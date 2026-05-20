@@ -1,0 +1,22 @@
+pandas>=2.0.0
+numpy>=1.24.0
+websocket-client>=1.6.0
+hyperliquid-python-sdk>=0.9.0
+pyarrow>=14.0.0
+fastparquet>=2023.10.0
+pytz>=2023.3
+colorama>=0.4.6 
+polars>=1.0.0  
+paradex-py
+apexomni-arm
+requests
+optuna
+# Claude AI advisor
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+feedparser>=6.0.0
+
+# AI Brain trading system (algo_brain/)
+requests>=2.31.0

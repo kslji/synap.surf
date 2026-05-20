@@ -1,0 +1,1 @@
+{"event": "TRADE_CLOSE", "timestamp": "2026-05-16T11:26:02.640143+00:00", "coin": "HYPE", "side": "LONG", "entry_price": 45.2515, "exit_price": 44.5, "position_size_usd": 123.0, "leverage": 5, "pnl_usd": -10.34, "pnl_pct": -8.3, "reason": "STOP_LOSS", "hold_duration_hours": 24.7}

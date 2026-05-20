@@ -1,0 +1,1412 @@
+2026-05-15 16:13:38,509 | INFO | ======================================================================
+2026-05-15 16:13:38,509 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-15 16:13:38,509 | INFO |   Capital:       $1000.0
+2026-05-15 16:13:38,509 | INFO |   Poll interval: 30 min (idle) / 2 min (with positions)
+2026-05-15 16:13:38,509 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-15 16:13:38,509 | INFO |   Mode:          PAPER TRADE
+2026-05-15 16:13:38,509 | INFO |   Nansen API:    ✅ Configured
+2026-05-15 16:13:38,509 | INFO |   CoinGecko:     ✅ Configured
+2026-05-15 16:13:38,509 | INFO |   Claude API:    ✅ Configured
+2026-05-15 16:13:38,509 | INFO | ======================================================================
+2026-05-15 16:13:38,509 | INFO | ✅ Telegram notifier ready.
+2026-05-15 16:13:38,509 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-15 16:13:38,509 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-15 16:13:38,509 | INFO |   🧠 BRAIN CYCLE — 2026-05-15 10:43:38 UTC
+2026-05-15 16:13:38,509 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-15 16:13:38,509 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-15 16:13:40,415 | INFO | 🔥 Volatility Leaders: HYPE, PURR, RUNE, GOAT, SAGA, MEW, MERL, ICP, NIL, POLYX
+2026-05-15 16:13:40,415 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-15 16:13:40,610 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-15 16:13:40,610 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-15 16:13:40,610 | INFO | 🔍 Nansen API: POST perp-screener
+2026-05-15 16:13:41,582 | INFO | 💳 Nansen credit used. Total: 1/1000 (999 remaining)
+2026-05-15 16:13:41,585 | INFO | 🔍 Nansen API: POST smart-money/netflow
+2026-05-15 16:13:42,990 | INFO | 💳 Nansen credit used. Total: 2/1000 (998 remaining)
+2026-05-15 16:13:42,994 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 16:13:42,994 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 16:13:42,994 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 16:13:42,994 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 16:13:42,994 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 16:13:42,994 | INFO | 🔍 Nansen API: POST token-screener
+2026-05-15 16:13:44,046 | INFO | 💳 Nansen credit used. Total: 3/1000 (997 remaining)
+2026-05-15 16:13:44,047 | INFO | 📊 Nansen intelligence built. Credits: 3/1000
+2026-05-15 16:13:44,047 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-15 16:13:44,902 | INFO | 😱 Fear & Greed: 43 (Fear) trend=DECLINING
+2026-05-15 16:13:45,672 | INFO | 🔥 CoinGecko trending: ['RUNE', 'HYPE', 'IRYS', 'ZANO', 'BILL', 'PENGU', 'BTC', 'KISHU', 'FIRO', 'SOL']
+2026-05-15 16:13:46,359 | INFO | 📂 Trending narratives: ['Tokenized Pre-IPO Stocks', 'Farcaster Ecosystem', 'TimeFi', 'Sticker-Themed Coins', 'Game Studio']
+2026-05-15 16:14:00,654 | INFO | 📰 Fetched 161 headlines from 8 RSS feeds
+2026-05-15 16:14:00,669 | INFO | 📊 Sentiment data built: F&G=43, trending=15 coins, headlines for 2 coins
+2026-05-15 16:14:00,669 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-15 16:14:00,669 | INFO | 👀 Watchlist: 10 coins — GOAT, HYPE, ICP, MERL, MEW, NIL, POLYX, PURR, RUNE, SAGA
+2026-05-15 16:14:00,670 | INFO | 
+📈 Step 5: Fetching technicals for 10 coins...
+2026-05-15 16:14:04,052 | WARNING | No candles returned for MEW
+2026-05-15 16:14:04,322 | WARNING | No candles returned for MEW
+2026-05-15 16:14:09,232 | INFO |   Got technicals for 9 coins
+2026-05-15 16:14:09,233 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-15 16:14:09,233 | INFO |   No automatic exits triggered
+2026-05-15 16:14:09,233 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-15 16:14:09,698 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-15 16:14:09,990 | INFO | 📊 Sentiment data built: F&G=43, trending=15 coins, headlines for 2 coins
+2026-05-15 16:14:09,990 | INFO |   🧠 Sending 15,513 chars to Claude (claude-sonnet-4-5)...
+2026-05-15 16:14:30,472 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-05-15 16:14:30,493 | INFO |   🧠 Claude responded with 2,283 chars
+2026-05-15 16:14:30,493 | INFO |   🧠 AI Decision: 2 new trades, 0 position updates
+2026-05-15 16:14:30,493 | INFO |   👀 Watching: ['HYPE', 'GOAT', 'MERL']
+2026-05-15 16:14:30,493 | INFO |   💭 HYPE shows massive smart money accumulation ($45M buy pressure, 668M volume) with strong positive news catalysts (Coinbase/Circle backing, ETF race). GOAT in STRONG_TREND_UP on 30m with low RSI (33.82
+2026-05-15 16:14:30,493 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-15 16:14:30,494 | INFO |   📝 Market view: Market in Fear (43, declining 7-day) but selective opportunities exist. HYPE leading with institutional backing and massive smart money flows. Avoid RUNE (exploit news, -12%), ICP/NIL/SAGA (all STRONG_TREND_DOWN). POLYX conflicting signals (30m up, 1m down). Focus on quality setups with smart money confirmation rather than chasing trending coins without confluence.
+2026-05-15 16:14:30,494 | INFO |   💸 Entry cost for HYPE: fee=$0.09 + slippage=$0.04 = $0.12 (total fees paid: $0.12)
+2026-05-15 16:14:30,494 | INFO | 
+============================================================
+  🚀 TRADE OPENED: LONG HYPE
+  Entry:      $45.2515
+  Size:       $123.00 @ 5x leverage
+  Stop Loss:  $44.3500
+  TP1:        $46.6500
+  TP2:        $48.0400
+  Conviction: 82%
+  Reason:     Triple confluence: (1) Nansen shows strongest smart money accumulation - $45M buy pressure, 668M volume, 10,370 traders. (2) 30m regime STRONG_TREND_UP, price +16.26% 24h with institutional backing news (Coinbase/Circle, Bitwise ETF). (3) Positive funding (0.0013%) and massive OI ($981M). 1m RSI 36.37 suggests short-term oversold in uptrend - ideal pullback entry. Stop at 1.5x ATR below entry.
+============================================================
+2026-05-15 16:14:30,495 | INFO |   ✅ Opened LONG HYPE @ $45.2515
+2026-05-15 16:14:31,224 | INFO |   💸 Entry cost for GOAT: fee=$0.08 + slippage=$0.03 = $0.11 (total fees paid: $0.23)
+2026-05-15 16:14:31,224 | INFO | 
+============================================================
+  🚀 TRADE OPENED: LONG GOAT
+  Entry:      $0.0214
+  Size:       $111.18 @ 5x leverage
+  Stop Loss:  $0.0207
+  TP1:        $0.0225
+  TP2:        $0.0236
+  Conviction: 76%
+  Reason:     Strong technical setup: 30m STRONG_TREND_UP regime with RSI 33.82 (oversold in uptrend = pullback buy). Price +10.15% 24h but pulled back to EMA20 on 1m. ADX 28.52 confirms trend strength. Low volatility (ATR 2.22%) allows slightly larger size. No smart money data but technicals + regime alignment sufficient for medium conviction. Stop at 2x ATR (0.000476 * 1.5).
+============================================================
+2026-05-15 16:14:31,224 | INFO |   ✅ Opened LONG GOAT @ $0.0214
+2026-05-15 16:14:32,092 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-15 16:14:32,092 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $952.93
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $952.93
+  Open Positions:  2
+────────────────────────────────────────────────────────────
+2026-05-15 16:14:32,092 | INFO |   🟢 LONG  HYPE   | entry=$45.2515 | curr=$45.2515 | P&L: $+0.00 (+0.0%) | SL=$44.3500
+2026-05-15 16:14:32,092 | INFO |   🟢 LONG  GOAT   | entry=$0.0214 | curr=$0.0214 | P&L: $+0.00 (+0.0%) | SL=$0.0207
+2026-05-15 16:14:32,092 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-15 16:14:32,093 | INFO | 
+✅ Cycle complete in 53.6s | Equity: $952.93 | Positions: 2 | Win rate: 0% | AI calls: YES
+2026-05-15 16:14:32,813 | INFO | 📢 Scheduled portfolio report sent to Telegram
+2026-05-15 16:14:32,813 | INFO | 
+💤 Sleeping 2 min (positions open — monitoring SL/TP). Next cycle: 10:46:32 UTC
+
+2026-05-15 16:14:37,043 | INFO | 
+🛑 Brain stopped by user. Saving state...
+2026-05-15 23:05:20,349 | INFO | ======================================================================
+2026-05-15 23:05:20,349 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-15 23:05:20,349 | INFO |   Capital:       $1000.0
+2026-05-15 23:05:20,349 | INFO |   Poll interval: 30 min (idle) / 2 min (with positions)
+2026-05-15 23:05:20,349 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-15 23:05:20,349 | INFO |   Mode:          PAPER TRADE
+2026-05-15 23:05:20,349 | INFO |   Nansen API:    ✅ Configured
+2026-05-15 23:05:20,349 | INFO |   CoinGecko:     ✅ Configured
+2026-05-15 23:05:20,349 | INFO |   Claude API:    ✅ Configured
+2026-05-15 23:05:20,349 | INFO | ======================================================================
+2026-05-15 23:05:20,349 | INFO | 📂 Loaded portfolio: cash=$952.93, 2 open positions, realized P&L=$+0.00, fees paid=$0.23
+2026-05-15 23:05:20,349 | INFO | ✅ Telegram notifier ready.
+2026-05-15 23:05:20,350 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-15 23:05:20,350 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-15 23:05:20,350 | INFO |   🧠 BRAIN CYCLE — 2026-05-15 17:35:20 UTC
+2026-05-15 23:05:20,350 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-15 23:05:20,350 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-15 23:05:22,735 | INFO | 🔥 Volatility Leaders: SAGA, STABLE, EIGEN, RUNE, SPX, JTO, 2Z, TURBO, W, AZTEC
+2026-05-15 23:05:22,735 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-15 23:05:22,893 | INFO |   ✅ GOAT is at -2.51% loss (≥ 1.25% loss threshold)
+2026-05-15 23:05:22,894 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-15 23:05:22,894 | INFO | 🔍 Nansen API: POST perp-screener
+2026-05-15 23:05:24,878 | INFO | 💳 Nansen credit used. Total: 4/1000 (996 remaining)
+2026-05-15 23:05:24,883 | INFO | 🔍 Nansen API: POST smart-money/netflow
+2026-05-15 23:05:26,035 | INFO | 💳 Nansen credit used. Total: 5/1000 (995 remaining)
+2026-05-15 23:05:26,038 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 23:05:26,038 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 23:05:26,038 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 23:05:26,038 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 23:05:26,038 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-15 23:05:26,038 | INFO | 🔍 Nansen API: POST token-screener
+2026-05-15 23:05:27,390 | INFO | 💳 Nansen credit used. Total: 6/1000 (994 remaining)
+2026-05-15 23:05:27,393 | INFO | 📊 Nansen intelligence built. Credits: 6/1000
+2026-05-15 23:05:27,393 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-15 23:05:28,158 | INFO | 😱 Fear & Greed: 43 (Fear) trend=DECLINING
+2026-05-15 23:05:29,560 | INFO | 🔥 CoinGecko trending: ['ZANO', 'HYPE', 'LAB', 'BTC', 'SOL', 'MEGA', 'VVV', 'ZEC', 'LINK', 'AI']
+2026-05-15 23:05:29,856 | INFO | 📂 Trending narratives: ['Privacy Infrastructure', 'Chain Abstraction', 'Cross-chain Communication', 'Layer 0 (L0)', 'Stablecoin Issuer']
+2026-05-15 23:05:40,454 | INFO | 📰 Fetched 161 headlines from 8 RSS feeds
+2026-05-15 23:05:40,480 | INFO | 📊 Sentiment data built: F&G=43, trending=15 coins, headlines for 1 coins
+2026-05-15 23:05:40,481 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-15 23:05:40,482 | INFO | 👀 Watchlist: 10 coins — 2Z, AZTEC, EIGEN, JTO, RUNE, SAGA, SPX, STABLE, TURBO, W
+2026-05-15 23:05:40,483 | INFO | 
+📈 Step 5: Fetching technicals for 10 coins...
+2026-05-15 23:05:49,579 | INFO |   Got technicals for 10 coins
+2026-05-15 23:05:49,580 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-15 23:05:49,580 | INFO |   No automatic exits triggered
+2026-05-15 23:05:49,580 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-15 23:05:50,079 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-15 23:05:50,414 | INFO | 📊 Sentiment data built: F&G=43, trending=15 coins, headlines for 1 coins
+2026-05-15 23:05:50,442 | INFO |   🧠 Sending 17,093 chars to Claude (claude-sonnet-4-5)...
+2026-05-15 23:06:08,784 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-05-15 23:06:08,814 | INFO |   🧠 Claude responded with 2,050 chars
+2026-05-15 23:06:08,815 | INFO |   🧠 AI Decision: 0 new trades, 2 position updates
+2026-05-15 23:06:08,815 | INFO |   👀 Watching: ['HYPE', 'GOAT', 'RUNE']
+2026-05-15 23:06:08,815 | INFO |   💭 HYPE showing strong smart money accumulation with $43M buy pressure and positive funding despite market fear. GOAT near stop loss, needs immediate assessment. RUNE experiencing major exploit news (-12
+2026-05-15 23:06:08,816 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-15 23:06:08,816 | INFO |   📝 Market view: Market in Fear (43) with declining sentiment. Most coins in STRONG_TREND_DOWN on 30m timeframes despite some 1m bounces. This is a SELL THE RALLY environment - do NOT chase 1m uptrends when 30m regime is bearish. Smart money on HYPE is notable exception. Waiting for clearer multi-timeframe alignment before new entries.
+2026-05-15 23:06:08,816 | INFO |   ⏸️  Skip reason: No new trades: All potential setups have conflicting timeframes (1m bullish vs 30m STRONG_TREND_DOWN). RUNE exploit news creates too much uncertainty despite -13% drop. SPX, TURBO, AZTEC showing 1m strength but 30m downtrends override - regime rules prevent longs. No high-conviction shorts as Fear reading suggests we may be near a local bottom. Preserving capital and managing existing positions is the priority.
+2026-05-15 23:06:08,816 | INFO |   💸 Exit cost for GOAT: fee=$0.08 + slippage=$0.03 = $0.11 | net P&L after costs: $-14.06
+2026-05-15 23:06:08,816 | INFO | 
+============================================================
+  ❌ TRADE CLOSED: LONG GOAT
+  Entry:    $0.0214 → Exit: $0.0209
+  P&L:      $-14.06 (-12.55%)
+  Duration: 6.9h
+  Reason:   AI_CLOSE: Position down -12.5%, dangerously close to stop loss (0.020698 vs current 0.020858). No smart money data available to validate thesis. 30m regime is STRONG_TREND_DOWN with RSI 33.74. Exit now to preserve capital - original thesis invalidated.
+============================================================
+2026-05-15 23:06:08,817 | INFO |   🔄 HYPE: TIGHTEN_STOP — SL → $44.5000. Position down -5.9% but smart money showing massive accumulation ($43M buy pressure, 10,392 traders, positive funding). Tighten stop to 44.5 (just below current 44.71) to reduce risk while giving room for the strong smart money thesis to play out. 30m still in downtrend but 1m showing stabilization.
+2026-05-15 23:06:09,782 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-15 23:06:09,782 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $961.10
+  Unrealized P&L:  $-7.31
+  Realized P&L:    $-14.06
+  Total Equity:    $953.79
+  Open Positions:  1
+────────────────────────────────────────────────────────────
+2026-05-15 23:06:09,782 | INFO |   🔴 LONG  HYPE   | entry=$45.2515 | curr=$44.7135 | P&L: $-7.31 (-5.9%) | SL=$44.5000
+2026-05-15 23:06:09,782 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-15 23:06:09,785 | INFO | 
+✅ Cycle complete in 49.4s | Equity: $953.79 | Positions: 1 | Win rate: 0% | AI calls: YES
+2026-05-15 23:06:10,797 | INFO | 📢 Scheduled portfolio report sent to Telegram
+2026-05-15 23:06:10,797 | INFO | 
+💤 Sleeping 2 min (positions open — monitoring SL/TP). Next cycle: 17:38:10 UTC
+
+2026-05-15 23:06:15,946 | INFO | 
+🛑 Brain stopped by user. Saving state...
+2026-05-16 16:55:22,038 | INFO | ======================================================================
+2026-05-16 16:55:22,038 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-16 16:55:22,038 | INFO |   Capital:       $1000.0
+2026-05-16 16:55:22,038 | INFO |   Poll interval: 40 min (idle) / 2 min (with positions)
+2026-05-16 16:55:22,038 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-16 16:55:22,038 | INFO |   Mode:          PAPER TRADE
+2026-05-16 16:55:22,038 | INFO |   Nansen API:    ✅ Configured
+2026-05-16 16:55:22,039 | INFO |   CoinGecko:     ✅ Configured
+2026-05-16 16:55:22,039 | INFO |   Claude API:    ✅ Configured
+2026-05-16 16:55:22,039 | INFO | ======================================================================
+2026-05-16 16:55:22,039 | INFO | 📂 Loaded portfolio: cash=$961.10, 1 open positions, realized P&L=$-14.06, fees paid=$0.35
+2026-05-16 16:55:22,039 | INFO | ✅ Telegram notifier ready.
+2026-05-16 16:55:22,039 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-16 16:55:22,039 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-16 16:55:22,040 | INFO |   🧠 BRAIN CYCLE — 2026-05-16 11:25:22 UTC
+2026-05-16 16:55:22,040 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-16 16:55:22,040 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-16 16:55:23,268 | INFO | 🔥 Volatility Leaders: RUNE, MERL, CFX, STABLE, RESOLV, VVV, EIGEN, IMX, AZTEC, 2Z
+2026-05-16 16:55:23,268 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-16 16:55:23,427 | INFO |   ✅ HYPE is at -9.48% loss (≥ 1.25% loss threshold)
+2026-05-16 16:55:23,427 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-16 16:55:23,427 | INFO | 🔍 Nansen API: POST perp-screener
+2026-05-16 16:55:24,378 | INFO | 💳 Nansen credit used. Total: 7/1000 (993 remaining)
+2026-05-16 16:55:24,380 | INFO | 🔍 Nansen API: POST smart-money/netflow
+2026-05-16 16:55:25,669 | INFO | 💳 Nansen credit used. Total: 8/1000 (992 remaining)
+2026-05-16 16:55:25,671 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-16 16:55:25,671 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-16 16:55:25,671 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-16 16:55:25,671 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-16 16:55:25,671 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-16 16:55:25,671 | INFO | 🔍 Nansen API: POST token-screener
+2026-05-16 16:55:26,898 | INFO | 💳 Nansen credit used. Total: 9/1000 (991 remaining)
+2026-05-16 16:55:26,900 | INFO | 📊 Nansen intelligence built. Credits: 9/1000
+2026-05-16 16:55:26,900 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-16 16:55:28,741 | INFO | 😱 Fear & Greed: 31 (Fear) trend=DECLINING
+2026-05-16 16:55:32,571 | INFO | 🔥 CoinGecko trending: ['BTC', 'BILL', 'MEGA', 'HYPE', 'ASTEROID', 'PI', 'PENGU', 'ETH', 'VVV', 'TAO']
+2026-05-16 16:55:33,678 | INFO | 📂 Trending narratives: ['Binance HODLer Airdrops', 'Decentralized Identifier (DID)', 'Parallelized EVM', 'Exchange-based Tokens', 'Derivatives']
+2026-05-16 16:55:44,624 | INFO | 📰 Fetched 161 headlines from 8 RSS feeds
+2026-05-16 16:55:44,655 | INFO | 📊 Sentiment data built: F&G=31, trending=15 coins, headlines for 4 coins
+2026-05-16 16:55:44,655 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-16 16:55:44,655 | INFO | 👀 Watchlist: 19 coins — 2Z, ARB, AZTEC, BTC, CFX, EIGEN, ETH, HYPE, IMX, LINK, MERL, RESOLV, RUNE, SOL, STABLE, SUI, TIA, VVV, ZEC
+2026-05-16 16:55:44,656 | INFO | 
+📈 Step 5: Fetching technicals for 19 coins...
+2026-05-16 16:56:02,638 | INFO |   Got technicals for 19 coins
+2026-05-16 16:56:02,639 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-16 16:56:02,640 | INFO |   💸 Exit cost for HYPE: fee=$0.09 + slippage=$0.04 = $0.12 | net P&L after costs: $-10.34
+2026-05-16 16:56:02,640 | INFO | 
+============================================================
+  ❌ TRADE CLOSED: LONG HYPE
+  Entry:    $45.2515 → Exit: $44.5000
+  P&L:      $-10.34 (-8.30%)
+  Duration: 24.7h
+  Reason:   STOP_LOSS
+============================================================
+2026-05-16 16:56:02,641 | INFO |   ⚡ Auto-exit: HYPE — STOP_LOSS
+2026-05-16 16:56:02,641 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-16 16:56:03,169 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-16 16:56:03,599 | INFO | 📊 Sentiment data built: F&G=31, trending=15 coins, headlines for 4 coins
+2026-05-16 16:56:03,601 | INFO |   🧠 Sending 29,591 chars to Claude (claude-sonnet-4-5)...
+2026-05-16 16:56:20,508 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-05-16 16:56:20,519 | INFO |   🧠 Claude responded with 1,932 chars
+2026-05-16 16:56:20,520 | INFO |   🧠 AI Decision: 0 new trades, 0 position updates
+2026-05-16 16:56:20,520 | INFO |   💭 Market-wide STRONG_TREND_DOWN regime across all major assets. Fear & Greed at 31 (Fear) with declining trend. News confirms $500M in long liquidations and BTC at $78k. Smart money data shows no clear 
+2026-05-16 16:56:20,520 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-16 16:56:20,520 | INFO |   📝 Market view: Extreme caution warranted. Every major asset (BTC, ETH, SOL, LINK, HYPE, etc.) is in STRONG_TREND_DOWN on 30m timeframe with deeply oversold RSI readings (14-36 range). While 1m charts show some STRONG_TREND_UP signals, these are counter-trend bounces within a dominant downtrend. News confirms massive long liquidations and continued selling pressure. Smart money perp data shows mixed signals with no clear directional conviction. This is a 'wait and watch' environment - attempting to catch falling knives or fade the trend without clear reversal signals would violate risk management principles.
+2026-05-16 16:56:20,520 | INFO |   ⏸️  Skip reason: REGIME OVERRIDE: All watchlist assets in STRONG_TREND_DOWN on 30m timeframe. Despite some coins showing 1m uptrends (ZEC, CFX, STABLE, RESOLV, IMX, SUI), the dominant 30m downtrend takes precedence per trading rules. Oversold RSI readings (LINK 14.49, RUNE 1.89, MERL 22.72) in a downtrend are NOT reversal signals - they indicate strong selling pressure. Fear & Greed at 31 is 'Fear' but not 'Extreme Fear' (<20), so no contrarian signal applies. Smart money data lacks clear accumulation patterns. No valid short setups meet double confluence requirements (would need technical breakdown + smart money confirmation + negative sentiment alignment). Preserving capital and waiting for regime shift or clear reversal structure is the professional decision.
+2026-05-16 16:56:20,521 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-16 16:56:20,521 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-16 16:56:20,521 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $975.36
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $-24.40
+  Total Equity:    $975.36
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-16 16:56:20,521 | INFO |   💤 No open positions
+2026-05-16 16:56:20,521 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-16 16:56:20,522 | INFO | 
+✅ Cycle complete in 58.5s | Equity: $975.36 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-16 16:56:42,932 | INFO | 
+🛑 Brain stopped by user. Saving state...
+2026-05-18 20:38:44,532 | INFO | ======================================================================
+2026-05-18 20:38:44,532 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 20:38:44,532 | INFO |   Capital:       $50.0
+2026-05-18 20:38:44,532 | INFO |   Poll interval: 90 min (idle) / 1 min (with positions)
+2026-05-18 20:38:44,532 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 20:38:44,532 | INFO |   Mode:          DRY RUN
+2026-05-18 20:38:44,532 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 20:38:44,532 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 20:38:44,532 | INFO |   Claude API:    ✅ Configured
+2026-05-18 20:38:44,532 | INFO | ======================================================================
+2026-05-18 20:38:44,532 | INFO | 🟡 PAPER TRADING MODE ON — Simulation only. 🟡
+2026-05-18 20:38:44,533 | INFO | 📂 Loaded portfolio: cash=$975.36, 0 open positions, realized P&L=$-24.40, fees paid=$0.47
+2026-05-18 20:38:44,533 | INFO | ✅ Telegram notifier ready.
+2026-05-18 20:38:44,533 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 20:38:44,533 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 20:38:44,533 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 15:08:44 UTC
+2026-05-18 20:38:44,533 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 20:38:44,534 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 20:38:46,501 | INFO | 🔥 Volatility Leaders: TST, BABY, DYM, BCH, APE, MEW, VINE, CFX, AIXBT, SPX
+2026-05-18 20:38:46,502 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 20:38:46,787 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 20:38:46,787 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 20:38:46,787 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 20:38:46,787 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 20:38:46,787 | INFO | 👀 Watchlist: 20 coins — AIXBT, APE, ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, HYPE, LINK, MEW, SOL, SPX, SUI, TIA, TON, TST
+2026-05-18 20:38:46,789 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 20:39:00,025 | WARNING | No candles returned for MEW
+2026-05-18 20:39:00,390 | WARNING | No candles returned for MEW
+2026-05-18 20:39:08,606 | INFO |   Got technicals for 19 coins
+2026-05-18 20:39:08,608 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 20:39:08,608 | INFO |   No automatic exits triggered
+2026-05-18 20:39:08,608 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 20:39:08,933 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 20:39:08,933 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 20:39:08,933 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 20:39:09,283 | INFO |   📝 Market view: Dry run active
+2026-05-18 20:39:09,283 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 20:39:09,284 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 20:39:09,284 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 20:39:09,284 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $975.36
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $-24.40
+  Total Equity:    $975.36
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 20:39:09,284 | INFO |   💤 No open positions
+2026-05-18 20:39:09,284 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 20:39:09,285 | INFO | 
+✅ Cycle complete in 24.8s | Equity: $975.36 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-18 20:40:24,147 | INFO | ======================================================================
+2026-05-18 20:40:24,149 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 20:40:24,149 | INFO |   Capital:       $50.0
+2026-05-18 20:40:24,149 | INFO |   Poll interval: 90 min (idle) / 1 min (with positions)
+2026-05-18 20:40:24,149 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 20:40:24,149 | INFO |   Mode:          DRY RUN
+2026-05-18 20:40:24,149 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 20:40:24,149 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 20:40:24,149 | INFO |   Claude API:    ✅ Configured
+2026-05-18 20:40:24,149 | INFO | ======================================================================
+2026-05-18 20:40:24,149 | INFO | 🟡 PAPER TRADING MODE ON — Simulation only. 🟡
+2026-05-18 20:40:24,149 | INFO | 📂 Loaded portfolio: cash=$975.36, 0 open positions, realized P&L=$-24.40, fees paid=$0.47
+2026-05-18 20:40:24,149 | INFO | ✅ Telegram notifier ready.
+2026-05-18 20:40:24,149 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 20:40:24,149 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 20:40:24,149 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 15:10:24 UTC
+2026-05-18 20:40:24,149 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 20:40:24,149 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 20:40:26,184 | INFO | 🔥 Volatility Leaders: TST, BABY, DYM, BCH, APE, MEW, VINE, CFX, AIXBT, SPX
+2026-05-18 20:40:26,185 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 20:40:26,371 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 20:40:26,371 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 20:40:26,371 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 20:40:26,371 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 20:40:26,372 | INFO | 👀 Watchlist: 20 coins — AIXBT, APE, ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, HYPE, LINK, MEW, SOL, SPX, SUI, TIA, TON, TST
+2026-05-18 20:40:26,372 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 20:40:39,766 | WARNING | No candles returned for MEW
+2026-05-18 20:40:39,949 | WARNING | No candles returned for MEW
+2026-05-18 20:40:47,029 | INFO |   Got technicals for 19 coins
+2026-05-18 20:40:47,031 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 20:40:47,031 | INFO |   No automatic exits triggered
+2026-05-18 20:40:47,031 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 20:40:48,163 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 20:40:48,164 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 20:40:48,164 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 20:40:48,584 | INFO |   📝 Market view: Dry run active
+2026-05-18 20:40:48,584 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 20:40:48,584 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 20:40:48,584 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 20:40:48,584 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $975.36
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $-24.40
+  Total Equity:    $975.36
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 20:40:48,584 | INFO |   💤 No open positions
+2026-05-18 20:40:48,584 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 20:40:48,585 | INFO | 
+✅ Cycle complete in 24.4s | Equity: $975.36 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-18 20:43:05,819 | INFO | ======================================================================
+2026-05-18 20:43:05,819 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 20:43:05,819 | INFO |   Capital:       $50.0
+2026-05-18 20:43:05,819 | INFO |   Poll interval: 90 min (idle) / 1 min (with positions)
+2026-05-18 20:43:05,819 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 20:43:05,819 | INFO |   Mode:          DRY RUN
+2026-05-18 20:43:05,819 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 20:43:05,819 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 20:43:05,820 | INFO |   Claude API:    ✅ Configured
+2026-05-18 20:43:05,820 | INFO | ======================================================================
+2026-05-18 20:43:05,820 | INFO | 🟡 PAPER TRADING MODE ON — Simulation only. 🟡
+2026-05-18 20:43:05,820 | INFO | 📂 Loaded portfolio: cash=$975.36, 0 open positions, realized P&L=$-24.40, fees paid=$0.47
+2026-05-18 20:43:05,820 | INFO | ✅ Telegram notifier ready.
+2026-05-18 20:43:05,820 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 20:43:05,820 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 20:43:05,820 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 15:13:05 UTC
+2026-05-18 20:43:05,820 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 20:43:05,820 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 20:43:07,778 | INFO | 🔥 Volatility Leaders: TST, BABY, DYM, BCH, VINE, MEW, APE, CFX, HYPER, AIXBT
+2026-05-18 20:43:07,779 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 20:43:07,950 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 20:43:07,951 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 20:43:07,951 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 20:43:07,951 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 20:43:07,951 | INFO | 👀 Watchlist: 20 coins — AIXBT, APE, ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, HYPE, HYPER, LINK, MEW, SOL, SUI, TIA, TON, TST
+2026-05-18 20:43:07,952 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 20:43:21,165 | WARNING | No candles returned for MEW
+2026-05-18 20:43:21,337 | WARNING | No candles returned for MEW
+2026-05-18 20:43:26,474 | INFO |   Got technicals for 19 coins
+2026-05-18 20:43:26,474 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 20:43:26,474 | INFO |   No automatic exits triggered
+2026-05-18 20:43:26,474 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 20:43:27,035 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 20:43:27,035 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 20:43:27,035 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 20:43:27,314 | INFO |   📝 Market view: Dry run active
+2026-05-18 20:43:27,314 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 20:43:27,315 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 20:43:27,315 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 20:43:27,315 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $975.36
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $-24.40
+  Total Equity:    $975.36
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 20:43:27,315 | INFO |   💤 No open positions
+2026-05-18 20:43:27,315 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 20:43:27,316 | INFO | 
+✅ Cycle complete in 21.5s | Equity: $975.36 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-18 22:02:14,759 | INFO | ======================================================================
+2026-05-18 22:02:14,759 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 22:02:14,759 | INFO |   Capital:       $50.0
+2026-05-18 22:02:14,759 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-18 22:02:14,759 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 22:02:14,759 | INFO |   Mode:          DRY RUN
+2026-05-18 22:02:14,759 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 22:02:14,759 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 22:02:14,759 | INFO |   Claude API:    ✅ Configured
+2026-05-18 22:02:14,759 | INFO | ======================================================================
+2026-05-18 22:02:14,759 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-18 22:02:17,111 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0x77Dab0eAEC92907acC4D5836e03eeFc50e655Ca5
+2026-05-18 22:02:17,111 | INFO | ✅ Telegram notifier ready.
+2026-05-18 22:02:17,111 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 22:02:17,111 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 22:02:17,112 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 16:32:17 UTC
+2026-05-18 22:02:17,112 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 22:02:17,112 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 22:02:18,646 | INFO | 🔥 Volatility Leaders: BABY, DYM, APE, BCH, GOAT, TST, MEW, VINE, CFX, HYPER
+2026-05-18 22:02:18,646 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 22:02:19,150 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 22:02:19,513 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 22:02:19,513 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 22:02:19,513 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 22:02:19,513 | INFO | 👀 Watchlist: 20 coins — APE, ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, GOAT, HYPE, HYPER, LINK, MEW, SOL, SUI, TIA, TON, TST
+2026-05-18 22:02:19,514 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 22:02:33,355 | WARNING | No candles returned for MEW
+2026-05-18 22:02:33,549 | WARNING | No candles returned for MEW
+2026-05-18 22:02:38,474 | INFO |   Got technicals for 19 coins
+2026-05-18 22:02:38,474 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 22:02:38,818 | INFO |   No automatic exits triggered
+2026-05-18 22:02:38,818 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 22:02:39,307 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 22:02:40,428 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 22:02:40,429 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 22:02:40,718 | INFO |   📝 Market view: Dry run active
+2026-05-18 22:02:40,718 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 22:02:40,719 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 22:02:40,719 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 22:02:42,070 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $0.00
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $0.00
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 22:02:42,070 | INFO |   💤 No open positions
+2026-05-18 22:02:42,070 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 22:02:42,072 | INFO | 
+✅ Cycle complete in 25.0s | Equity: $0.00 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-18 22:08:56,103 | INFO | ======================================================================
+2026-05-18 22:08:56,104 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 22:08:56,104 | INFO |   Capital:       $50.0
+2026-05-18 22:08:56,104 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-18 22:08:56,104 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 22:08:56,104 | INFO |   Mode:          DRY RUN
+2026-05-18 22:08:56,104 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 22:08:56,104 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 22:08:56,104 | INFO |   Claude API:    ✅ Configured
+2026-05-18 22:08:56,104 | INFO | ======================================================================
+2026-05-18 22:08:56,104 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-18 22:08:57,192 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0x77Dab0eAEC92907acC4D5836e03eeFc50e655Ca5
+2026-05-18 22:08:57,193 | INFO | ✅ Telegram notifier ready.
+2026-05-18 22:08:57,193 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 22:08:57,193 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 22:08:57,193 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 16:38:57 UTC
+2026-05-18 22:08:57,193 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 22:08:57,193 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 22:08:59,050 | INFO | 🔥 Volatility Leaders: BABY, DYM, BCH, TST, MEW, GOAT, VINE, CFX, APE, HYPER
+2026-05-18 22:08:59,050 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 22:08:59,548 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 22:08:59,883 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 22:08:59,883 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 22:08:59,884 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 22:08:59,884 | INFO | 👀 Watchlist: 20 coins — APE, ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, GOAT, HYPE, HYPER, LINK, MEW, SOL, SUI, TIA, TON, TST
+2026-05-18 22:08:59,884 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 22:09:14,095 | WARNING | No candles returned for MEW
+2026-05-18 22:09:14,265 | WARNING | No candles returned for MEW
+2026-05-18 22:09:18,920 | INFO |   Got technicals for 19 coins
+2026-05-18 22:09:18,920 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 22:09:19,543 | INFO |   No automatic exits triggered
+2026-05-18 22:09:19,543 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 22:09:20,152 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 22:09:21,055 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 22:09:21,056 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 22:09:21,417 | INFO |   📝 Market view: Dry run active
+2026-05-18 22:09:21,417 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 22:09:21,418 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 22:09:21,418 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 22:09:22,288 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $0.00
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $0.00
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 22:09:22,288 | INFO |   💤 No open positions
+2026-05-18 22:09:22,288 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 22:09:22,290 | INFO | 
+✅ Cycle complete in 25.1s | Equity: $0.00 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-18 22:10:05,177 | INFO | ======================================================================
+2026-05-18 22:10:05,177 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 22:10:05,177 | INFO |   Capital:       $50.0
+2026-05-18 22:10:05,177 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-18 22:10:05,177 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 22:10:05,177 | INFO |   Mode:          DRY RUN
+2026-05-18 22:10:05,177 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 22:10:05,177 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 22:10:05,177 | INFO |   Claude API:    ✅ Configured
+2026-05-18 22:10:05,177 | INFO | ======================================================================
+2026-05-18 22:10:05,178 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-18 22:10:07,118 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0x77Dab0eAEC92907acC4D5836e03eeFc50e655Ca5
+2026-05-18 22:10:07,119 | INFO | ✅ Telegram notifier ready.
+2026-05-18 22:10:07,119 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 22:10:07,119 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 22:10:07,119 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 16:40:07 UTC
+2026-05-18 22:10:07,120 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 22:10:07,120 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 22:10:08,777 | INFO | 🔥 Volatility Leaders: BABY, DYM, BCH, TST, GOAT, MEW, VINE, CFX, APE, HYPER
+2026-05-18 22:10:08,777 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 22:10:09,595 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 22:10:10,064 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 22:10:10,064 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 22:10:10,064 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 22:10:10,064 | INFO | 👀 Watchlist: 20 coins — APE, ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, GOAT, HYPE, HYPER, LINK, MEW, SOL, SUI, TIA, TON, TST
+2026-05-18 22:10:10,065 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 22:10:23,688 | WARNING | No candles returned for MEW
+2026-05-18 22:10:23,871 | WARNING | No candles returned for MEW
+2026-05-18 22:10:29,003 | INFO |   Got technicals for 19 coins
+2026-05-18 22:10:29,004 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 22:10:29,351 | INFO |   No automatic exits triggered
+2026-05-18 22:10:29,351 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 22:10:30,484 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 22:10:31,330 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 22:10:31,330 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 22:10:31,627 | INFO |   📝 Market view: Dry run active
+2026-05-18 22:10:31,627 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 22:10:31,628 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 22:10:31,628 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 22:10:32,509 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $0.00
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $0.00
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 22:10:32,510 | INFO |   💤 No open positions
+2026-05-18 22:10:32,510 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 22:10:32,512 | INFO | 
+✅ Cycle complete in 25.4s | Equity: $0.00 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-18 22:11:41,431 | INFO | ======================================================================
+2026-05-18 22:11:41,431 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 22:11:41,431 | INFO |   Capital:       $50.0
+2026-05-18 22:11:41,431 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-18 22:11:41,431 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 22:11:41,431 | INFO |   Mode:          DRY RUN
+2026-05-18 22:11:41,431 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 22:11:41,431 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 22:11:41,431 | INFO |   Claude API:    ✅ Configured
+2026-05-18 22:11:41,431 | INFO | ======================================================================
+2026-05-18 22:11:41,431 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-18 22:11:43,358 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0x77Dab0eAEC92907acC4D5836e03eeFc50e655Ca5
+2026-05-18 22:11:43,358 | INFO | ✅ Telegram notifier ready.
+2026-05-18 22:11:43,358 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 22:11:43,358 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 22:11:43,359 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 16:41:43 UTC
+2026-05-18 22:11:43,359 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 22:11:43,359 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 22:11:44,993 | INFO | 🔥 Volatility Leaders: BABY, DYM, BCH, TST, GOAT, MEW, VINE, CFX, APE, HYPER
+2026-05-18 22:11:44,994 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 22:11:45,603 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 22:11:46,034 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 22:11:46,034 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 22:11:46,034 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 22:11:46,034 | INFO | 👀 Watchlist: 20 coins — APE, ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, GOAT, HYPE, HYPER, LINK, MEW, SOL, SUI, TIA, TON, TST
+2026-05-18 22:11:46,035 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 22:12:00,889 | WARNING | No candles returned for MEW
+2026-05-18 22:12:01,094 | WARNING | No candles returned for MEW
+2026-05-18 22:12:06,433 | INFO |   Got technicals for 19 coins
+2026-05-18 22:12:06,433 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 22:12:06,824 | INFO |   No automatic exits triggered
+2026-05-18 22:12:06,826 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 22:12:07,290 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 22:12:08,142 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 22:12:08,143 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 22:12:08,422 | INFO |   📝 Market view: Dry run active
+2026-05-18 22:12:08,422 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 22:12:08,424 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 22:12:08,424 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 22:12:09,300 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $0.00
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $0.00
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 22:12:09,300 | INFO |   💤 No open positions
+2026-05-18 22:12:09,300 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 22:12:09,302 | INFO | 
+✅ Cycle complete in 25.9s | Equity: $0.00 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-18 22:23:07,502 | INFO | ======================================================================
+2026-05-18 22:23:07,503 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 22:23:07,503 | INFO |   Capital:       $50.0
+2026-05-18 22:23:07,503 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-18 22:23:07,503 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 22:23:07,503 | INFO |   Mode:          MAINNET
+2026-05-18 22:23:07,503 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 22:23:07,503 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 22:23:07,503 | INFO |   Claude API:    ✅ Configured
+2026-05-18 22:23:07,503 | INFO | ======================================================================
+2026-05-18 22:23:07,503 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-18 22:23:09,480 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0x77Dab0eAEC92907acC4D5836e03eeFc50e655Ca5
+2026-05-18 22:23:09,480 | INFO | ✅ Telegram notifier ready.
+2026-05-18 22:23:09,481 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 22:23:09,646 | WARNING | Hyperliquid balance is 0 ($0.0000). Sleeping for 30 minutes...
+2026-05-18 22:23:14,192 | INFO | 
+🛑 Brain stopped by user. Saving state...
+2026-05-18 22:25:58,866 | INFO | ======================================================================
+2026-05-18 22:25:58,867 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 22:25:58,867 | INFO |   Capital:       $50.0
+2026-05-18 22:25:58,867 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-18 22:25:58,867 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 22:25:58,867 | INFO |   Mode:          MAINNET
+2026-05-18 22:25:58,867 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 22:25:58,867 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 22:25:58,867 | INFO |   Claude API:    ✅ Configured
+2026-05-18 22:25:58,867 | INFO | ======================================================================
+2026-05-18 22:25:58,867 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-18 22:26:00,987 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-18 22:26:00,987 | INFO | ✅ Telegram notifier ready.
+2026-05-18 22:26:00,987 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 22:26:01,156 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 22:26:01,156 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 16:56:01 UTC
+2026-05-18 22:26:01,156 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 22:26:01,156 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 22:26:03,051 | INFO | 🔥 Volatility Leaders: TST, BABY, DYM, BCH, MEW, VINE, GOAT, HYPER, CFX, SOPH
+2026-05-18 22:26:03,051 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 22:26:03,690 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 22:26:04,122 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 22:26:04,122 | INFO | 🔍 Nansen API: POST perp-screener
+2026-05-18 22:26:05,308 | INFO | 💳 Nansen credit used. Total: 10/1000 (990 remaining)
+2026-05-18 22:26:05,311 | INFO | 🔍 Nansen API: POST smart-money/netflow
+2026-05-18 22:26:07,156 | INFO | 💳 Nansen credit used. Total: 11/1000 (989 remaining)
+2026-05-18 22:26:07,161 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-18 22:26:07,161 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-18 22:26:07,161 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-18 22:26:07,161 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-18 22:26:07,161 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-18 22:26:07,162 | INFO | 🔍 Nansen API: POST token-screener
+2026-05-18 22:26:08,313 | INFO | 💳 Nansen credit used. Total: 12/1000 (988 remaining)
+2026-05-18 22:26:08,316 | INFO | 📊 Nansen intelligence built. Credits: 12/1000
+2026-05-18 22:26:08,316 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 22:26:09,100 | INFO | 😱 Fear & Greed: 28 (Fear) trend=DECLINING
+2026-05-18 22:26:10,106 | INFO | 
+🛑 Brain stopped by user. Saving state...
+2026-05-18 22:37:47,473 | INFO | ======================================================================
+2026-05-18 22:37:47,473 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-18 22:37:47,473 | INFO |   Capital:       $50.0
+2026-05-18 22:37:47,473 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-18 22:37:47,473 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-18 22:37:47,473 | INFO |   Mode:          DRY RUN
+2026-05-18 22:37:47,473 | INFO |   Nansen API:    ✅ Configured
+2026-05-18 22:37:47,473 | INFO |   CoinGecko:     ✅ Configured
+2026-05-18 22:37:47,473 | INFO |   Claude API:    ✅ Configured
+2026-05-18 22:37:47,473 | INFO | ======================================================================
+2026-05-18 22:37:47,473 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-18 22:37:48,831 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-18 22:37:48,831 | INFO | ✅ Telegram notifier ready.
+2026-05-18 22:37:48,831 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-18 22:37:48,831 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-18 22:37:48,832 | INFO |   🧠 BRAIN CYCLE — 2026-05-18 17:07:48 UTC
+2026-05-18 22:37:48,832 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-18 22:37:48,832 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-18 22:37:50,438 | INFO | 🔥 Volatility Leaders: TST, BABY, DYM, BCH, MEW, VINE, HYPER, GOAT, CFX, SOPH
+2026-05-18 22:37:50,438 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-18 22:37:51,101 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-18 22:37:51,551 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-18 22:37:51,551 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-18 22:37:51,551 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-18 22:37:51,551 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BABY, BCH, BNB, BTC, CFX, DYM, ETH, GOAT, HYPE, HYPER, LINK, MEW, SOL, SOPH, SUI, TIA, TON, TST
+2026-05-18 22:37:51,552 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-18 22:38:04,270 | WARNING | No candles returned for MEW
+2026-05-18 22:38:04,440 | WARNING | No candles returned for MEW
+2026-05-18 22:38:09,673 | INFO |   Got technicals for 19 coins
+2026-05-18 22:38:09,673 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-18 22:38:10,023 | INFO |   No automatic exits triggered
+2026-05-18 22:38:10,023 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-18 22:38:10,580 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-18 22:38:12,073 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-18 22:38:12,073 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-18 22:38:12,370 | INFO |   📝 Market view: Dry run active
+2026-05-18 22:38:12,370 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-18 22:38:12,370 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-18 22:38:12,370 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-18 22:38:14,121 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $53.66
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $53.66
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-18 22:38:14,122 | INFO |   💤 No open positions
+2026-05-18 22:38:14,122 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-18 22:38:14,124 | INFO | 
+✅ Cycle complete in 25.3s | Equity: $53.66 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-19 13:49:15,948 | INFO | ======================================================================
+2026-05-19 13:49:15,949 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-19 13:49:15,949 | INFO |   Capital:       $50.0
+2026-05-19 13:49:15,949 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-19 13:49:15,949 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-19 13:49:15,949 | INFO |   Mode:          DRY RUN
+2026-05-19 13:49:15,949 | INFO |   Nansen API:    ✅ Configured
+2026-05-19 13:49:15,949 | INFO |   CoinGecko:     ✅ Configured
+2026-05-19 13:49:15,949 | INFO |   Claude API:    ✅ Configured
+2026-05-19 13:49:15,949 | INFO | ======================================================================
+2026-05-19 13:49:15,949 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-19 13:49:17,937 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-19 13:49:17,937 | INFO | ✅ Telegram notifier ready.
+2026-05-19 13:49:17,938 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-19 13:49:17,938 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-19 13:49:17,938 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 08:19:17 UTC
+2026-05-19 13:49:17,939 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-19 13:49:17,939 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-19 13:49:19,578 | INFO | 🔥 Volatility Leaders: PURR, DYM, ONDO, BOME, LIT, BERA, NEAR, MEW, INJ, DYDX
+2026-05-19 13:49:19,578 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-19 13:49:20,200 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-19 13:49:20,598 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-19 13:49:20,598 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-19 13:49:20,598 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-19 13:49:20,598 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BERA, BNB, BOME, BTC, DYDX, DYM, ETH, HYPE, INJ, LINK, LIT, MEW, NEAR, ONDO, PURR, SOL, SUI, TIA
+2026-05-19 13:49:20,599 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-19 13:49:32,738 | WARNING | No candles returned for MEW
+2026-05-19 13:49:33,052 | WARNING | No candles returned for MEW
+2026-05-19 13:49:38,613 | INFO |   Got technicals for 19 coins
+2026-05-19 13:49:38,614 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-19 13:49:39,096 | INFO |   No automatic exits triggered
+2026-05-19 13:49:39,097 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-19 13:49:39,561 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-19 13:49:40,756 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-19 13:49:40,756 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-19 13:49:41,048 | INFO |   📝 Market view: Dry run active
+2026-05-19 13:49:41,048 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-19 13:49:41,049 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-19 13:49:41,049 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-19 13:49:42,461 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.04
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.04
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-19 13:49:42,461 | INFO |   💤 No open positions
+2026-05-19 13:49:42,461 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-19 13:49:42,463 | INFO | 
+✅ Cycle complete in 24.5s | Equity: $50.04 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-19 13:52:54,182 | INFO | ======================================================================
+2026-05-19 13:52:54,183 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-19 13:52:54,183 | INFO |   Capital:       $50.0
+2026-05-19 13:52:54,183 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-19 13:52:54,183 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-19 13:52:54,183 | INFO |   Mode:          DRY RUN
+2026-05-19 13:52:54,183 | INFO |   Nansen API:    ✅ Configured
+2026-05-19 13:52:54,183 | INFO |   CoinGecko:     ✅ Configured
+2026-05-19 13:52:54,183 | INFO |   Claude API:    ✅ Configured
+2026-05-19 13:52:54,183 | INFO | ======================================================================
+2026-05-19 13:52:54,183 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-19 13:52:55,869 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-19 13:52:55,869 | INFO | ✅ Telegram notifier ready.
+2026-05-19 13:52:55,869 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-19 13:52:55,869 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-19 13:52:55,870 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 08:22:55 UTC
+2026-05-19 13:52:55,870 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-19 13:52:55,870 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-19 13:52:57,494 | INFO | 🔥 Volatility Leaders: PURR, DYM, ONDO, BOME, LIT, BERA, NEAR, MEW, HYPER, INJ
+2026-05-19 13:52:57,495 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-19 13:52:58,612 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-19 13:52:58,945 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-19 13:52:58,945 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-19 13:52:58,945 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-19 13:52:58,945 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BERA, BNB, BOME, BTC, DYM, ETH, HYPE, HYPER, INJ, LINK, LIT, MEW, NEAR, ONDO, PURR, SOL, SUI, TIA
+2026-05-19 13:52:58,946 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-19 13:53:09,923 | WARNING | No candles returned for MEW
+2026-05-19 13:53:10,093 | WARNING | No candles returned for MEW
+2026-05-19 13:53:15,774 | INFO |   Got technicals for 19 coins
+2026-05-19 13:53:15,774 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-19 13:53:16,133 | INFO |   No automatic exits triggered
+2026-05-19 13:53:16,133 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-19 13:53:16,759 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-19 13:53:18,151 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-19 13:53:18,151 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-19 13:53:18,432 | INFO |   📝 Market view: Dry run active
+2026-05-19 13:53:18,432 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-19 13:53:18,433 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-19 13:53:18,433 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-19 13:53:19,682 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.04
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.04
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-19 13:53:19,682 | INFO |   💤 No open positions
+2026-05-19 13:53:19,682 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-19 13:53:19,683 | INFO | 
+✅ Cycle complete in 23.8s | Equity: $50.04 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-19 13:54:16,691 | INFO | ======================================================================
+2026-05-19 13:54:16,691 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-19 13:54:16,691 | INFO |   Capital:       $50.0
+2026-05-19 13:54:16,691 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-19 13:54:16,691 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-19 13:54:16,691 | INFO |   Mode:          DRY RUN
+2026-05-19 13:54:16,691 | INFO |   Nansen API:    ✅ Configured
+2026-05-19 13:54:16,691 | INFO |   CoinGecko:     ✅ Configured
+2026-05-19 13:54:16,691 | INFO |   Claude API:    ✅ Configured
+2026-05-19 13:54:16,691 | INFO | ======================================================================
+2026-05-19 13:54:16,691 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-19 13:54:18,797 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-19 13:54:18,797 | INFO | ✅ Telegram notifier ready.
+2026-05-19 13:54:18,797 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-19 13:54:18,798 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-19 13:54:18,798 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 08:24:18 UTC
+2026-05-19 13:54:18,798 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-19 13:54:18,798 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-19 13:54:20,390 | INFO | 🔥 Volatility Leaders: PURR, BOME, DYM, ONDO, LIT, NEAR, BERA, MEW, HYPER, INJ
+2026-05-19 13:54:20,391 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-19 13:54:20,978 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-19 13:54:21,308 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-19 13:54:21,308 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-19 13:54:21,308 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-19 13:54:21,308 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BERA, BNB, BOME, BTC, DYM, ETH, HYPE, HYPER, INJ, LINK, LIT, MEW, NEAR, ONDO, PURR, SOL, SUI, TIA
+2026-05-19 13:54:21,309 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-19 13:54:32,244 | WARNING | No candles returned for MEW
+2026-05-19 13:54:32,417 | WARNING | No candles returned for MEW
+2026-05-19 13:54:38,377 | INFO |   Got technicals for 19 coins
+2026-05-19 13:54:38,377 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-19 13:54:39,124 | INFO |   No automatic exits triggered
+2026-05-19 13:54:39,124 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-19 13:54:39,602 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-19 13:54:40,929 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-19 13:54:40,929 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-19 13:54:41,211 | INFO |   📝 Market view: Dry run active
+2026-05-19 13:54:41,211 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-19 13:54:41,212 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-19 13:54:41,212 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-19 13:54:42,705 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.04
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.04
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-19 13:54:42,705 | INFO |   💤 No open positions
+2026-05-19 13:54:42,705 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-19 13:54:42,707 | INFO | 
+✅ Cycle complete in 23.9s | Equity: $50.04 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-19 13:58:28,262 | INFO | ======================================================================
+2026-05-19 13:58:28,262 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-19 13:58:28,262 | INFO |   Capital:       $50.0
+2026-05-19 13:58:28,262 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-19 13:58:28,262 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-19 13:58:28,262 | INFO |   Mode:          DRY RUN
+2026-05-19 13:58:28,262 | INFO |   Nansen API:    ✅ Configured
+2026-05-19 13:58:28,262 | INFO |   CoinGecko:     ✅ Configured
+2026-05-19 13:58:28,262 | INFO |   Claude API:    ✅ Configured
+2026-05-19 13:58:28,262 | INFO | ======================================================================
+2026-05-19 13:58:28,262 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-19 13:58:29,681 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-19 13:58:29,681 | INFO | ✅ Telegram notifier ready.
+2026-05-19 13:58:29,682 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-19 13:58:29,682 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-19 13:58:29,683 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 08:28:29 UTC
+2026-05-19 13:58:29,683 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-19 13:58:29,683 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-19 13:58:31,420 | INFO | 🔥 Volatility Leaders: PURR, BOME, ONDO, DYM, LIT, NEAR, BERA, MEW, HYPER, INJ
+2026-05-19 13:58:31,421 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-19 13:58:31,915 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-19 13:58:32,290 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-19 13:58:32,290 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-19 13:58:32,290 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-19 13:58:32,291 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BERA, BNB, BOME, BTC, DYM, ETH, HYPE, HYPER, INJ, LINK, LIT, MEW, NEAR, ONDO, PURR, SOL, SUI, TIA
+2026-05-19 13:58:32,291 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-19 13:58:44,572 | WARNING | No candles returned for MEW
+2026-05-19 13:58:44,739 | WARNING | No candles returned for MEW
+2026-05-19 13:58:50,301 | INFO |   Got technicals for 19 coins
+2026-05-19 13:58:50,302 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-19 13:58:50,889 | INFO |   No automatic exits triggered
+2026-05-19 13:58:50,889 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-19 13:58:51,492 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-19 13:58:52,756 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-19 13:58:52,756 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-19 13:58:53,025 | INFO |   📝 Market view: Dry run active
+2026-05-19 13:58:53,025 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-19 13:58:53,026 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-19 13:58:53,026 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-19 13:58:54,232 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.04
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.04
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-19 13:58:54,232 | INFO |   💤 No open positions
+2026-05-19 13:58:54,232 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-19 13:58:54,234 | INFO | 
+✅ Cycle complete in 24.6s | Equity: $50.04 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-19 14:02:33,415 | INFO | ======================================================================
+2026-05-19 14:02:33,416 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-19 14:02:33,416 | INFO |   Capital:       $50.0
+2026-05-19 14:02:33,416 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-19 14:02:33,416 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-19 14:02:33,416 | INFO |   Mode:          DRY RUN
+2026-05-19 14:02:33,416 | INFO |   Nansen API:    ✅ Configured
+2026-05-19 14:02:33,416 | INFO |   CoinGecko:     ✅ Configured
+2026-05-19 14:02:33,416 | INFO |   Claude API:    ✅ Configured
+2026-05-19 14:02:33,416 | INFO | ======================================================================
+2026-05-19 14:02:33,416 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-19 14:02:35,239 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-19 14:02:35,239 | INFO | ✅ Telegram notifier ready.
+2026-05-19 14:02:35,239 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-19 14:02:35,239 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-19 14:02:35,240 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 08:32:35 UTC
+2026-05-19 14:02:35,240 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-19 14:02:35,240 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-19 14:02:36,561 | INFO | 🔥 Volatility Leaders: PURR, BOME, DYM, ONDO, LIT, NEAR, BERA, MEW, HYPER, INJ
+2026-05-19 14:02:36,561 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-19 14:02:37,096 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-19 14:02:37,499 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-19 14:02:37,499 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-19 14:02:37,499 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-19 14:02:37,499 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BERA, BNB, BOME, BTC, DYM, ETH, HYPE, HYPER, INJ, LINK, LIT, MEW, NEAR, ONDO, PURR, SOL, SUI, TIA
+2026-05-19 14:02:37,500 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-19 14:02:49,237 | WARNING | No candles returned for MEW
+2026-05-19 14:02:49,406 | WARNING | No candles returned for MEW
+2026-05-19 14:02:55,868 | INFO |   Got technicals for 19 coins
+2026-05-19 14:02:55,868 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-19 14:02:56,243 | INFO |   No automatic exits triggered
+2026-05-19 14:02:56,243 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-19 14:02:56,700 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-19 14:02:58,730 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-19 14:02:58,730 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-19 14:02:58,999 | INFO |   📝 Market view: Dry run active
+2026-05-19 14:02:58,999 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-19 14:02:59,000 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-19 14:02:59,000 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-19 14:03:00,306 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.04
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.04
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-19 14:03:00,306 | INFO |   💤 No open positions
+2026-05-19 14:03:00,306 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-19 14:03:00,308 | INFO | 
+✅ Cycle complete in 25.1s | Equity: $50.04 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-19 14:09:51,447 | INFO | ======================================================================
+2026-05-19 14:09:51,447 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-19 14:09:51,447 | INFO |   Capital:       $50.0
+2026-05-19 14:09:51,447 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-19 14:09:51,447 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-19 14:09:51,447 | INFO |   Mode:          DRY RUN
+2026-05-19 14:09:51,447 | INFO |   Nansen API:    ✅ Configured
+2026-05-19 14:09:51,447 | INFO |   CoinGecko:     ✅ Configured
+2026-05-19 14:09:51,447 | INFO |   Claude API:    ✅ Configured
+2026-05-19 14:09:51,447 | INFO | ======================================================================
+2026-05-19 14:09:51,447 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-19 14:09:53,210 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-19 14:09:53,210 | INFO | ✅ Telegram notifier ready.
+2026-05-19 14:09:53,211 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-19 14:09:53,211 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-19 14:09:53,211 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 08:39:53 UTC
+2026-05-19 14:09:53,212 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-19 14:09:53,212 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-19 14:09:55,117 | INFO | 🔥 Volatility Leaders: BOME, PURR, ONDO, DYM, LIT, NEAR, HYPER, BERA, MEW, INJ
+2026-05-19 14:09:55,117 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-19 14:09:55,824 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-19 14:09:56,157 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-19 14:09:56,157 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-19 14:09:56,158 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-19 14:09:56,158 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BERA, BNB, BOME, BTC, DYM, ETH, HYPE, HYPER, INJ, LINK, LIT, MEW, NEAR, ONDO, PURR, SOL, SUI, TIA
+2026-05-19 14:09:56,158 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-19 14:10:08,566 | WARNING | No candles returned for MEW
+2026-05-19 14:10:08,734 | WARNING | No candles returned for MEW
+2026-05-19 14:10:14,155 | INFO |   Got technicals for 19 coins
+2026-05-19 14:10:14,155 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-19 14:10:14,496 | INFO |   No automatic exits triggered
+2026-05-19 14:10:14,496 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-19 14:10:14,954 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-19 14:10:16,563 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-19 14:10:16,563 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-19 14:10:16,799 | INFO |   📝 Market view: Dry run active
+2026-05-19 14:10:16,800 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-19 14:10:16,800 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-19 14:10:16,800 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-19 14:10:18,182 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.04
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.04
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-19 14:10:18,182 | INFO |   💤 No open positions
+2026-05-19 14:10:18,182 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-19 14:10:18,183 | INFO | 
+✅ Cycle complete in 25.0s | Equity: $50.04 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-19 14:18:28,708 | INFO | ======================================================================
+2026-05-19 14:18:28,708 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-19 14:18:28,708 | INFO |   Capital:       $50.0
+2026-05-19 14:18:28,708 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-19 14:18:28,708 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-19 14:18:28,708 | INFO |   Mode:          DRY RUN
+2026-05-19 14:18:28,708 | INFO |   Nansen API:    ✅ Configured
+2026-05-19 14:18:28,708 | INFO |   CoinGecko:     ✅ Configured
+2026-05-19 14:18:28,708 | INFO |   Claude API:    ✅ Configured
+2026-05-19 14:18:28,708 | INFO | ======================================================================
+2026-05-19 14:18:28,708 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-19 14:18:30,349 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-19 14:18:30,349 | INFO | ✅ Telegram notifier ready.
+2026-05-19 14:18:30,349 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-19 14:18:30,349 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-19 14:18:30,350 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 08:48:30 UTC
+2026-05-19 14:18:30,350 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-19 14:18:30,350 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-19 14:18:31,799 | INFO | 🔥 Volatility Leaders: BOME, ONDO, PURR, LIT, DYM, NEAR, HYPER, MEW, BERA, INJ
+2026-05-19 14:18:31,799 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-19 14:18:32,316 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-19 14:18:32,909 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-19 14:18:32,909 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-19 14:18:32,909 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-19 14:18:32,909 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BERA, BNB, BOME, BTC, DYM, ETH, HYPE, HYPER, INJ, LINK, LIT, MEW, NEAR, ONDO, PURR, SOL, SUI, TIA
+2026-05-19 14:18:32,909 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-19 14:18:44,969 | WARNING | No candles returned for MEW
+2026-05-19 14:18:45,137 | WARNING | No candles returned for MEW
+2026-05-19 14:18:51,379 | INFO |   Got technicals for 19 coins
+2026-05-19 14:18:51,379 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-19 14:18:51,721 | INFO |   No automatic exits triggered
+2026-05-19 14:18:51,721 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-19 14:18:52,190 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-19 14:18:53,352 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-19 14:18:53,352 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-19 14:18:53,593 | INFO |   📝 Market view: Dry run active
+2026-05-19 14:18:53,593 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-19 14:18:53,593 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-19 14:18:53,594 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-19 14:18:55,333 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.04
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.04
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-19 14:18:55,333 | INFO |   💤 No open positions
+2026-05-19 14:18:55,333 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-19 14:18:55,335 | INFO | 
+✅ Cycle complete in 25.0s | Equity: $50.04 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-20 01:04:16,982 | INFO | ======================================================================
+2026-05-20 01:04:16,982 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-20 01:04:16,983 | INFO |   Capital:       $50.0
+2026-05-20 01:04:16,983 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-20 01:04:16,983 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-20 01:04:16,983 | INFO |   Mode:          DRY RUN
+2026-05-20 01:04:16,983 | INFO |   Nansen API:    ✅ Configured
+2026-05-20 01:04:16,983 | INFO |   CoinGecko:     ✅ Configured
+2026-05-20 01:04:16,983 | INFO |   Claude API:    ✅ Configured
+2026-05-20 01:04:16,983 | INFO | ======================================================================
+2026-05-20 01:04:16,983 | INFO | 🟢 LIVE TRADING MODE ON — Real orders will be executed on Hyperliquid Mainnet! 🟢
+2026-05-20 01:04:19,404 | INFO | 🟢 HyperliquidTrader initialized on MAINNET for account 0xa8d43fAefaBc9c7b02C8FE5F1F164389F80aF28c
+2026-05-20 01:04:19,404 | INFO | ✅ Telegram notifier ready.
+2026-05-20 01:04:19,404 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-20 01:04:19,405 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-20 01:04:19,405 | INFO |   🧠 BRAIN CYCLE — 2026-05-19 19:34:19 UTC
+2026-05-20 01:04:19,405 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-20 01:04:19,405 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-20 01:04:20,901 | INFO | 🔥 Volatility Leaders: VVV, PURR, LIT, NIL, PYTH, MEW, COMP, DYDX, BIO, HYPE
+2026-05-20 01:04:20,902 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-20 01:04:21,458 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-20 01:04:21,815 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-20 01:04:21,815 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-20 01:04:21,816 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-20 01:04:21,816 | INFO | 👀 Watchlist: 20 coins — ARB, AVAX, BIO, BNB, BTC, COMP, DYDX, ETH, HYPE, LINK, LIT, MEW, NIL, PURR, PYTH, SOL, SUI, TIA, TON, VVV
+2026-05-20 01:04:21,816 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-20 01:04:33,027 | WARNING | No candles returned for MEW
+2026-05-20 01:04:33,219 | WARNING | No candles returned for MEW
+2026-05-20 01:04:41,536 | INFO |   Got technicals for 19 coins
+2026-05-20 01:04:41,537 | INFO | 
+💰 Step 6: Checking SL / TP / expiry exits...
+2026-05-20 01:04:41,870 | INFO |   No automatic exits triggered
+2026-05-20 01:04:41,870 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-20 01:04:42,326 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-20 01:04:43,554 | INFO |   [DRY RUN] Skipping CLAUDE call — no trades executed
+2026-05-20 01:04:43,555 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-20 01:04:43,841 | INFO |   📝 Market view: Dry run active
+2026-05-20 01:04:43,841 | INFO |   ⏸️  Skip reason: Dry run mode
+2026-05-20 01:04:43,841 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-20 01:04:43,841 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-20 01:04:45,418 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $51.13
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $51.13
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-20 01:04:45,418 | INFO |   💤 No open positions
+2026-05-20 01:04:45,418 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-20 01:04:45,419 | INFO | 
+✅ Cycle complete in 26.0s | Equity: $51.13 | Positions: 0 | Win rate: 0% | AI calls: YES
