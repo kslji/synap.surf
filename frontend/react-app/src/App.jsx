@@ -11,7 +11,12 @@ import AIPage from './components/AIPage.jsx';
 import { ToastProvider } from './components/Toast.jsx';
 
 export default function App() {
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState(() => localStorage.getItem('app_view') || 'dashboard');
+  
+  useEffect(() => {
+    localStorage.setItem('app_view', view);
+  }, [view]);
+
   const [tradingMode, setTradingMode] = useState(() => localStorage.getItem('trading_mode') || 'bot');
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const { stats, trades, decisions, perps, intel, topCoins, fetchAll } = useDashboard();

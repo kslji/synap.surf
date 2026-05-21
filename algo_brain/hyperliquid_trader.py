@@ -63,7 +63,6 @@ class HyperliquidTrader:
             account_address=self.user_address,
         )
         self.info = Info(base_url=self.base_url, skip_ws=True)
-
         # Cumulative stats (persisted locally)
         self.realized_pnl = 0.0
         self.total_trades = 0

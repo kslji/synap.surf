@@ -56,31 +56,7 @@ export default function AIPage() {
       <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(0, 210, 211, 0.15) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 0, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(108, 92, 231, 0.15) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 0, pointerEvents: 'none' }} />
 
-      {/* Header */}
-      <header style={{ padding: '32px 40px', display: 'flex', alignItems: 'center', gap: 20, zIndex: 1, flexShrink: 0 }}>
-        <div style={{ 
-          width: 56, height: 56, borderRadius: '18px', 
-          background: 'linear-gradient(135deg, #00d2d3, #6c5ce7)', 
-          display: 'flex', alignItems: 'center', justifyContent: 'center', 
-          boxShadow: '0 8px 32px rgba(108, 92, 231, 0.4)' 
-        }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/>
-            <path d="M19 2l1.5 3 3 1.5-3 1.5L19 11l-1.5-3-3-1.5 3-1.5z"/>
-          </svg>
-        </div>
-        <div>
-          <h2 style={{ 
-            fontSize: 32, margin: 0, fontWeight: 900, letterSpacing: '-1px', 
-            color: 'var(--t1)'
-          }}>
-            ALGO BRAIN
-          </h2>
-          <p style={{ color: 'var(--t3)', fontSize: 14, marginTop: 4, fontWeight: 600, letterSpacing: '0.5px' }}>
-            Your AI Trading Assistant, which will keep you updated on the latest news and trends.
-          </p>
-        </div>
-      </header>
+
 
       {/* Chat Area */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 40px 40px 40px', display: 'flex', flexDirection: 'column', zIndex: 1 }}>
@@ -90,7 +66,12 @@ export default function AIPage() {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', animation: 'fadeIn 1s ease-out' }}>
               <div style={{ textAlign: 'center', marginBottom: 48 }}>
                 <h1 style={{ fontSize: 48, fontWeight: 900, color: 'var(--t1)', letterSpacing: '-2px', marginBottom: 16 }}>How can I help you dominate the markets?</h1>
-                <p style={{ fontSize: 18, color: 'var(--t3)', fontWeight: 500 }}>Select a prompt below or type your own question.</p>
+                <p style={{ fontSize: 18, color: 'var(--t3)', fontWeight: 500 }}>
+                  Select a prompt below or type your own question.<br/>
+                  <span style={{ fontSize: 14, color: 'var(--accent)', marginTop: 8, display: 'inline-block', fontWeight: 600 }}>
+                    (in free trial only 5 credits / prompts are available)
+                  </span>
+                </p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: '800px' }}>
                 {[

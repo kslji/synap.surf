@@ -57,24 +57,113 @@ function SignalModal({ item, onClose }) {
 }
 
 function TelegramModal({ onClose }) {
+  const [tgToken, setTgToken] = useState('');
+  const [tgChatId, setTgChatId] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings/keys').then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.telegram_bot_token) setTgToken(d.telegram_bot_token);
+        if (d?.telegram_chat_id) setTgChatId(d.telegram_chat_id);
+      }).catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await fetch('/api/settings/keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_bot_token: tgToken, telegram_chat_id: tgChatId }),
+    }).catch(() => {});
+    setSaving(false);
+    onClose();
+  };
+
   return (
     <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-content" style={{ maxWidth: 400 }}>
         <span className="modal-close" onClick={onClose}>×</span>
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ margin: 0, fontSize: 24 }}>Telegram Setup</h2>
-          <div style={{ color: 'var(--t3)', fontSize: 12, marginTop: 4 }}>Configure your bot notifications</div>
+        <div className="modal-header" style={{ marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            Telegram Notifications
+          </h2>
         </div>
-        <div className="bot-config" style={{ background: 'var(--bg)', border: 'none' }}>
-          <div className="bc-field" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-            <label style={{ fontSize: 11 }}>BOT TOKEN</label>
-            <input 
-              type="password" 
-              placeholder="123456789:ABCdefGHI..." 
-              style={{ width: '100%', textAlign: 'left', padding: '14px', borderRadius: 12 }} 
-            />
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--t3)', lineHeight: 1.5 }}>
+            Get instant alerts when the bot opens a trade, hits a take-profit, or hits a stop-loss.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>BOT TOKEN</label>
+            <input type="text" value={tgToken} onChange={e => setTgToken(e.target.value)} placeholder="123456789:ABCdefGHIjklMNOpqr..." style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--t1)', fontSize: 13 }} />
           </div>
-          <button className="bc-save-btn" style={{ width: '100%', marginTop: 24 }} onClick={onClose}>SAVE TELEGRAM CONFIG</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>CHAT ID</label>
+            <input type="text" value={tgChatId} onChange={e => setTgChatId(e.target.value)} placeholder="e.g. -100123456789" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--t1)', fontSize: 13 }} />
+          </div>
+          <button onClick={handleSave} disabled={saving} style={{ background: 'var(--accent)', color: '#fff', border: 'none', padding: 12, borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: 'pointer', marginTop: 8 }}>
+            {saving ? 'SAVING...' : 'SAVE CONFIGURATION'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PositionsModal({ positions, onClose }) {
+  const [closingCoin, setClosingCoin] = useState(null);
+
+  const handleClose = async (coin) => {
+    setClosingCoin(coin);
+    try {
+      await fetch('/api/trade/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coin })
+      });
+    } catch (e) {}
+    setClosingCoin(null);
+  };
+
+  return (
+    <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content" style={{ maxWidth: 500 }}>
+        <span className="modal-close" onClick={onClose}>×</span>
+        <div className="modal-header" style={{ marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--t1)' }}>OPEN POSITIONS</h2>
+        </div>
+        <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+          {!positions || positions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--t3)' }}>
+              No active positions.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {positions.map((p, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--t1)' }}>{p.coin}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: p.side === 'LONG' ? 'var(--accent)' : 'var(--red)' }}>{p.side} {p.leverage}x</span>
+                    </div>
+                    <div style={{ marginTop: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: p.pnl_usd >= 0 ? 'var(--accent)' : 'var(--red)' }}>
+                        {p.pnl_usd >= 0 ? '+' : '-'}${Math.abs(p.pnl_usd).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleClose(p.coin)}
+                    disabled={closingCoin === p.coin}
+                    style={{ background: 'var(--t3)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    {closingCoin === p.coin ? 'CLOSING...' : 'CLOSE'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -104,10 +193,35 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   const toast = useToast();
   const [modal, setModal] = useState(null);
   const [tgModal, setTgModal] = useState(false);
+  const [posModal, setPosModal] = useState(false);
   const [aiEngine, setAiEngine] = useState('claude');
   const [hlOrderMode, setHlOrderMode] = useState('market');
   const [astOrderMode, setAstOrderMode] = useState('market');
   const [showTPSL, setShowTPSL] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [panelWidth, setPanelWidth] = useState(380);
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleMouseMove = (e) => {
+      let newWidth = window.innerWidth - e.clientX;
+      if (newWidth < 320) newWidth = 320;
+      if (newWidth > 800) newWidth = 800;
+      setPanelWidth(newWidth);
+    };
+    const handleMouseUp = () => setIsResizing(false);
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.userSelect = 'none';
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
 
   // New trade state
   const [tradeCoin, setTradeCoin] = useState('HYPE');
@@ -143,6 +257,17 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     return () => document.removeEventListener('mousedown', handler);
   }, [coinDropOpen]);
 
+  // Close bot asset dropdown on outside click
+  const [botAssetDropOpen, setBotAssetDropOpen] = useState(false);
+  useEffect(() => {
+    if (!botAssetDropOpen) return;
+    const handler = (e) => {
+      if (!e.target.closest('[data-bot-asset-drop]')) setBotAssetDropOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [botAssetDropOpen]);
+
   // Per-coin max leverage from Hyperliquid
   const [maxLeverage, setMaxLeverage] = useState(20);
   useEffect(() => {
@@ -153,12 +278,12 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   }, [tradeCoin]);
 
   const [botParams, setBotParams] = useState({
-    MAX_CAPITAL_PER_TRADE_PCT: '5',
-    MAX_LEVERAGE: '10',
+    MARGIN: '50',
+    LEVERAGE: '10',
     MAX_HOLD_HOURS: '24',
-    MAX_OPEN_POSITIONS: '2',
     TARGET_ROE_PCT: 'AUTO',
-    STOP_LOSS_PCT: 'AUTO'
+    STOP_LOSS_PCT: 'AUTO',
+    ASSET: 'AUTO'
   });
 
   const handleBotChange = (key, val) => {
@@ -187,6 +312,19 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   const handleTrade = async (action) => {
     if (tradeLoading) return;
     setTradeLoading(true);
+    
+    // Hyperliquid requires a minimum nominal size of $10
+    if ((action === 'LONG' || action === 'SHORT') && (tradeSize * tradeLev < 10)) {
+      toast({ 
+        type: 'error', 
+        title: 'Order Too Small', 
+        message: 'Hyperliquid requires a minimum nominal order size of $10. Please increase your margin or leverage.', 
+        duration: 7000 
+      });
+      setTradeLoading(false);
+      return;
+    }
+    
     try {
       // Auto-sync wallet from localStorage to backend if available
       const savedWallet = localStorage.getItem('hl_wallet');
@@ -257,8 +395,19 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     if (!levPresets.includes(maxLeverage)) levPresets.push(maxLeverage);
 
     return (
-      <aside className="right-panel">
+      <div className={`rp-container ${isPanelOpen ? 'open' : 'closed'} ${isResizing ? 'resizing' : ''}`}>
+        <div className="rp-resizer" onMouseDown={() => { setIsPanelOpen(true); setIsResizing(true); }} />
+        <button className="rp-toggle-btn" onClick={() => setIsPanelOpen(!isPanelOpen)} title={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}>
+          {isPanelOpen ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          )}
+        </button>
+        <aside className="right-panel" style={isPanelOpen ? { width: panelWidth } : {}}>
+        {modal && <SignalModal item={modal} onClose={() => setModal(null)} />}
         {tgModal && <TelegramModal onClose={() => setTgModal(false)} />}
+        {posModal && <PositionsModal positions={positions} onClose={() => setPosModal(false)} />}
         
         {/* HYPERLIQUID SECTION */}
         <section className="rp-section">
@@ -269,9 +418,11 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 <span className={`tt-tab ${hlOrderMode === 'market' ? 'active' : ''}`} onClick={() => setHlOrderMode('market')}>MARKET</span>
                 <span className={`tt-tab ${hlOrderMode === 'limit' ? 'active' : ''}`} onClick={() => setHlOrderMode('limit')}>LIMIT</span>
               </div>
-              <div className="bc-field" style={{ gap: 8 }}>
-                <label style={{ fontSize: 9 }}>NOTIFS <span className="edit-link" onClick={() => setTgModal(true)}>Edit</span></label>
-                <label className="switch mini">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  NOTIFS <span className="edit-link" onClick={() => setTgModal(true)}>Edit</span>
+                </label>
+                <label className="switch mini" style={{ margin: 0 }}>
                   <input type="checkbox" defaultChecked />
                   <span className="slider round" />
                 </label>
@@ -440,10 +591,15 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
 
         {/* ALGO AI BOT SECTION */}
         <section className="rp-section">
-          <div className="rp-hdr"><h3>ALGO AI BOT</h3></div>
+          <div className="rp-hdr">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              ALGO AI BOT 
+              <span style={{ fontSize: 9, color: '#ff9f43', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.5px', textTransform: 'none' }}>(Max 2 positions)</span>
+            </h3>
+          </div>
           <div className="bot-config">
             {Object.entries(botParams).map(([key, val]) => {
-              const isAutoCapable = key === 'TARGET_ROE_PCT' || key === 'STOP_LOSS_PCT';
+              const isAutoCapable = key === 'TARGET_ROE_PCT' || key === 'STOP_LOSS_PCT' || key === 'ASSET';
               const isAuto = val === 'AUTO';
               return (
                 <div key={key} className="bc-field" style={{ alignItems: isAutoCapable ? 'flex-start' : 'center' }}>
@@ -454,19 +610,44 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                         <input 
                           type="checkbox" 
                           checked={isAuto} 
-                          onChange={(e) => handleBotChange(key, e.target.checked ? 'AUTO' : '10')}
+                          onChange={(e) => handleBotChange(key, e.target.checked ? 'AUTO' : (key === 'ASSET' ? 'BTC' : '10'))}
                         />
                         AI AUTO
                       </label>
                     )}
                   </div>
-                  <input 
-                    type={isAuto ? "text" : "number"} 
-                    value={isAuto ? "AUTO" : val} 
-                    disabled={isAuto}
-                    onChange={e => handleBotChange(key, e.target.value)} 
-                    style={isAuto ? { opacity: 0.5, cursor: 'not-allowed', textAlign: 'center' } : {}}
-                  />
+                  {key === 'ASSET' && !isAuto ? (
+                    <div style={{ position: 'relative' }} data-bot-asset-drop>
+                      <button 
+                        onClick={() => setBotAssetDropOpen(o => !o)}
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', color: 'var(--t1)', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                      >
+                        {val}
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2.5" style={{ transform: botAssetDropOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      {botAssetDropOpen && (
+                        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1e1e24', border: '1px solid var(--border)', borderRadius: 12, padding: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', width: 160 }}>
+                          {coins.map(c => (
+                            <button key={c} onClick={() => { handleBotChange(key, c); setBotAssetDropOpen(false); }}
+                              style={{ background: val === c ? 'rgba(0, 210, 211, 0.1)' : 'transparent', color: val === c ? 'var(--accent)' : 'var(--t2)', border: 'none', borderRadius: 6, padding: '6px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}
+                              onMouseEnter={e => { if (val !== c) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                              onMouseLeave={e => { if (val !== c) e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <input 
+                      type={(isAuto || key === 'ASSET') ? "text" : "number"} 
+                      value={isAuto ? "AUTO" : val} 
+                      disabled={isAuto}
+                      onChange={e => handleBotChange(key, key === 'ASSET' ? e.target.value.toUpperCase() : e.target.value)} 
+                      style={isAuto ? { opacity: 0.5, cursor: 'not-allowed', textAlign: 'center' } : {}}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -480,20 +661,30 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
             <div className="bc-field" style={{ marginTop: 16, marginBottom: 8 }}>
               <label style={{ fontSize: 9 }}>AI ENGINE</label>
               <div className="mini-toggle" style={{ background: 'var(--bg)', border: '1px solid var(--border)', width: 'fit-content' }}>
-                {['claude', 'grok'].map(m => (
-                  <span key={m} className={`m-tgl${aiEngine === m ? ' active' : ''}`} onClick={() => setAiEngine(m)} style={{ fontSize: 8, padding: '4px 10px' }}>{m.toUpperCase()}</span>
-                ))}
+                <span className={`m-tgl${aiEngine === 'claude' ? ' active' : ''}`} onClick={() => setAiEngine('claude')} style={{ fontSize: 8, padding: '4px 10px' }}>CLAUDE</span>
+                <span className="m-tgl grok-tooltip" data-tooltip="Right now Grok is unavailable" style={{ fontSize: 8, padding: '4px 10px', opacity: 0.5, cursor: 'not-allowed' }}>GROK</span>
               </div>
             </div>
             <button className="bc-save-btn">SAVE PARAMETERS</button>
+            <button className="bc-save-btn" onClick={() => setPosModal(true)} style={{ marginTop: 8, background: 'rgba(255,255,255,0.05)', color: 'var(--t1)' }}>VIEW OPEN POSITIONS</button>
           </div>
         </section>
       </aside>
+      </div>
     );
   }
 
   return (
-    <aside className="right-panel">
+    <div className={`rp-container ${isPanelOpen ? 'open' : 'closed'} ${isResizing ? 'resizing' : ''}`}>
+      <div className="rp-resizer" onMouseDown={() => { setIsPanelOpen(true); setIsResizing(true); }} />
+      <button className="rp-toggle-btn" onClick={() => setIsPanelOpen(!isPanelOpen)} title={isPanelOpen ? 'Collapse Panel' : 'Expand Panel'}>
+        {isPanelOpen ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        )}
+      </button>
+      <aside className="right-panel" style={isPanelOpen ? { width: panelWidth } : {}}>
       {modal && <SignalModal item={modal} onClose={() => setModal(null)} />}
       <section className="rp-section">
         <div className="rp-hdr">
@@ -555,5 +746,6 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
         </div>
       </section>
     </aside>
+    </div>
   );
 }

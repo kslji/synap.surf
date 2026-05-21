@@ -95,6 +95,14 @@ class HyperliquidManualClient:
                 result = self.exchange.market_open(name=coin, is_buy=is_buy, sz=sz, px=current_px, slippage=0.02)
                 
             if result.get("status") == "ok":
+                # Check for inner exchange errors
+                try:
+                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+                    if statuses and "error" in statuses[0]:
+                        return {"status": "error", "message": statuses[0]["error"]}
+                except Exception:
+                    pass
+
                 # Handle TP / SL orders if requested
                 # TP/SL requires submitting trigger orders
                 # Note: For robust TP/SL, we submit trigger orders on the opposite side
@@ -134,6 +142,12 @@ class HyperliquidManualClient:
         try:
             result = self.exchange.market_close(coin=coin, slippage=0.02)
             if result.get("status") == "ok":
+                try:
+                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+                    if statuses and "error" in statuses[0]:
+                        return {"status": "error", "message": statuses[0]["error"]}
+                except Exception:
+                    pass
                 return {"status": "success", "result": result}
             else:
                 return {"status": "error", "message": str(result)}
@@ -171,6 +185,12 @@ class HyperliquidManualClient:
             
             open_res = self.exchange.market_open(name=coin, is_buy=new_is_buy, sz=current_sz, px=current_px, slippage=0.02)
             if open_res.get("status") == "ok":
+                try:
+                    statuses = open_res.get("response", {}).get("data", {}).get("statuses", [])
+                    if statuses and "error" in statuses[0]:
+                        return {"status": "error", "message": f"Closed successfully, but failed to open opposite: {statuses[0]['error']}"}
+                except Exception:
+                    pass
                 return {"status": "success", "result": open_res}
             else:
                 return {"status": "error", "message": f"Closed but failed to open new: {open_res}"}

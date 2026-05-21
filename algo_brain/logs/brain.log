@@ -1410,3 +1410,151 @@
 
 2026-05-20 01:04:45,419 | INFO | 
 ✅ Cycle complete in 26.0s | Equity: $51.13 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-21 18:54:44,772 | INFO | ======================================================================
+2026-05-21 18:54:44,773 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-21 18:54:44,774 | INFO |   Capital:       $50.0
+2026-05-21 18:54:44,774 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-21 18:54:44,774 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-21 18:54:44,774 | INFO |   Mode:          PAPER TRADE
+2026-05-21 18:54:44,774 | INFO |   Nansen API:    ❌ Not set
+2026-05-21 18:54:44,774 | INFO |   CoinGecko:     ⚠️  No key (rate limited)
+2026-05-21 18:54:44,774 | INFO |   Claude API:    ✅ Configured
+2026-05-21 18:54:44,774 | INFO | ======================================================================
+2026-05-21 18:54:44,774 | INFO | 🟡 PAPER TRADING MODE ON — Simulation only. 🟡
+2026-05-21 18:54:44,775 | WARNING | TELEGRAM_BOT_TOKEN not set — Telegram notifications disabled.
+2026-05-21 18:54:44,775 | WARNING | TELEGRAM_BOT_TOKEN not set — bot polling disabled.
+2026-05-21 18:54:44,775 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-21 18:54:44,775 | INFO |   🧠 BRAIN CYCLE — 2026-05-21 13:24:44 UTC
+2026-05-21 18:54:44,775 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-21 18:54:44,775 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-21 18:54:47,191 | INFO | 🔥 Volatility Leaders: PROVE, APEX, 2Z, PURR, CHILLGUY, HYPE, GRASS, TST, LIT, ZEC
+2026-05-21 18:54:47,192 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-21 18:54:47,354 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-21 18:54:47,354 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,354 | WARNING | NANSEN_API_KEY not set — skipping Nansen call
+2026-05-21 18:54:47,355 | INFO | 📊 Nansen intelligence built. Credits: 0/1000
+2026-05-21 18:54:47,355 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-21 18:54:48,105 | INFO | 😱 Fear & Greed: 29 (Fear) trend=DECLINING
+2026-05-21 18:54:48,667 | INFO | 🔥 CoinGecko trending: ['MANIFEST', 'HYPE', 'NEX', 'PENGU', 'ZEC', 'VVV', 'ASTER', 'SOL', 'TAO', 'PI']
+2026-05-21 18:54:49,432 | INFO | 📂 Trending narratives: ['BONK.fun Ecosystem', 'Derivatives', 'Decentralized Exchange (DEX)', 'Binance HODLer Airdrops', 'Decentralized Finance (DeFi)']
+2026-05-21 18:54:58,019 | INFO | 📰 Fetched 161 headlines from 8 RSS feeds
+2026-05-21 18:54:58,035 | INFO | 📊 Sentiment data built: F&G=29, trending=15 coins, headlines for 6 coins
+2026-05-21 18:54:58,035 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-21 18:54:58,035 | INFO | 👀 Watchlist: 20 coins — 2Z, APEX, ARB, AVAX, BNB, BTC, CHILLGUY, ETH, GRASS, HYPE, LINK, LIT, PROVE, PURR, SOL, SUI, TIA, TON, TST, XRP
+2026-05-21 18:54:58,036 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-21 18:55:18,129 | INFO |   Got technicals for 20 coins
+2026-05-21 18:55:18,130 | INFO | 
+💰 Step 6: Checking SL proximity, TP hits, expiry exits...
+2026-05-21 18:55:18,130 | INFO |   No automatic exits triggered
+2026-05-21 18:55:18,130 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-21 18:55:18,617 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-21 18:55:19,297 | INFO | 📊 Sentiment data built: F&G=29, trending=15 coins, headlines for 6 coins
+2026-05-21 18:55:19,298 | INFO |   🧠 Sending 28,817 chars to Claude (claude-sonnet-4-5)...
+2026-05-21 18:55:19,806 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-05-21 18:55:19,807 | ERROR | Claude API error: Error code: 401 - {'type': 'error', 'error': {'type': 'authentication_error', 'message': 'invalid x-api-key'}, 'request_id': 'req_011CbFniC2CkZvyehebvcALo'}
+2026-05-21 18:55:19,808 | WARNING | CLAUDE returned no decision — skipping execution
+2026-05-21 18:58:59,449 | INFO | ======================================================================
+2026-05-21 18:58:59,449 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-21 18:58:59,449 | INFO |   Capital:       $50.0
+2026-05-21 18:58:59,449 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-21 18:58:59,449 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-21 18:58:59,449 | INFO |   Mode:          PAPER TRADE
+2026-05-21 18:58:59,449 | INFO |   Nansen API:    ✅ Configured
+2026-05-21 18:58:59,449 | INFO |   CoinGecko:     ✅ Configured
+2026-05-21 18:58:59,449 | INFO |   Claude API:    ✅ Configured
+2026-05-21 18:58:59,449 | INFO | ======================================================================
+2026-05-21 18:58:59,449 | INFO | 🟡 PAPER TRADING MODE ON — Simulation only. 🟡
+2026-05-21 18:58:59,451 | INFO | 📂 Loaded portfolio: cash=$50.00, 0 open positions, realized P&L=$+0.00
+2026-05-21 18:58:59,451 | INFO | ✅ Telegram notifier ready.
+2026-05-21 18:58:59,451 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-21 18:58:59,451 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-21 18:58:59,451 | INFO |   🧠 BRAIN CYCLE — 2026-05-21 13:28:59 UTC
+2026-05-21 18:58:59,452 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-21 18:58:59,452 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-21 18:59:01,265 | INFO | 🔥 Volatility Leaders: PROVE, 2Z, APEX, PURR, CHILLGUY, HYPE, GRASS, LIT, TST, ZEC
+2026-05-21 18:59:01,266 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-21 18:59:01,427 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-21 18:59:01,428 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-21 18:59:01,428 | INFO | 🔍 Nansen API: POST perp-screener
+2026-05-21 18:59:02,830 | INFO | 💳 Nansen credit used. Total: 1/1000 (999 remaining)
+2026-05-21 18:59:02,836 | INFO | 🔍 Nansen API: POST smart-money/netflow
+2026-05-21 18:59:09,302 | INFO | 💳 Nansen credit used. Total: 2/1000 (998 remaining)
+2026-05-21 18:59:09,310 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 18:59:09,311 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 18:59:09,311 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 18:59:09,311 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 18:59:09,311 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 18:59:09,311 | INFO | 🔍 Nansen API: POST token-screener
+2026-05-21 18:59:10,553 | INFO | 💳 Nansen credit used. Total: 3/1000 (997 remaining)
+2026-05-21 18:59:10,556 | INFO | 📊 Nansen intelligence built. Credits: 3/1000
+2026-05-21 18:59:10,557 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-21 18:59:11,304 | INFO | 😱 Fear & Greed: 29 (Fear) trend=DECLINING
+2026-05-21 18:59:12,701 | INFO | 🔥 CoinGecko trending: ['HYPE', 'MANIFEST', 'PENGU', 'NEX', 'ZEC', 'VVV', 'NEAR', 'LIT', 'ASTER', 'SOL']
+2026-05-21 18:59:12,839 | INFO | 📂 Trending narratives: ['Venice Ecosystem', 'Derivatives', 'Decentralized Exchange (DEX)', 'AI Applications', 'Decentralized Finance (DeFi)']
+2026-05-21 18:59:20,882 | INFO | 📰 Fetched 161 headlines from 8 RSS feeds
+2026-05-21 18:59:20,918 | INFO | 📊 Sentiment data built: F&G=29, trending=15 coins, headlines for 4 coins
+2026-05-21 18:59:20,918 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-21 18:59:20,919 | INFO | 👀 Watchlist: 20 coins — 2Z, APEX, ARB, AVAX, BNB, BTC, CHILLGUY, ETH, GRASS, HYPE, LINK, LIT, PROVE, PURR, SOL, SUI, TIA, TON, TST, XRP
+2026-05-21 18:59:20,919 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-21 18:59:38,529 | INFO |   Got technicals for 20 coins
+2026-05-21 18:59:38,531 | INFO | 
+💰 Step 6: Checking SL proximity, TP hits, expiry exits...
+2026-05-21 18:59:38,531 | INFO |   No automatic exits triggered
+2026-05-21 18:59:38,531 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-21 18:59:38,985 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-21 18:59:39,278 | INFO | 📊 Sentiment data built: F&G=29, trending=15 coins, headlines for 6 coins
+2026-05-21 18:59:39,279 | INFO |   🧠 Sending 30,857 chars to Claude (claude-sonnet-4-5)...
+2026-05-21 19:00:02,126 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-05-21 19:00:02,153 | INFO |   🧠 Claude responded with 2,509 chars
+2026-05-21 19:00:02,156 | INFO |   🧠 AI Decision: 2 new trades, 0 position updates
+2026-05-21 19:00:02,156 | INFO |   👀 Watching: ['HYPE', 'ZEC', 'GRASS']
+2026-05-21 19:00:02,156 | INFO |   💭 HYPE showing massive smart money accumulation ($111M buy pressure) with strong technical momentum in STRONG_TREND_UP regime. ZEC has significant buy pressure ($23M) with +13% CoinGecko trend and clean
+2026-05-21 19:00:02,156 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-21 19:00:02,156 | INFO |   📝 Market view: Fear & Greed at 29 (declining) creates contrarian opportunity for quality setups. Smart money heavily accumulating HYPE and ZEC with significant buy pressure. Bitcoin holding $77K with long-term holders accumulating (per news). Market showing selective strength in privacy coins, DeFi, and AI narratives. Deploying 24.5% capital across 2 high-conviction trades with strong smart money backing.
+2026-05-21 19:00:02,157 | WARNING | Cannot open LONG HYPE: Margin $40.00 exceeds max $7.50
+2026-05-21 19:00:02,157 | WARNING |   ❌ Failed to open LONG HYPE
+2026-05-21 19:00:02,157 | WARNING | Cannot open LONG ZEC: Margin $40.00 exceeds max $7.50
+2026-05-21 19:00:02,157 | WARNING |   ❌ Failed to open LONG ZEC
+2026-05-21 19:00:02,161 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-21 19:00:02,161 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-21 19:00:02,162 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.00
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.00
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-21 19:00:02,162 | INFO |   💤 No open positions
+2026-05-21 19:00:02,162 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-21 19:00:02,168 | INFO | 
+✅ Cycle complete in 62.7s | Equity: $50.00 | Positions: 0 | Win rate: 0% | AI calls: YES

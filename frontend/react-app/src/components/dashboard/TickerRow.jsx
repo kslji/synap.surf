@@ -4,12 +4,12 @@ export default function TickerRow({ perps }) {
     <section className="ticker-row">
       <div className="ticker-meta">
         <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#18b87a" /></svg>
-        MOST VOLATILE 24H
+        20 MOST VOLATILE 24H
       </div>
       <div className="ticker-chips">
         {!perps.length
           ? <span className="perp-loading">Syncing perps…</span>
-          : perps.slice(0, 10).map((c, i) => (
+          : perps.slice(0, 20).map((c, i) => (
             <div key={i} className="wchip">
               <div className="wchip-icon">
                 {(c.name || '??').slice(0, 2)}

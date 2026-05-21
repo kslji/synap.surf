@@ -1091,7 +1091,66 @@ button {
 }
 
 /* ── Right Panel ─────────────────────────────────────────────────────────── */
+.rp-container {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.rp-resizer {
+  position: absolute;
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 50;
+}
+.rp-resizer:hover {
+  background: rgba(0, 229, 255, 0.2);
+}
+
+.rp-toggle-btn {
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 60px;
+  background: var(--accent, #00e5ff);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  z-index: 100;
+  transition: all 0.2s ease;
+  box-shadow: -4px 0 12px rgba(0,229,255,0.2);
+}
+.rp-toggle-btn:hover {
+  background: #fff;
+  color: var(--accent, #00e5ff);
+  box-shadow: -4px 0 16px rgba(255,255,255,0.3);
+}
+
+.rp-container.closed .right-panel {
+  width: 0 !important;
+  padding: 0;
+  overflow: hidden;
+  border-left: none;
+  opacity: 0;
+}
+
+.rp-container.resizing .right-panel {
+  transition: none !important;
+}
+
 .right-panel {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s, opacity 0.2s;
   width: 380px;
   flex-shrink: 0;
   display: flex;
@@ -2234,6 +2293,8 @@ input:checked + .switch.mini .slider:before {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 8px;
   margin-bottom: 12px;
@@ -2304,11 +2365,13 @@ input:checked + .switch.mini .slider:before {
 
 .stat-card {
   background: rgba(255, 255, 255, 0.03);
-  padding: 14px;
-  border-radius: 14px;
+  padding: 12px 8px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: 4px;
 }
 
@@ -2808,4 +2871,40 @@ input:checked + .switch.mini .slider:before {
 @keyframes brain-pulse {
   0% { filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.3)); transform: scale(0.95); }
   100% { filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.8)); transform: scale(1.05); }
+}
+
+/* ── Custom Tooltips ─────────────────────────────────────────────────────── */
+.grok-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+.grok-tooltip:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1e24;
+  border: 1px solid var(--border);
+  color: var(--t1);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  font-weight: 700;
+  animation: fadeIn 0.2s ease-out;
+}
+.grok-tooltip:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--border) transparent transparent transparent;
+  pointer-events: none;
 }
