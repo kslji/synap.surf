@@ -29,9 +29,26 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from algo_brain.market_data import get_top_3_perps_with_details
+from algo_brain.market_data import get_top_3_perps_with_details, get_mid_prices
+from algo_brain.config import HL_WALLET
 
-app = FastAPI(title="AlgoBrain Dashboard")
+import asyncio
+from contextlib import asynccontextmanager
+from backend.services import volatility_service, market_intel_service, trade_history_sync_service
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    task1 = asyncio.create_task(volatility_service())
+    task2 = asyncio.create_task(market_intel_service())
+    task3 = asyncio.create_task(trade_history_sync_service())
+    yield
+    # Shutdown
+    task1.cancel()
+    task2.cancel()
+    task3.cancel()
+
+app = FastAPI(title="AlgoBrain Dashboard", lifespan=lifespan)
 
 ROOT = Path("/Users/arjunsingh/Desktop/algo_brain")
 REACT_DIST = ROOT / "frontend" / "react-app" / "dist"
@@ -84,81 +101,107 @@ def _save_users(data: dict) -> None:
 
 # ── Helper: Load all JSONL trades ─────────────────────────────────────────────
 def _load_all_trades() -> list[dict]:
-    trades = []
-    for filepath in sorted(glob.glob(str(LOGS_DIR / "trades_*.jsonl"))):
-        with open(filepath) as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        trades.append(json.loads(line))
-                    except Exception:
-                        pass
-    return trades
-
+    try:
+        with get_db() as db:
+            rows = db.execute("SELECT * FROM trade_logs ORDER BY timestamp ASC").fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
 
 def _load_all_decisions() -> list[dict]:
-    decisions = []
-    for filepath in sorted(
-        glob.glob(str(LOGS_DIR / "decisions_*.jsonl")), reverse=True
-    ):
-        with open(filepath) as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        decisions.append(json.loads(line))
-                    except Exception:
-                        pass
-    return decisions
+    try:
+        with get_db() as db:
+            rows = db.execute("SELECT * FROM decision_logs ORDER BY timestamp DESC").fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
 
 
 # ── API: Portfolio Stats ───────────────────────────────────────────────────────
 @app.get("/api/stats")
-async def get_stats():
+def get_stats():
     try:
-        state_file = LOGS_DIR / "portfolio_state.json"
-        if not state_file.exists():
+        with get_db() as db:
+            if HL_WALLET:
+                row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (HL_WALLET,)).fetchone()
+                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'live_positions'").fetchone()
+            else:
+                row = db.execute("SELECT * FROM portfolios WHERE user_id = 'PAPER_USER' AND portfolio_type = 'PAPER'").fetchone()
+                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'paper_positions'").fetchone()
+
+            if not row and HL_WALLET:
+                from algo_brain.telegram_bot import get_live_hl_portfolio
+                live_data = get_live_hl_portfolio()
+                if live_data:
+                    return {
+                        "equity": round(live_data["total_equity"], 2),
+                        "cash": round(live_data["cash"], 2),
+                        "realized_pnl": 0.0,
+                        "unrealized_pnl": round(live_data["unrealized_pnl"], 2),
+                        "total_trades": 0,
+                        "winning_trades": 0,
+                        "losing_trades": 0,
+                        "win_rate": 0.0,
+                        "fees_paid": round(live_data["cumulative_fees"], 2),
+                        "pnl_pct": 0.0,
+                        "positions": live_data["positions"],
+                        "last_updated": live_data["fetched_at"],
+                    }
+
+            if not row:
+                return {
+                    "equity": 1000.0,
+                    "cash": 1000.0,
+                    "realized_pnl": 0.0,
+                    "unrealized_pnl": 0.0,
+                    "total_trades": 0,
+                    "winning_trades": 0,
+                    "losing_trades": 0,
+                    "win_rate": 0.0,
+                    "fees_paid": 0.0,
+                    "pnl_pct": 0.0,
+                    "positions": [],
+                    "last_updated": "",
+                }
+            
+            positions = json.loads(kv_row["value_json"]) if kv_row else []
+            
+            initial_capital = 1000.0 # Base reference for paper. Live uses its own equity tracking.
+            unrealized = sum(float(p.get("unrealized_pnl", 0)) for p in positions)
+            
+            if HL_WALLET:
+                # Live total_equity from DB already includes unrealized from the API fetch.
+                equity = float(row["total_equity"])
+            else:
+                # Paper trades dynamically sum cash + unrealized
+                equity = float(row["cash"]) + unrealized
+            
+            total_trades = row["total_trades"]
+            winning_trades = row["winning_trades"]
+            win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+            
+            pnl_pct = round((equity - initial_capital) / initial_capital * 100, 2)
+            if HL_WALLET:
+                # In live mode, we might not know initial capital. Using realized_pnl over cash as rough proxy or leave it 0 if we don't have accurate history.
+                pnl_pct = 0.0 # Optionally leave out pct for live
+            
+            eth_price = get_mid_prices().get("ETH", 3200.0)
+            
             return {
-                "equity": 1000.0,
-                "cash": 1000.0,
-                "realized_pnl": 0.0,
-                "unrealized_pnl": 0.0,
-                "total_trades": 0,
-                "winning_trades": 0,
-                "losing_trades": 0,
-                "win_rate": 0.0,
+                "equity": round(equity, 2),
+                "cash": round(float(row["cash"]), 2),
+                "realized_pnl": round(float(row["realized_pnl"]), 2),
+                "unrealized_pnl": round(unrealized, 2),
+                "total_trades": total_trades,
+                "winning_trades": winning_trades,
+                "losing_trades": row["losing_trades"],
+                "win_rate": round(win_rate, 1),
                 "fees_paid": 0.0,
-                "pnl_pct": 0.0,
-                "positions": [],
-                "last_updated": "",
+                "pnl_pct": pnl_pct,
+                "eth_price": eth_price,
+                "positions": positions,
+                "last_updated": row["updated_at"],
             }
-        with open(state_file) as f:
-            state = json.load(f)
-
-        initial_capital = 1000.0
-        positions = state.get("positions") or []
-        unrealized = sum(float(p.get("unrealized_pnl", 0)) for p in positions)
-        equity = float(state.get("cash", initial_capital)) + unrealized
-
-        total_trades = state.get("total_trades", 0)
-        winning_trades = state.get("winning_trades", 0)
-        win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
-
-        return {
-            "equity": round(equity, 2),
-            "cash": round(float(state.get("cash", initial_capital)), 2),
-            "realized_pnl": round(float(state.get("realized_pnl", 0)), 2),
-            "unrealized_pnl": round(unrealized, 2),
-            "total_trades": total_trades,
-            "winning_trades": winning_trades,
-            "losing_trades": state.get("losing_trades", 0),
-            "win_rate": round(win_rate, 1),
-            "fees_paid": round(float(state.get("total_fees_paid", 0)), 4),
-            "pnl_pct": round((equity - initial_capital) / initial_capital * 100, 2),
-            "positions": positions,
-            "last_updated": state.get("last_updated", ""),
-        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -169,6 +212,86 @@ async def get_trades():
     trades = _load_all_trades()
     return list(reversed(trades))[:20]
 
+
+# ── API: User Settings (Paper vs Subscribers) ──────────────────────────────────
+@app.get("/api/users")
+async def get_users():
+    return _load_users()
+
+@app.post("/api/users")
+async def save_users(request: Request):
+    data = await request.json()
+    _save_users(data)
+    return {"status": "ok"}
+
+@app.post("/api/portfolio/refresh")
+def refresh_portfolio():
+    """Forces a refresh of the live portfolio state directly from Hyperliquid API."""
+    if not HL_WALLET:
+        raise HTTPException(status_code=400, detail="No live wallet configured.")
+    try:
+        from algo_brain.hyperliquid_trader import HyperliquidTrader
+        # Instantiating the trader automatically fetches state or we can call fetch directly.
+        # But trader._save_state() needs an active Info call. Actually get_live_hl_portfolio() is better.
+        from algo_brain.telegram_bot import get_live_hl_portfolio
+        from backend.db import get_db, set_market_data
+        
+        live_data = get_live_hl_portfolio()
+        if live_data:
+            with get_db() as db:
+                db.execute('''
+                    INSERT INTO portfolios (user_id, portfolio_type, cash, total_equity, unrealized_pnl, updated_at)
+                    VALUES (?, 'LIVE', ?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, portfolio_type) DO UPDATE SET
+                        cash=excluded.cash,
+                        total_equity=excluded.total_equity,
+                        unrealized_pnl=excluded.unrealized_pnl,
+                        updated_at=CURRENT_TIMESTAMP
+                ''', (HL_WALLET, live_data["cash"], live_data["total_equity"], live_data["unrealized_pnl"]))
+                
+            set_market_data("live_positions", live_data["positions"])
+        return {"status": "ok", "message": "Portfolio synced from Hyperliquid"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/strategy/subscribe")
+async def subscribe_strategy(request: Request):
+    """User selects a strategy. If IN_TRADE, they join the waiting room."""
+    data = await request.json()
+    wallet_address = data.get("wallet_address", HL_WALLET)
+    strategy_id = data.get("strategy_id")
+    capital = data.get("capital", 100)
+    leverage = data.get("leverage", 10)
+    timeframe = data.get("timeframe", "1h")
+    
+    if not strategy_id:
+        raise HTTPException(status_code=400, detail="strategy_id required")
+        
+    try:
+        with get_db() as db:
+            # Check strategy state
+            strat_state = db.execute("SELECT status FROM strategy_state WHERE strategy_id = ?", (strategy_id,)).fetchone()
+            status = 'ACTIVE'
+            alert_msg = None
+            
+            if strat_state and strat_state["status"] == 'IN_TRADE':
+                status = 'WAITING'
+                alert_msg = f"Alert: Strategy '{strategy_id}' is currently IN_TRADE. You have been placed in the waiting room and will be joined automatically when the current cycle finishes."
+            
+            # Upsert subscription
+            db.execute('''
+                INSERT INTO subscriptions (wallet_address, strategy_id, status, capital, leverage, timeframe)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(wallet_address, strategy_id) DO UPDATE SET
+                    status=excluded.status,
+                    capital=excluded.capital,
+                    leverage=excluded.leverage,
+                    timeframe=excluded.timeframe
+            ''', (wallet_address, strategy_id, status, capital, leverage, timeframe))
+            
+        return {"status": "ok", "subscription_status": status, "alert": alert_msg}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ── API: AI Signals (Clean Feed) ──────────────────────────────────────────────
 @app.get("/api/decisions")
@@ -188,38 +311,44 @@ async def get_decisions():
 @app.get("/api/watchlist")
 async def get_watchlist():
     try:
-        with open(LOGS_DIR / "watchlist.json") as f:
-            return json.load(f)
+        with get_db() as db:
+            row = db.execute("SELECT value_json FROM market_data WHERE key = 'watchlist'").fetchone()
+            if row:
+                return json.loads(row["value_json"])
     except Exception:
-        return {"watchlist": ["BTC", "ETH", "SOL"], "updated_at": ""}
+        pass
+    return {"watchlist": ["BTC", "ETH", "SOL"], "updated_at": ""}
 
 
 @app.get("/api/market_intel")
 async def get_market_intel():
     try:
-        with open(LOGS_DIR / "market_intelligence.json") as f:
-            return json.load(f)
+        with get_db() as db:
+            row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence'").fetchone()
+            if row:
+                return json.loads(row["value_json"])
     except Exception:
-        return {
-            "market_view": "Syncing market data...",
-            "fear_greed": {"value": 50, "classification": "Neutral"},
-            "trending_coins": [],
-            "trending_narratives": []
-        }
+        pass
+    return {
+        "market_view": "Syncing market data...",
+        "fear_greed": {"value": 50, "classification": "Neutral"},
+        "trending_coins": [],
+        "trending_narratives": []
+    }
 
 
 # ── API: Hyperliquid Proxy ──────────────────────────────────────────────────
 @app.get("/api/hl_top_perps")
-async def get_hl_top_perps():
-    """Read top perps from the JSON file updated by the background service."""
-    cache_file = LOGS_DIR / "top_perps.json"
+def get_hl_top_perps():
+    """Read top perps from the SQLite DB updated by the background service."""
     try:
-        if cache_file.exists():
-            with open(cache_file) as f:
-                cached_data = json.load(f)
+        with get_db() as db:
+            row = db.execute("SELECT value_json FROM market_data WHERE key = 'top_perps'").fetchone()
+            if row:
+                cached_data = json.loads(row["value_json"])
                 return cached_data.get("data", {})
-
-        # Fallback if file doesn't exist yet
+                
+        # Fallback
         data = get_top_3_perps_with_details()
         return data
     except Exception as e:
@@ -347,7 +476,7 @@ def get_hl_client():
     return _hl_client
 
 @app.post("/api/trade/open")
-async def manual_trade_open(req: TradeOpenReq):
+def manual_trade_open(req: TradeOpenReq):
     try:
         client = get_hl_client()
         res = client.open_position(
@@ -361,7 +490,7 @@ async def manual_trade_open(req: TradeOpenReq):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/trade/close")
-async def manual_trade_close(req: TradeCoinReq):
+def manual_trade_close(req: TradeCoinReq):
     try:
         client = get_hl_client()
         res = client.close_position(req.coin)
@@ -372,7 +501,7 @@ async def manual_trade_close(req: TradeCoinReq):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/trade/reverse")
-async def manual_trade_reverse(req: TradeCoinReq):
+def manual_trade_reverse(req: TradeCoinReq):
     try:
         client = get_hl_client()
         res = client.reverse_position(req.coin)
@@ -383,7 +512,7 @@ async def manual_trade_reverse(req: TradeCoinReq):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/wallet/balance")
-async def get_wallet_balance(wallet: Optional[str] = None):
+def get_wallet_balance(wallet: Optional[str] = None):
     try:
         # Accept wallet from query param (frontend localStorage) or fall back to env
         addr = (wallet or os.environ.get("HL_WALLET", "")).strip()
@@ -403,7 +532,7 @@ async def get_wallet_balance(wallet: Optional[str] = None):
         return {"balance": 0, "available": 0, "configured": False, "error": str(e)}
 
 @app.get("/api/coin/leverage/{coin}")
-async def get_coin_max_leverage(coin: str):
+def get_coin_max_leverage(coin: str):
     try:
         from hyperliquid.info import Info
         from hyperliquid.utils import constants
@@ -417,7 +546,7 @@ async def get_coin_max_leverage(coin: str):
         return {"coin": coin.upper(), "max_leverage": 20, "error": str(e)}
 
 @app.get("/api/coins")
-async def get_all_coins():
+def get_all_coins():
     try:
         from hyperliquid.info import Info
         from hyperliquid.utils import constants
@@ -427,6 +556,31 @@ async def get_all_coins():
         return {"coins": sorted(coins)}
     except Exception as e:
         return {"coins": ["BTC", "ETH", "SOL", "AVAX", "DOGE"], "error": str(e)}
+
+@app.get("/api/candles")
+def get_candles_data(coin: str, timeframe: str = "1h", lookback: int = 500):
+    try:
+        from algo_brain.market_data import fetch_candles
+        df = fetch_candles(coin.upper(), interval=timeframe, n=lookback)
+        if df.empty:
+            return []
+        
+        records = df.to_dict('records')
+        formatted = []
+        for r in records:
+            formatted.append({
+                "time": int(r.get('open_time_ms', 0) / 1000),
+                "open": r['open'],
+                "high": r['high'],
+                "low": r['low'],
+                "close": r['close']
+            })
+        return formatted
+    except Exception as e:
+        import traceback
+        print(f"Candles error: {e}")
+        traceback.print_exc()
+        return []
 
 
 
@@ -526,24 +680,39 @@ async def subscribe_strategy(req: SubscribeRequest):
 
 @app.post("/api/strategies/{strategy_id}/backtest")
 async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC"):
-    import random
     import time
     
-    # Simulate a 2-3 second backtest calculation
-    import asyncio
-    await asyncio.sleep(2.5)
-    
-    # Generate realistic pseudo-random metrics based on strategy_id hash
-    seed = sum(ord(c) for c in strategy_id) + sum(ord(c) for c in coin) + (10 if timeframe == '1h' else 5)
-    random.seed(seed + int(time.time() % 100)) # Add some variance
-    
+    # Initialize default metrics
     metrics = {
-        "winRate": round(random.uniform(55.0, 75.0), 1),
-        "totalPnl": round(random.uniform(200.0, 2500.0), 2),
-        "drawdown": round(random.uniform(2.0, 15.0), 1),
-        "trades": int(random.uniform(50, 500))
+        "winRate": 0.0,
+        "totalPnl": 0.0,
+        "drawdown": 0.0,
+        "trades": 0
     }
+    trades = []
     
+    try:
+        from algo_brain.market_data import fetch_candles
+        from algo_brain.strategies.backtest import run_simulation
+        
+        # Calculate candles for 30 days (1 month)
+        tf_candles = {'1m': 43200, '5m': 8640, '15m': 2880, '1h': 720, '4h': 180, '1d': 30}
+        # Cap at 2000 for safety to not overload the API or frontend
+        target_n = min(2000, max(50, tf_candles.get(timeframe, 720)))
+        
+        df = fetch_candles(coin, interval=timeframe, n=target_n)
+        
+        if not df.empty:
+            # Run the real backtest simulation
+            results = run_simulation(df, strategy_id=strategy_id, initial_capital=1000.0, leverage=1)
+            metrics = results["metrics"]
+            trades = results["trades"]
+            
+    except Exception as e:
+        import traceback
+        print(f"Error running backtest: {e}")
+        traceback.print_exc()
+
     with get_db() as db:
         metrics_json = json.dumps(metrics)
         db.execute('''
@@ -554,4 +723,14 @@ async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC
             updated_at = CURRENT_TIMESTAMP
         ''', (strategy_id, timeframe, coin, metrics_json))
         
-    return {"status": "success", "metrics": metrics}
+    return {"status": "success", "metrics": metrics, "trades": trades}
+
+if __name__ == "__main__":
+    import uvicorn
+    # Make sure DB is initialized
+    from backend.db import init_db
+    init_db()
+    
+    port = int(os.environ.get("PORT", 8000))
+    print(f"Starting server on port {port}...")
+    uvicorn.run("backend.server:app", host="0.0.0.0", port=port, reload=True)

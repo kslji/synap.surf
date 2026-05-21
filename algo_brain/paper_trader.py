@@ -22,11 +22,14 @@ from algo_brain.config import (
     MAX_CAPITAL_PER_TRADE_PCT,
     MAX_TOTAL_DEPLOYED_PCT,
     MAX_HOLD_HOURS,
-    PORTFOLIO_STATE_FILE,
     HL_FEE_RATE,
     HL_SLIPPAGE_RATE,
     MIN_ROE_EXIT_PCT,
 )
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from backend.db import get_db
 from algo_brain import trade_journal
 
 logger = logging.getLogger(__name__)
@@ -95,44 +98,62 @@ class PaperTrader:
     # ── State Persistence ────────────────────────────────────────────────────
 
     def _load_state(self):
-        """Load portfolio state from disk."""
+        """Load portfolio state from database."""
         try:
-            if PORTFOLIO_STATE_FILE.exists():
-                with open(PORTFOLIO_STATE_FILE) as f:
-                    state = json.load(f)
-                self.cash = state.get("cash", INITIAL_CAPITAL)
-                self.positions = state.get("positions", [])
-                self.realized_pnl = state.get("realized_pnl", 0.0)
-                self.total_trades = state.get("total_trades", 0)
-                self.winning_trades = state.get("winning_trades", 0)
-                self.losing_trades = state.get("losing_trades", 0)
-                self.total_fees_paid = state.get("total_fees_paid", 0.0)
-                self.last_traded_token = state.get("last_traded_token", "")
-                logger.info(
-                    f"📂 Loaded portfolio: cash=${self.cash:.2f}, "
-                    f"{len(self.positions)} open positions, "
-                    f"realized P&L=${self.realized_pnl:+.2f}, "
-                    f"fees paid=${self.total_fees_paid:.2f}"
-                )
+            with get_db() as db:
+                row = db.execute("SELECT * FROM portfolios WHERE user_id = 'PAPER_USER' AND portfolio_type = 'PAPER'").fetchone()
+                if row:
+                    self.cash = row["cash"]
+                    self.realized_pnl = row["realized_pnl"]
+                    self.total_trades = row["total_trades"]
+                    self.winning_trades = row["winning_trades"]
+                    self.losing_trades = row["losing_trades"]
+                    
+                    # We also load the raw JSON positions state to preserve all metadata easily
+                    kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'paper_positions'").fetchone()
+                    if kv_row:
+                        self.positions = json.loads(kv_row["value_json"])
+                    
+                    logger.info(
+                        f"📂 Loaded portfolio: cash=${self.cash:.2f}, "
+                        f"{len(self.positions)} open positions, "
+                        f"realized P&L=${self.realized_pnl:+.2f}"
+                    )
         except Exception as e:
             logger.warning(f"Could not load portfolio state: {e}. Starting fresh.")
 
     def _save_state(self):
-        """Save portfolio state to disk."""
+        """Save portfolio state to database."""
         try:
-            state = {
-                "cash": round(self.cash, 2),
-                "positions": self.positions,
-                "realized_pnl": round(self.realized_pnl, 2),
-                "total_trades": self.total_trades,
-                "winning_trades": self.winning_trades,
-                "losing_trades": self.losing_trades,
-                "total_fees_paid": round(self.total_fees_paid, 4),
-                "last_traded_token": self.last_traded_token,
-                "last_updated": datetime.now(timezone.utc).isoformat(),
-            }
-            with open(PORTFOLIO_STATE_FILE, "w") as f:
-                json.dump(state, f, indent=2, default=str)
+            with get_db() as db:
+                db.execute('''
+                    INSERT INTO portfolios (user_id, portfolio_type, cash, total_equity, unrealized_pnl, realized_pnl, total_trades, winning_trades, losing_trades)
+                    VALUES ('PAPER_USER', 'PAPER', ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(user_id, portfolio_type) DO UPDATE SET
+                        cash=excluded.cash,
+                        total_equity=excluded.total_equity,
+                        unrealized_pnl=excluded.unrealized_pnl,
+                        realized_pnl=excluded.realized_pnl,
+                        total_trades=excluded.total_trades,
+                        winning_trades=excluded.winning_trades,
+                        losing_trades=excluded.losing_trades,
+                        updated_at=CURRENT_TIMESTAMP
+                ''', (
+                    round(self.cash, 2),
+                    round(self.total_equity, 2),
+                    round(sum(p.get("unrealized_pnl", 0) for p in self.positions), 2),
+                    round(self.realized_pnl, 2),
+                    self.total_trades,
+                    self.winning_trades,
+                    self.losing_trades
+                ))
+                
+                # Save raw positions to kv_store to preserve full memory metadata easily
+                db.execute('''
+                    INSERT INTO market_data (key, value_json) VALUES ('paper_positions', ?)
+                    ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
+                ''', (json.dumps(self.positions, default=str),))
+                
         except Exception as e:
             logger.error(f"Failed to save portfolio state: {e}")
 

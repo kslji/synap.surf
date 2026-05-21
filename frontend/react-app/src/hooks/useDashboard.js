@@ -35,7 +35,7 @@ export function useDashboard() {
       const coins = ctxs.map(ctx => {
         const mark = parseFloat(ctx.markPx || 0), prev = parseFloat(ctx.prevDayPx || mark);
         return { name: ctx.name || '?', mark, chg: prev ? ((mark - prev) / prev) * 100 : 0, absChg: Math.abs(prev ? ((mark - prev) / prev) * 100 : 0) };
-      }).filter(c => userWatchlist.includes(c.name));
+      });
       const sorted = coins.sort((a, b) => b.absChg - a.absChg);
       setPerps(sorted);
       setTopCoins(sorted.slice(0, 4).map(c => c.name));

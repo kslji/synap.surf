@@ -954,7 +954,7 @@ button {
 
 .dt-head {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr;
   padding: 0 24px 16px;
   border-bottom: 1px solid var(--border);
   color: var(--t1);
@@ -966,7 +966,7 @@ button {
 
 .dt-row {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 1fr 1fr;
   align-items: center;
   padding: 13px 20px;
   border-radius: 16px;
@@ -2551,6 +2551,7 @@ input:checked + .switch.mini .slider:before {
   align-items: center;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .strat-header-card::before {
@@ -2655,12 +2656,13 @@ input:checked + .switch.mini .slider:before {
   height: 50px;
 }
 
-.exec-input-wrap input, .exec-input-wrap select {
+.exec-input-wrap input, .exec-input-wrap select, .exec-input-wrap span {
   background: transparent;
   border: none;
   width: 100%;
   color: var(--t1);
   font-weight: 700;
+  font-size: 14px;
   outline: none;
 }
 

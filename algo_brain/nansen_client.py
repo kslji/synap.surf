@@ -20,9 +20,12 @@ from algo_brain.config import (
     NANSEN_BASE_URL,
     NANSEN_MONTHLY_BUDGET,
     NANSEN_BUDGET_WARNING_PCT,
-    NANSEN_CREDITS_FILE,
     NANSEN_CACHE_TTL_SECONDS,
 )
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from backend.db import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -43,17 +46,18 @@ class NansenCreditTracker:
 
     def _load(self):
         try:
-            if NANSEN_CREDITS_FILE.exists():
-                with open(NANSEN_CREDITS_FILE) as f:
-                    data = json.load(f)
-                saved_month = datetime.fromisoformat(data["month_start"])
-                # Reset if new month
-                if saved_month.month != datetime.now(timezone.utc).month:
-                    self.credits_used = 0
-                    self._save()
-                else:
-                    self.credits_used = data.get("credits_used", 0)
-                    self.month_start = saved_month
+            with get_db() as db:
+                row = db.execute("SELECT value_json FROM market_data WHERE key = 'nansen_credits'").fetchone()
+                if row:
+                    data = json.loads(row["value_json"])
+                    saved_month = datetime.fromisoformat(data["month_start"])
+                    # Reset if new month
+                    if saved_month.month != datetime.now(timezone.utc).month:
+                        self.credits_used = 0
+                        self._save()
+                    else:
+                        self.credits_used = data.get("credits_used", 0)
+                        self.month_start = saved_month
         except Exception:
             pass
 
@@ -64,8 +68,11 @@ class NansenCreditTracker:
                 "month_start": self.month_start.isoformat(),
                 "last_updated": datetime.now(timezone.utc).isoformat(),
             }
-            with open(NANSEN_CREDITS_FILE, "w") as f:
-                json.dump(data, f, indent=2)
+            with get_db() as db:
+                db.execute('''
+                    INSERT INTO market_data (key, value_json) VALUES ('nansen_credits', ?)
+                    ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
+                ''', (json.dumps(data, default=str),))
         except Exception as e:
             logger.warning(f"Failed to save credit tracker: {e}")
 

@@ -11,7 +11,7 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
             <h1 id="equityValue">${fmt(stats.equity)}</h1>
             <span className={`bal-badge${pct < 0 ? ' neg' : ''}`}>{pct >= 0 ? '+' : ''}{pct.toFixed(2)}%</span>
           </div>
-          <span className="bal-eth">≈ {((stats.equity || 0) / 3200).toFixed(4)} ETH</span>
+          <span className="bal-eth">≈ {((stats.equity || 0) / (stats.eth_price || 3200)).toFixed(4)} ETH</span>
         </div>
         <div className="bal-actions-row">
           <button className="qbtn tiny" title="Refresh" onClick={onRefresh}>

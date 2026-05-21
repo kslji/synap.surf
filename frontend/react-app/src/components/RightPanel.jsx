@@ -84,10 +84,11 @@ function TelegramModal({ onClose }) {
 function SignalCard({ item, onClick }) {
   const t = item.data;
   const time = relTime(item.timestamp);
-  let type = 'SIGNAL', typeCls = 'signal', meta = 'Analyzing opportunities...';
-  if (t.event === 'TRADE_OPEN') { type = 'OPEN'; typeCls = (t.side || 'LONG').toLowerCase(); meta = `Entry $${t.entry_price} · SL $${t.stop_loss}`; }
-  else if (t.event === 'TRADE_CLOSE') { type = 'CLOSE'; typeCls = 'close'; meta = `Exit $${t.exit_price} · PnL $${t.pnl_usd}`; }
-  else if (t.event === 'TRADE_UPDATE') { type = 'UPDATE'; typeCls = 'update'; meta = t.action ? t.action.replace('_', ' ') : 'Risk Adjustment'; }
+  let type = 'SIGNAL', typeCls = 'signal', meta = t.reasoning || t.details || 'Analyzing opportunities...';
+  if (t.event === 'TRADE_OPEN') { type = 'OPEN'; typeCls = (t.side || 'LONG').toLowerCase(); meta = t.reasoning || `Entry $${t.entry_price} · SL $${t.stop_loss}`; }
+  else if (t.event === 'TRADE_CLOSE') { type = 'CLOSE'; typeCls = 'close'; meta = t.reasoning || `Exit $${t.exit_price} · PnL $${t.pnl_usd}`; }
+  else if (t.event === 'TRADE_UPDATE') { type = 'UPDATE'; typeCls = 'update'; meta = t.reasoning || (t.action ? t.action.replace('_', ' ') : 'Risk Adjustment'); }
+  else if (t.event === 'FILL') { type = 'FILL'; typeCls = 'update'; meta = t.details || `Manual fill at $${t.entry_price}`; }
   const conv = t.conviction ? Math.round(t.conviction * 100) : null;
   return (
     <div className="signal-card" onClick={onClick}>

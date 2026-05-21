@@ -28,8 +28,11 @@ from hyperliquid.utils import constants
 from algo_brain.config import (
     TELEGRAM_BOT_TOKEN,
     HL_WALLET,
-    LIVE_PORTFOLIO_STATE_FILE,
 )
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from backend.db import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +99,6 @@ def get_live_hl_portfolio() -> Optional[dict]:
 
         # 4. Load cumulative fees from live state file
         cumulative_fees = 0.0
-        if LIVE_PORTFOLIO_STATE_FILE.exists():
-            try:
-                with open(LIVE_PORTFOLIO_STATE_FILE) as f:
-                    state_file_data = json.load(f)
-                    cumulative_fees = state_file_data.get("total_fees_paid", 0.0)
-            except Exception:
-                pass
 
         return {
             "cash": cash,
@@ -285,17 +281,17 @@ class TelegramNotifier:
             trades = 0
             wins = 0
             losses = 0
-            if LIVE_PORTFOLIO_STATE_FILE.exists():
-                try:
-                    with open(LIVE_PORTFOLIO_STATE_FILE) as f:
-                        state_data = json.load(f)
-                        rpnl = state_data.get("realized_pnl", 0.0)
-                        trades = state_data.get("total_trades", 0)
-                        wins = state_data.get("winning_trades", 0)
-                        losses = state_data.get("losing_trades", 0)
+            try:
+                with get_db() as db:
+                    row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (HL_WALLET,)).fetchone()
+                    if row:
+                        rpnl = row["realized_pnl"]
+                        trades = row["total_trades"]
+                        wins = row["winning_trades"]
+                        losses = row["losing_trades"]
                         wr = round((wins / max(trades, 1)) * 100, 1)
-                except Exception:
-                    pass
+            except Exception:
+                pass
             sign = "+" if rpnl >= 0 else ""
 
             pos_str = ""
@@ -415,17 +411,17 @@ def _handle_status(chat_id: int) -> None:
                 trades = 0
                 wins = 0
                 losses = 0
-                if LIVE_PORTFOLIO_STATE_FILE.exists():
-                    try:
-                        with open(LIVE_PORTFOLIO_STATE_FILE) as f:
-                            state_data = json.load(f)
-                            rpnl = state_data.get("realized_pnl", 0.0)
-                            trades = state_data.get("total_trades", 0)
-                            wins = state_data.get("winning_trades", 0)
-                            losses = state_data.get("losing_trades", 0)
+                try:
+                    with get_db() as db:
+                        row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (HL_WALLET,)).fetchone()
+                        if row:
+                            rpnl = row["realized_pnl"]
+                            trades = row["total_trades"]
+                            wins = row["winning_trades"]
+                            losses = row["losing_trades"]
                             wr = round((wins / max(trades, 1)) * 100, 1)
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
                 sign = "+" if rpnl >= 0 else ""
 
                 pos_str = ""
@@ -463,23 +459,24 @@ def _handle_status(chat_id: int) -> None:
             return
 
         # Fallback to Paper Trading State ONLY if HL_WALLET is not configured
-        state_file = LOGS_DIR / "portfolio_state.json"
-        if not state_file.exists():
-            _send(chat_id, "⚠️ Bot has not started yet. No portfolio data.")
+        try:
+            with get_db() as db:
+                row = db.execute("SELECT * FROM portfolios WHERE user_id = 'PAPER_USER' AND portfolio_type = 'PAPER'").fetchone()
+                if not row:
+                    _send(chat_id, "⚠️ Bot has not started yet. No portfolio data.")
+                    return
+                cash = row["cash"]
+                rpnl = row["realized_pnl"]
+                trades = row["total_trades"]
+                wins = row["winning_trades"]
+                losses = row["losing_trades"]
+                wr = round((wins / max(trades, 1)) * 100, 1)
+                
+                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'paper_positions'").fetchone()
+                positions = json.loads(kv_row["value_json"]) if kv_row else []
+        except Exception as e:
+            _send(chat_id, f"⚠️ Error fetching status: {e}")
             return
-        with open(state_file) as f:
-            state = json.load(f)
-
-        cash = state.get("cash", 1000)
-        rpnl = state.get("realized_pnl", 0)
-        trades = state.get("total_trades", 0)
-        wins = state.get("winning_trades", 0)
-        losses = state.get("losing_trades", 0)
-        wr = round((wins / trades * 100) if trades > 0 else 0, 1)
-        sign = "+" if rpnl >= 0 else ""
-
-        # Build positions list
-        positions = state.get("positions", [])
         pos_str = ""
         for p in positions:
             side_icon = "📈" if p["side"] == "LONG" else "📉"
@@ -507,12 +504,12 @@ def _handle_status(chat_id: int) -> None:
 
 def _handle_watchlist(chat_id: int) -> None:
     try:
-        wl_file = LOGS_DIR / "watchlist.json"
-        if not wl_file.exists():
-            _send(chat_id, "⚠️ No watchlist data yet. Start the bot first.")
-            return
-        with open(wl_file) as f:
-            data = json.load(f)
+        with get_db() as db:
+            row = db.execute("SELECT value_json FROM market_data WHERE key = 'watchlist'").fetchone()
+            if not row:
+                _send(chat_id, "⚠️ No watchlist data yet. Start the bot first.")
+                return
+            data = json.loads(row["value_json"])
         coins = data.get("coins", [])
         _send(
             chat_id,

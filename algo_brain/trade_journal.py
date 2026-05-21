@@ -16,6 +16,10 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from backend.db import get_db
 
 from algo_brain.config import LOGS_DIR
 
@@ -69,21 +73,20 @@ def log_trade_open(
     reasoning: str,
 ):
     """Log a new trade entry."""
-    record = {
-        "event": "TRADE_OPEN",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "coin": coin,
-        "side": side,
-        "entry_price": round(entry_price, 6),
-        "position_size_usd": round(position_size_usd, 2),
-        "leverage": leverage,
-        "stop_loss": round(stop_loss, 6),
-        "take_profit_1": round(take_profit_1, 6),
-        "take_profit_2": round(take_profit_2, 6),
-        "conviction": round(conviction, 2),
-        "reasoning": reasoning,
-    }
-    _append_jsonl(_trades_file(), record)
+    try:
+        with get_db() as db:
+            db.execute('''
+                INSERT INTO trade_logs (
+                    event, coin, side, entry_price, position_size_usd, leverage, 
+                    stop_loss, take_profit_1, take_profit_2, conviction, reasoning
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                "TRADE_OPEN", coin, side, round(entry_price, 6), round(position_size_usd, 2), 
+                leverage, round(stop_loss, 6), round(take_profit_1, 6), round(take_profit_2, 6), 
+                round(conviction, 2), reasoning
+            ))
+    except Exception as e:
+        logger.error(f"DB Error log_trade_open: {e}")
 
     logger.info(
         f"\n{'='*60}\n"
@@ -112,21 +115,20 @@ def log_trade_close(
     hold_duration_hours: float,
 ):
     """Log a trade exit."""
-    record = {
-        "event": "TRADE_CLOSE",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "coin": coin,
-        "side": side,
-        "entry_price": round(entry_price, 6),
-        "exit_price": round(exit_price, 6),
-        "position_size_usd": round(position_size_usd, 2),
-        "leverage": leverage,
-        "pnl_usd": round(pnl_usd, 2),
-        "pnl_pct": round(pnl_pct, 2),
-        "reason": reason,
-        "hold_duration_hours": round(hold_duration_hours, 1),
-    }
-    _append_jsonl(_trades_file(), record)
+    try:
+        with get_db() as db:
+            db.execute('''
+                INSERT INTO trade_logs (
+                    event, coin, side, entry_price, exit_price, position_size_usd, leverage, 
+                    pnl_usd, pnl_pct, hold_duration_hours, reasoning
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                "TRADE_CLOSE", coin, side, round(entry_price, 6), round(exit_price, 6), 
+                round(position_size_usd, 2), leverage, round(pnl_usd, 2), round(pnl_pct, 2), 
+                round(hold_duration_hours, 1), reason
+            ))
+    except Exception as e:
+        logger.error(f"DB Error log_trade_close: {e}")
 
     emoji = "✅" if pnl_usd >= 0 else "❌"
     logger.info(
@@ -146,14 +148,14 @@ def log_trade_update(
     details: str,
 ):
     """Log a position update (move SL, partial close, etc.)."""
-    record = {
-        "event": "TRADE_UPDATE",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "coin": coin,
-        "action": action,
-        "details": details,
-    }
-    _append_jsonl(_trades_file(), record)
+    try:
+        with get_db() as db:
+            db.execute('''
+                INSERT INTO trade_logs (event, coin, action, details)
+                VALUES (?, ?, ?, ?)
+            ''', ("TRADE_UPDATE", coin, action, details))
+    except Exception as e:
+        logger.error(f"DB Error log_trade_update: {e}")
     logger.info(f"  🔄 {coin}: {action} — {details}")
 
 
@@ -164,13 +166,14 @@ def log_trade_update(
 
 def log_ai_decision(decision: dict, raw_prompt_size: int = 0, raw_response_size: int = 0):
     """Log the full AI decision for review and debugging."""
-    record = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "prompt_chars": raw_prompt_size,
-        "response_chars": raw_response_size,
-        "decision": decision,
-    }
-    _append_jsonl(_decisions_file(), record)
+    try:
+        with get_db() as db:
+            db.execute('''
+                INSERT INTO decision_logs (prompt_chars, response_chars, decision_json)
+                VALUES (?, ?, ?)
+            ''', (raw_prompt_size, raw_response_size, json.dumps(decision, default=str)))
+    except Exception as e:
+        logger.error(f"DB Error log_ai_decision: {e}")
 
     # Summary log
     trades = decision.get("trades", [])
@@ -261,9 +264,13 @@ def update_daily_summary(portfolio: dict):
             for old_key in sorted_keys[:-90]:
                 del existing[old_key]
 
-        with open(summary_file, "w") as f:
-            json.dump(existing, f, indent=2)
-
+        with get_db() as db:
+            db.execute('''
+                INSERT INTO market_data (key, value_json)
+                VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
+            ''', ("daily_summary", json.dumps(existing, default=str)))
+            
     except Exception as e:
         logger.error(f"Failed to update daily summary: {e}")
 
@@ -304,8 +311,12 @@ def update_market_intel(sentiment: dict, decision: dict):
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
-        with open(intel_file, "w") as f:
-            json.dump(intel_data, f, indent=2)
+        with get_db() as db:
+            db.execute('''
+                INSERT INTO market_data (key, value_json)
+                VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
+            ''', ("market_intelligence", json.dumps(intel_data, default=str)))
             
         logger.info("  📊 Market Intelligence updated for dashboard")
 
@@ -324,15 +335,13 @@ def export_trades_csv(output_path: Optional[Path] = None):
         output_path = LOGS_DIR / "all_trades.csv"
 
     all_trades = []
-    for jsonl_file in sorted(LOGS_DIR.glob("trades_*.jsonl")):
-        with open(jsonl_file) as f:
-            for line in f:
-                try:
-                    record = json.loads(line.strip())
-                    if record.get("event") in ("TRADE_OPEN", "TRADE_CLOSE"):
-                        all_trades.append(record)
-                except Exception:
-                    continue
+    try:
+        with get_db() as db:
+            rows = db.execute("SELECT * FROM trade_logs ORDER BY timestamp ASC").fetchall()
+            all_trades = [dict(r) for r in rows]
+    except Exception as e:
+        logger.error(f"Failed to export trades to CSV: {e}")
+        return
 
     if not all_trades:
         logger.info("No trades to export")

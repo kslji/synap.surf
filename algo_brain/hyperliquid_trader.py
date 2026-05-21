@@ -25,7 +25,6 @@ from hyperliquid.utils import constants
 from algo_brain.config import (
     HL_PRIVATE_KEY,
     HL_WALLET,
-    LIVE_PORTFOLIO_STATE_FILE,
     HL_TAKER_FEE,
     HL_SLIPPAGE_RATE,
     MAX_OPEN_POSITIONS,
@@ -33,6 +32,10 @@ from algo_brain.config import (
     MIN_ROE_EXIT_PCT,
 )
 from algo_brain import trade_journal
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from backend.db import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -71,19 +74,16 @@ class HyperliquidTrader:
 
         self.current_prices = {}
 
-        # Load accumulated stats
-        if LIVE_PORTFOLIO_STATE_FILE.exists():
-            try:
-                with open(LIVE_PORTFOLIO_STATE_FILE) as f:
-                    state = json.load(f)
-                    self.realized_pnl = state.get("realized_pnl", 0.0)
-                    self.total_trades = state.get("total_trades", 0)
-                    self.winning_trades = state.get("winning_trades", 0)
-                    self.losing_trades = state.get("losing_trades", 0)
-                    self.total_fees_paid = state.get("total_fees_paid", 0.0)
-                    self.last_traded_token = state.get("last_traded_token", "")
-            except Exception as e:
-                logger.error(f"Error loading live cumulative stats: {e}")
+        try:
+            with get_db() as db:
+                row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (self.user_address,)).fetchone()
+                if row:
+                    self.realized_pnl = row["realized_pnl"]
+                    self.total_trades = row["total_trades"]
+                    self.winning_trades = row["winning_trades"]
+                    self.losing_trades = row["losing_trades"]
+        except Exception as e:
+            logger.error(f"Error loading live cumulative stats: {e}")
 
         logger.info(
             f"🟢 HyperliquidTrader initialized on MAINNET for account {self.user_address}"
@@ -92,32 +92,47 @@ class HyperliquidTrader:
     # ── State Sync & Metadata Persistence ────────────────────────────────────
 
     def _load_local_state(self) -> List[Dict]:
-        """Load open positions metadata from disk."""
-        if LIVE_PORTFOLIO_STATE_FILE.exists():
-            try:
-                with open(LIVE_PORTFOLIO_STATE_FILE) as f:
-                    state = json.load(f)
-                    return state.get("positions", [])
-            except Exception as e:
-                logger.error(f"Error loading live portfolio state: {e}")
+        """Load open positions metadata from db."""
+        try:
+            with get_db() as db:
+                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'live_positions'").fetchone()
+                if kv_row:
+                    return json.loads(kv_row["value_json"])
+        except Exception as e:
+            logger.error(f"Error loading live portfolio state: {e}")
         return []
 
     def _save_local_state(self, positions: List[Dict]):
-        """Save open positions and cumulative metrics to disk."""
+        """Save open positions and cumulative metrics to db."""
         try:
-            state = {
-                "positions": positions,
-                "cash": round(self.cash, 2),
-                "realized_pnl": round(self.realized_pnl, 2),
-                "total_trades": self.total_trades,
-                "winning_trades": self.winning_trades,
-                "losing_trades": self.losing_trades,
-                "total_fees_paid": round(self.total_fees_paid, 4),
-                "last_traded_token": self.last_traded_token,
-                "last_updated": datetime.now(timezone.utc).isoformat(),
-            }
-            with open(LIVE_PORTFOLIO_STATE_FILE, "w") as f:
-                json.dump(state, f, indent=2, default=str)
+            with get_db() as db:
+                db.execute('''
+                    INSERT INTO portfolios (user_id, portfolio_type, cash, total_equity, unrealized_pnl, realized_pnl, total_trades, winning_trades, losing_trades)
+                    VALUES (?, 'LIVE', ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(user_id, portfolio_type) DO UPDATE SET
+                        cash=excluded.cash,
+                        total_equity=excluded.total_equity,
+                        unrealized_pnl=excluded.unrealized_pnl,
+                        realized_pnl=excluded.realized_pnl,
+                        total_trades=excluded.total_trades,
+                        winning_trades=excluded.winning_trades,
+                        losing_trades=excluded.losing_trades,
+                        updated_at=CURRENT_TIMESTAMP
+                ''', (
+                    self.user_address,
+                    round(self.cash, 2),
+                    round(self.total_equity, 2),
+                    round(sum(p.get("unrealized_pnl", 0) for p in positions), 2),
+                    round(self.realized_pnl, 2),
+                    self.total_trades,
+                    self.winning_trades,
+                    self.losing_trades
+                ))
+                
+                db.execute('''
+                    INSERT INTO market_data (key, value_json) VALUES ('live_positions', ?)
+                    ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
+                ''', (json.dumps(positions, default=str),))
         except Exception as e:
             logger.error(f"Error saving live portfolio state: {e}")
 

@@ -25,14 +25,9 @@ export const absTime = (iso) => {
 export const fmt = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export const coinIcon = (coin) => {
-  const c = (coin || '').toLowerCase();
-  if (c === 'btc') return '₿';
-  if (c === 'eth') return 'Ξ';
-  if (c === 'sol') return '◎';
   return (coin || '??').slice(0, 2).toUpperCase();
 };
 
 export const coinClass = (coin) => {
-  const c = (coin || '').toLowerCase();
-  return ['btc', 'eth', 'sol'].includes(c) ? c : 'def';
+  return 'def';
 };

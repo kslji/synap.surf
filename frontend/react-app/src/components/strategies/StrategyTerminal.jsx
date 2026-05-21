@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Component } from 'react';
+import BacktestChart from './BacktestChart';
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() { if (this.state.hasError) return <div style={{color:'red'}}>{this.state.error?.toString()}</div>; return this.props.children; }
+}
 
 function CustomDropdown({ options, value, onChange, label }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,26 +35,38 @@ function CustomDropdown({ options, value, onChange, label }) {
       </div>
       {isOpen && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
-          background: 'var(--card)', border: '1px solid var(--border)',
-          borderRadius: '8px', zIndex: 50, overflowY: 'auto', maxHeight: '250px',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+          position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0,
+          background: 'rgba(26, 30, 35, 0.85)', backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(0, 229, 255, 0.15)',
+          borderRadius: '12px', zIndex: 50, overflowY: 'auto', maxHeight: '280px',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 229, 255, 0.05)',
+          padding: '6px'
         }}>
           {options.map(opt => (
             <div
               key={opt.value}
               onClick={() => { onChange(opt.value); setIsOpen(false); }}
               style={{
-                padding: '10px 14px', fontSize: '13px', cursor: 'pointer',
-                color: opt.value === value ? 'var(--accent)' : 'var(--t1)',
-                background: opt.value === value ? 'rgba(79, 124, 138, 0.1)' : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                padding: '12px 16px', fontSize: '13px', cursor: 'pointer',
+                color: opt.value === value ? '#00e5ff' : 'var(--t2)',
+                background: opt.value === value ? 'rgba(0, 229, 255, 0.1)' : 'transparent',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+                fontWeight: opt.value === value ? '600' : '400',
+                marginBottom: '2px'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(79, 124, 138, 0.15)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = opt.value === value ? 'rgba(79, 124, 138, 0.1)' : 'transparent'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = opt.value === value ? 'rgba(0, 229, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.color = opt.value === value ? '#00e5ff' : 'var(--t1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = opt.value === value ? 'rgba(0, 229, 255, 0.1)' : 'transparent';
+                e.currentTarget.style.color = opt.value === value ? '#00e5ff' : 'var(--t2)';
+              }}
             >
               {opt.label}
-              {opt.value === value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+              {opt.value === value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
             </div>
           ))}
         </div>
@@ -175,11 +194,11 @@ export default function StrategyTerminal() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to run backtest');
       
-      // Update the local state with new metrics
+      // Update the local state with new metrics and trades
       setStrategies(prev => prev.map(s => 
-        s.id === selected.id ? { ...s, metrics: data.metrics } : s
+        s.id === selected.id ? { ...s, metrics: data.metrics, trades: data.trades } : s
       ));
-      setSelected(prev => ({ ...prev, metrics: data.metrics }));
+      setSelected(prev => ({ ...prev, metrics: data.metrics, trades: data.trades }));
       
     } catch (e) {
       console.error("Backtest error:", e);
@@ -251,6 +270,15 @@ export default function StrategyTerminal() {
               onClick={() => setSelected(strat)}
             >
               <h4>{strat.name}</h4>
+              <p style={{ 
+                margin: '6px 0 12px 0', 
+                fontSize: '11.5px', 
+                color: 'var(--t2)', 
+                lineHeight: '1.5',
+                opacity: selected.id === strat.id ? 1 : 0.8
+              }}>
+                {strat.description}
+              </p>
               <div className="strat-tags">
                 {strat.tags.map(t => <span key={t} className="strat-tag">{t}</span>)}
               </div>
@@ -263,7 +291,15 @@ export default function StrategyTerminal() {
         <div className="strat-header-card">
           <div className="strat-title-wrap">
             <h2>{selected.name}</h2>
-            <p>{selected.description || 'High-performance algorithmic strategy from library.'}</p>
+            <p style={{ 
+              marginTop: '10px', 
+              fontSize: '14px', 
+              lineHeight: '1.6', 
+              color: 'var(--t2)',
+              maxWidth: '85%'
+            }}>
+              {selected.description || 'High-performance algorithmic strategy from library.'}
+            </p>
           </div>
           <div className="strat-tags">
             {selected.tags && selected.tags.map(t => (
@@ -274,7 +310,7 @@ export default function StrategyTerminal() {
 
         <div style={{ padding: '0 24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 12, color: 'var(--t2)', letterSpacing: 1 }}>STRATEGY PERFORMANCE</h3>
+            <h3 style={{ margin: 0, fontSize: 12, color: 'var(--t2)', letterSpacing: 1 }}>STRATEGY PERFORMANCE <span style={{color: '#00e5ff', opacity: 0.8, fontSize: 10, marginLeft: 8}}>(1 Month Window)</span></h3>
             <button 
               className={`beautiful-backtest-btn ${isBacktesting ? 'loading' : ''}`}
               onClick={handleBacktest} 
@@ -312,6 +348,14 @@ export default function StrategyTerminal() {
               <span className="value">{metrics.trades}</span>
             </div>
           </div>
+          
+          <ErrorBoundary>
+            <BacktestChart 
+              symbol={coin} 
+              interval={timeframe}
+              trades={selected.trades || []}
+            />
+          </ErrorBoundary>
         </div>
 
         <div className="strat-execution-panel">

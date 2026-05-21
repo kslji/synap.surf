@@ -11,7 +11,7 @@ export default function TickerRow({ perps }) {
           ? <span className="perp-loading">Syncing perps…</span>
           : perps.slice(0, 10).map((c, i) => (
             <div key={i} className="wchip">
-              <div className={`wchip-icon ${(c.name || '').toLowerCase()}`}>
+              <div className="wchip-icon">
                 {(c.name || '??').slice(0, 2)}
               </div>
               <span className="wchip-name">{c.name}</span>
