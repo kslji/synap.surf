@@ -11,10 +11,39 @@ import AIPage from './components/AIPage.jsx';
 import { ToastProvider } from './components/Toast.jsx';
 
 export default function App() {
-  const [view, setView] = useState(() => localStorage.getItem('app_view') || 'dashboard');
+  const [view, setView] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') || localStorage.getItem('app_view') || 'dashboard';
+  });
   
+  const changeView = (newView) => {
+    setView(newView);
+    const url = new URL(window.location);
+    url.searchParams.set('view', newView);
+    window.history.pushState({ view: newView }, '', url);
+  };
+
   useEffect(() => {
     localStorage.setItem('app_view', view);
+  }, [view]);
+
+  // Handle browser Back/Forward buttons
+  useEffect(() => {
+    const onPopState = (e) => {
+      const newView = e.state?.view || new URLSearchParams(window.location.search).get('view') || 'dashboard';
+      setView(newView);
+      // Ensure nested views like the AI chat are cleared when navigating back
+      window.dispatchEvent(new Event('resetAIPage'));
+    };
+
+    if (!window.history.state) {
+      const url = new URL(window.location);
+      url.searchParams.set('view', view);
+      window.history.replaceState({ view }, '', url);
+    }
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
   }, [view]);
 
   const [tradingMode, setTradingMode] = useState(() => localStorage.getItem('trading_mode') || 'bot');
@@ -45,7 +74,7 @@ export default function App() {
             trades={trades}
             perps={perps}
             intel={intel}
-            onShowCharts={() => setView('charts')}
+            onShowCharts={() => changeView('charts')}
             onRefresh={fetchAll}
           />
         );
@@ -54,7 +83,7 @@ export default function App() {
           <MultiChartTerminal
             coins={topCoins}
             theme={theme}
-            onBack={() => setView('dashboard')}
+            onBack={() => changeView('dashboard')}
           />
         );
       case 'strategies':
@@ -73,7 +102,7 @@ export default function App() {
   return (
     <ToastProvider>
       <div className="shell">
-        <Sidebar view={view} setView={setView} theme={theme} toggleTheme={toggleTheme} />
+        <Sidebar view={view} setView={changeView} theme={theme} toggleTheme={toggleTheme} />
         {renderView()}
         {view !== 'strategies' && view !== 'proposals' && view !== 'settings' && view !== 'ai' && (
           <RightPanel

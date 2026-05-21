@@ -58,8 +58,7 @@ async def market_intel_service():
             # 3. Fetch Nansen data (if configured)
             nansen_data = await asyncio.to_thread(nansen_client.build_nansen_intelligence, target_coins)
             
-            # 4. Clean up Nansen branding as requested
-            # We just merge the data into a generic "market_intelligence" payload
+            # We just merge the data into a generic payload
             intel = {
                 "sentiment": sentiment,
                 "on_chain_flows": nansen_data.get("smart_money_flows", {}),
@@ -67,8 +66,8 @@ async def market_intel_service():
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
-            set_market_data('market_intelligence', intel)
-            logger.info("Updated market intelligence.")
+            set_market_data('market_intelligence_global', intel)
+            logger.info("Updated raw market intelligence.")
             
         except Exception as e:
             logger.error(f"Error in market_intel_service: {e}")

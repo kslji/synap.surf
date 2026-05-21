@@ -219,7 +219,7 @@ export default function StrategyTerminal() {
           height="80" 
           viewBox="0 0 24 24" 
           fill="none" 
-          stroke="#00e5ff" 
+          stroke="#ff9f43" 
           strokeWidth="1.5" 
           strokeLinecap="round" 
           strokeLinejoin="round" 
@@ -231,7 +231,7 @@ export default function StrategyTerminal() {
         </svg>
         <h3 style={{ 
           marginTop: '32px', letterSpacing: '4px', fontWeight: '900', 
-          background: 'linear-gradient(90deg, #00e5ff, #0099ff)',
+          background: 'linear-gradient(90deg, #ff9f43, #feca57)',
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           animation: 'pulse-text 2s ease-in-out infinite'
         }}>
@@ -269,18 +269,24 @@ export default function StrategyTerminal() {
               className={`strat-item${selected.id === strat.id ? ' active' : ''}`}
               onClick={() => setSelected(strat)}
             >
-              <h4>{strat.name}</h4>
+              <h4 style={{ color: selected.id === strat.id ? '#feca57' : 'var(--t1)', transition: 'color 0.2s' }}>{strat.name}</h4>
               <p style={{ 
                 margin: '6px 0 12px 0', 
                 fontSize: '11.5px', 
-                color: 'var(--t2)', 
+                color: selected.id === strat.id ? 'rgba(255, 159, 67, 0.9)' : 'var(--t2)', 
                 lineHeight: '1.5',
-                opacity: selected.id === strat.id ? 1 : 0.8
+                opacity: selected.id === strat.id ? 1 : 0.8,
+                transition: 'color 0.2s'
               }}>
                 {strat.description}
               </p>
               <div className="strat-tags">
-                {strat.tags.map(t => <span key={t} className="strat-tag">{t}</span>)}
+                {strat.tags.map(t => <span key={t} className="strat-tag" style={{ 
+                  background: selected.id === strat.id ? 'rgba(255, 159, 67, 0.15)' : 'rgba(255,255,255,0.05)', 
+                  color: selected.id === strat.id ? '#ff9f43' : 'var(--t3)',
+                  border: selected.id === strat.id ? '1px solid rgba(255, 159, 67, 0.3)' : '1px solid transparent',
+                  transition: 'all 0.2s'
+                }}>{t}</span>)}
               </div>
             </div>
           ))}
@@ -290,12 +296,12 @@ export default function StrategyTerminal() {
       <main className="strat-main">
         <div className="strat-header-card">
           <div className="strat-title-wrap">
-            <h2>{selected.name}</h2>
+            <h2 style={{ color: '#feca57', textShadow: '0 2px 10px rgba(254, 202, 87, 0.2)' }}>{selected.name}</h2>
             <p style={{ 
               marginTop: '10px', 
               fontSize: '14px', 
               lineHeight: '1.6', 
-              color: 'var(--t2)',
+              color: 'rgba(255, 159, 67, 0.9)',
               maxWidth: '85%'
             }}>
               {selected.description || 'High-performance algorithmic strategy from library.'}
@@ -303,27 +309,47 @@ export default function StrategyTerminal() {
           </div>
           <div className="strat-tags">
             {selected.tags && selected.tags.map(t => (
-              <span key={t} className="strat-tag" style={{ fontSize: 11, padding: '6px 12px', background: 'var(--accent)', color: '#fff' }}>{t}</span>
+              <span key={t} className="strat-tag" style={{ 
+                fontSize: 11, padding: '6px 12px', 
+                background: 'rgba(255, 159, 67, 0.15)', 
+                color: '#ff9f43',
+                border: '1px solid rgba(255, 159, 67, 0.4)',
+                boxShadow: '0 4px 12px rgba(255, 159, 67, 0.1)'
+              }}>{t}</span>
             ))}
           </div>
         </div>
 
         <div style={{ padding: '0 24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 12, color: 'var(--t2)', letterSpacing: 1 }}>STRATEGY PERFORMANCE <span style={{color: '#00e5ff', opacity: 0.8, fontSize: 10, marginLeft: 8}}>(1 Month Window)</span></h3>
+            <h3 style={{ margin: 0, fontSize: 12, color: '#feca57', letterSpacing: 1.5, textShadow: '0 2px 10px rgba(254, 202, 87, 0.3)' }}>
+              STRATEGY PERFORMANCE <span style={{color: 'rgba(255, 159, 67, 0.8)', fontSize: 10, marginLeft: 8}}>(1 Month Window)</span>
+            </h3>
             <button 
               className={`beautiful-backtest-btn ${isBacktesting ? 'loading' : ''}`}
               onClick={handleBacktest} 
               disabled={isBacktesting}
+              style={{
+                background: 'linear-gradient(90deg, #ff9f43, #feca57)',
+                border: 'none', color: '#1a1e23', fontWeight: 900,
+                padding: '8px 24px', borderRadius: '12px',
+                boxShadow: '0 6px 20px rgba(255,159,67,0.4)',
+                cursor: isBacktesting ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                letterSpacing: 1, opacity: isBacktesting ? 0.7 : 1
+              }}
+              onMouseOver={e => !isBacktesting && (e.currentTarget.style.transform = 'translateY(-2px)')}
+              onMouseOut={e => !isBacktesting && (e.currentTarget.style.transform = 'translateY(0)')}
             >
               {isBacktesting ? (
                 <>
-                  <div className="spinner-glow"></div>
+                  <div className="spinner-glow" style={{ borderTopColor: '#1a1e23', borderLeftColor: '#1a1e23', width: 14, height: 14 }}></div>
                   RUNNING SIMULATION...
                 </>
               ) : (
                 <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                   RUN BACKTEST
                 </>
               )}
@@ -333,7 +359,7 @@ export default function StrategyTerminal() {
           <div className="strat-perf-grid">
             <div className="perf-card">
               <span className="label">WIN RATE</span>
-              <span className="value highlight" style={{ color: 'var(--accent)' }}>{metrics.winRate}%</span>
+              <span className="value highlight" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(255,255,255,0.3)' }}>{metrics.winRate}%</span>
             </div>
             <div className="perf-card">
               <span className="label">EST. PROFIT</span>
@@ -345,7 +371,7 @@ export default function StrategyTerminal() {
             </div>
             <div className="perf-card">
               <span className="label">TOTAL TRADES</span>
-              <span className="value">{metrics.trades}</span>
+              <span className="value" style={{ color: '#ff9f43', textShadow: '0 2px 8px rgba(255,159,67,0.3)' }}>{metrics.trades}</span>
             </div>
           </div>
           
@@ -369,7 +395,7 @@ export default function StrategyTerminal() {
                 <label>INITIAL CAPITAL</label>
                 {walletBalance && (
                   <span style={{ fontSize: '10px', color: '#fff', fontWeight: 700 }}>
-                    Avail: <strong style={{ color: 'var(--accent)' }}>${parseFloat(walletBalance.available).toFixed(2)}</strong>
+                    Avail: <strong style={{ color: '#ff9f43', textShadow: '0 0 8px rgba(255,159,67,0.4)' }}>${parseFloat(walletBalance.available).toFixed(2)}</strong>
                   </span>
                 )}
               </div>
@@ -395,9 +421,12 @@ export default function StrategyTerminal() {
                       key={pct}
                       onClick={() => setCapital(((pct / 100) * parseFloat(walletBalance.available)).toFixed(2))}
                       style={{
-                        flex: 1, padding: '4px 0', fontSize: '10px', background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid var(--border)', borderRadius: '4px', color: 'var(--t2)', cursor: 'pointer'
+                        flex: 1, padding: '4px 0', fontSize: '10px', background: 'rgba(255, 159, 67, 0.1)',
+                        border: '1px solid rgba(255, 159, 67, 0.3)', borderRadius: '4px', color: '#ff9f43', cursor: 'pointer',
+                        fontWeight: 700, transition: 'all 0.2s'
                       }}
+                      onMouseOver={e => { e.currentTarget.style.background = 'rgba(255, 159, 67, 0.2)'; }}
+                      onMouseOut={e => { e.currentTarget.style.background = 'rgba(255, 159, 67, 0.1)'; }}
                     >
                       {pct}%
                     </button>
@@ -434,7 +463,7 @@ export default function StrategyTerminal() {
             <div className="exec-field">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <label>LEVERAGE</label>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>{leverage}x</span>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#ff9f43', textShadow: '0 0 8px rgba(255,159,67,0.4)' }}>{leverage}x</span>
               </div>
               <input 
                 type="range" 
@@ -443,9 +472,9 @@ export default function StrategyTerminal() {
                 step="1"
                 value={leverage} 
                 onChange={e => setLeverage(e.target.value)}
-                style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent)' }}
+                style={{ width: '100%', cursor: 'pointer', accentColor: '#ff9f43' }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '9px', color: 'var(--t3)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '9px', color: 'rgba(255, 159, 67, 0.7)' }}>
                 <span>1x</span>
                 <span>{maxLeverage}x Max</span>
               </div>
@@ -455,7 +484,20 @@ export default function StrategyTerminal() {
           <button 
             className={`strat-exec-btn${isExecuting ? (status === 'WAITING' ? ' waiting' : ' active') : ''}`}
             onClick={handleExecuteBtnClick}
-            style={{ background: status === 'WAITING' ? '#f5b301' : '' }}
+            style={{ 
+              background: isExecuting 
+                ? (status === 'WAITING' ? '#f5b301' : 'linear-gradient(90deg, #ff758c, #ff7eb3)') 
+                : 'linear-gradient(90deg, #a55eea, #8854d0)',
+              color: '#fff',
+              border: 'none',
+              boxShadow: isExecuting 
+                ? (status === 'WAITING' ? '0 6px 20px rgba(245, 179, 1, 0.4)' : '0 6px 20px rgba(255, 117, 140, 0.4)') 
+                : '0 6px 20px rgba(165, 94, 234, 0.4)',
+              transition: 'all 0.3s ease',
+              transform: 'translateY(0)'
+            }}
+            onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
           >
             {isExecuting ? (
               <>

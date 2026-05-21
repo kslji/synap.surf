@@ -143,12 +143,12 @@ button {
 }
 
 .sb-item:hover {
-  color: var(--t1);
+  color: var(--hover-color, var(--t1));
   background: rgba(255, 255, 255, 0.06);
 }
 
 .sb-item.active {
-  color: var(--t1);
+  color: var(--hover-color, var(--t1));
   background: rgba(255, 255, 255, 0.12);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -160,9 +160,9 @@ button {
   top: 15%;
   height: 70%;
   width: 4px;
-  background: #fff;
+  background: var(--hover-color, #fff);
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 10px #fff;
+  box-shadow: 0 0 10px var(--hover-color, #fff);
 }
 
 /* ── Main Area ───────────────────────────────────────────────────────────── */
@@ -1158,8 +1158,8 @@ button {
   gap: 20px;
   padding: 24px;
   overflow-y: auto;
-  border-left: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.2);
+  border-left: 1px solid rgba(255, 159, 67, 0.2);
+  background: linear-gradient(180deg, rgba(255, 159, 67, 0.15) 0%, rgba(255, 107, 107, 0.05) 100%);
 }
 
 .rp-section {

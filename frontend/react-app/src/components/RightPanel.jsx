@@ -46,8 +46,8 @@ function SignalModal({ item, onClose }) {
               <span className="m-val">{t.leverage || '5'}x</span>
             </div>
             <div className="m-stat">
-              <span className="m-label">AMOUNT</span>
-              <span className="m-val">${t.position_size_usd || '100'}</span>
+              <span className="m-label">PRICE</span>
+              <span className="m-val">{t.entry_price ? `$${t.entry_price}` : (t.price ? `$${t.price}` : 'Market')}</span>
             </div>
           </div>
         </div>
@@ -689,11 +689,6 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       <section className="rp-section">
         <div className="rp-hdr">
           <h3>PERFORMANCE</h3>
-          <div className="mini-toggle">
-            {['bot', 'manual'].map(m => (
-              <span key={m} className={`m-tgl${tradingMode === m ? ' active' : ''}`} onClick={() => setTradingMode(m)}>{m.toUpperCase()}</span>
-            ))}
-          </div>
         </div>
         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           <div className="stat-card">

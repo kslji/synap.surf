@@ -1,7 +1,22 @@
+import { useState } from 'react';
 import { fmt } from '../../utils.js';
 
 export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const pct = stats.pnl_pct || 0;
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
   return (
     <section className="bal-card compact">
       <div className="bal-top">
@@ -14,8 +29,8 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
           <span className="bal-eth">≈ {((stats.equity || 0) / (stats.eth_price || 3200)).toFixed(4)} ETH</span>
         </div>
         <div className="bal-actions-row">
-          <button className="qbtn tiny" title="Refresh" onClick={onRefresh}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <button className="qbtn tiny" title="Refresh" onClick={handleRefresh}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: isRefreshing ? 'spin 0.6s linear infinite' : 'none' }}>
               <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
             </svg>
           </button>

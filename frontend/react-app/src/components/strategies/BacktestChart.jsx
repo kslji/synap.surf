@@ -47,15 +47,31 @@ export default function BacktestChart({ symbol, interval, trades }) {
         textColor: '#D9D9D9',
       },
       grid: {
-        vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
-        horzLines: { color: 'rgba(255, 255, 255, 0.04)' },
+        vertLines: { color: 'rgba(255, 255, 255, 0.06)' },
+        horzLines: { color: 'rgba(255, 255, 255, 0.06)' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
+        vertLine: {
+          width: 1,
+          color: 'rgba(255, 159, 67, 0.5)',
+          style: 3, // dashed
+          labelBackgroundColor: '#ff9f43',
+        },
+        horzLine: {
+          width: 1,
+          color: 'rgba(255, 159, 67, 0.5)',
+          style: 3, // dashed
+          labelBackgroundColor: '#ff9f43',
+        },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(255, 255, 255, 0.1)',
       },
     });
 

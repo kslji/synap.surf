@@ -73,6 +73,39 @@ def init_db():
             )
         ''')
 
+        # Nansen API Cache (to serve as context for Claude chat)
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS nansen_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                endpoint TEXT,
+                cache_key TEXT UNIQUE,
+                response_json TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Claude Chat Cache — saves token burn by serving cached AI responses
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS chat_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cache_key TEXT UNIQUE,       -- SHA256(normalized_prompt + context_type)
+                context_type TEXT,
+                prompt TEXT,
+                response TEXT,
+                embedding_json TEXT,         -- JSON float array for semantic similarity search
+                hit_count INTEGER DEFAULT 1, -- how many times this was served from cache
+                tokens_saved INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP         -- NULL = never expires
+            )
+        ''')
+
+        # Safe migrations — add columns that may not exist in older DB files
+        try:
+            db.execute("ALTER TABLE chat_cache ADD COLUMN embedding_json TEXT")
+        except Exception:
+            pass  # Column already exists, that's fine
+
         # Signals Queue (to decouple strategy processes from execution engine)
         db.execute('''
             CREATE TABLE IF NOT EXISTS signals_queue (

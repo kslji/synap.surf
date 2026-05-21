@@ -1,10 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export default function AIPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const handleReset = () => {
+      setMessages([]);
+      setInput('');
+      setIsTyping(false);
+    };
+    window.addEventListener('resetAIPage', handleReset);
+    return () => window.removeEventListener('resetAIPage', handleReset);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -14,47 +25,78 @@ export default function AIPage() {
     scrollToBottom();
   }, [messages]);
 
-  const simulateStream = async (fullText) => {
-    setIsTyping(true);
-    setMessages(prev => [...prev, { role: 'ai', content: '' }]);
-    
-    let currentText = '';
-    const chars = fullText.split('');
-    
-    for (let i = 0; i < chars.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 15 + 5)); 
-      currentText += chars[i];
-      setMessages(prev => {
-        const newMsgs = [...prev];
-        newMsgs[newMsgs.length - 1].content = currentText;
-        return newMsgs;
-      });
-    }
-    setIsTyping(false);
-  };
+  const accumulatedRef = useRef('');
 
-  const handleSend = (text) => {
+  const handleSend = async (text, contextType = 'general') => {
     const userMsg = typeof text === 'string' ? text : input.trim();
     if (!userMsg || isTyping) return;
-    
+
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setInput('');
+    setIsTyping(true);
+    accumulatedRef.current = '';
     
-    setTimeout(() => {
-      simulateStream(`I'm analyzing the markets regarding: "${userMsg}".\n\nBased on current market conditions, real-time news, and algorithmic indicators, this setup presents a high-probability opportunity. The momentum oscillator is trending upward, and on-chain metrics show accumulation. However, always remember to manage your risk dynamically!`);
-    }, 400);
+    // Add AI message with thinking state
+    setMessages(prev => [...prev, { role: 'ai', content: '', isThinking: true, thinkTime: 0 }]);
+    
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      setMessages(prev => prev.map((m, i) => 
+        i === prev.length - 1 ? { ...m, thinkTime: Math.floor((Date.now() - startTime) / 1000) } : m
+      ));
+    }, 1000);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userMsg, context_type: contextType })
+      });
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+      // Stop the timer as soon as we get the first byte (headers)
+      clearInterval(interval);
+      setMessages(prev => prev.map((m, i) => 
+        i === prev.length - 1 ? { ...m, isThinking: false } : m
+      ));
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        accumulatedRef.current += chunk;
+        const snapshot = accumulatedRef.current;
+        setMessages(prev => prev.map((m, i) =>
+          i === prev.length - 1 ? { ...m, content: snapshot } : m
+        ));
+      }
+    } catch (err) {
+      clearInterval(interval);
+      setMessages(prev =>
+        prev.map((m, i) =>
+          i === prev.length - 1 ? { ...m, content: `Connection Error: ${err.message}`, isThinking: false } : m
+        )
+      );
+    } finally {
+      setIsTyping(false);
+    }
   };
+
 
   return (
     <div className="main-content fade-in" style={{ 
       display: 'flex', flexDirection: 'column', flex: 1, 
-      background: 'radial-gradient(circle at 50% 0%, rgba(108, 92, 231, 0.08) 0%, var(--bg) 60%)', 
+      background: 'radial-gradient(circle at 50% 0%, rgba(255, 159, 67, 0.1) 0%, var(--bg) 60%)', 
       height: '100%', minHeight: 0, position: 'relative', overflow: 'hidden' 
     }}>
       
       {/* Dynamic Background Glows */}
-      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(0, 210, 211, 0.15) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 0, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(108, 92, 231, 0.15) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 0, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(72, 219, 251, 0.15) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 0, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(255, 159, 67, 0.15) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 0, pointerEvents: 'none' }} />
 
 
 
@@ -75,14 +117,14 @@ export default function AIPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: '800px' }}>
                 {[
-                  { title: 'Market Analysis', desc: 'Analyze current momentum for BTC and ETH', icon: '📈' },
-                  { title: 'Strategy Generation', desc: 'Create a mean-reversion strategy for SOL', icon: '🧠' },
-                  { title: 'News Summary', desc: 'Summarize today\'s top crypto news', icon: '📰' },
-                  { title: 'Risk Management', desc: 'Calculate optimal position sizing', icon: '🛡️' }
+                  { title: 'Market Analysis', desc: 'Analyze current momentum across the top crypto markets', icon: '📈', id: 'market_analysis' },
+                  { title: 'Strategy Generation', desc: 'What is the best trading strategy right now based on current market conditions?', icon: '🧠', id: 'strategy_generation' },
+                  { title: 'Smart money holder', desc: 'Analyze smart money flows and holder behavior', icon: '📰', id: 'smart_money_holder' },
+                  { title: 'Risk Management', desc: 'Calculate optimal position sizing', icon: '🛡️', id: 'risk_management' }
                 ].map((item, i) => (
                   <button 
                     key={i} 
-                    onClick={() => handleSend(item.desc)}
+                    onClick={() => handleSend(item.desc, item.id)}
                     style={{ 
                       background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: 24, 
                       textAlign: 'left', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer',
@@ -102,6 +144,23 @@ export default function AIPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32, paddingBottom: 40 }}>
+              {/* Back Button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-start', animation: 'fadeIn 0.5s' }}>
+                <button 
+                  onClick={() => setMessages([])}
+                  style={{
+                    background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 20px',
+                    color: 'var(--t2)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
+                    cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.color = '#ff9f43'; e.currentTarget.style.borderColor = '#ff9f43'; e.currentTarget.style.background = 'rgba(255,159,67,0.1)'; }}
+                  onMouseOut={e => { e.currentTarget.style.color = 'var(--t2)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                  Back to Options
+                </button>
+              </div>
+              
               {messages.map((msg, i) => (
                 <div key={i} style={{ display: 'flex', gap: 20, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
                   {msg.role === 'ai' && (
@@ -110,30 +169,69 @@ export default function AIPage() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                       boxShadow: '0 4px 12px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)'
                     }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00d2d3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 2l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/>
                       </svg>
                     </div>
                   )}
                   <div style={{ 
-                    background: msg.role === 'user' ? 'linear-gradient(135deg, #00d2d3, #6c5ce7)' : 'var(--card)', 
+                    background: msg.role === 'user' ? 'linear-gradient(135deg, #ff9f43, #ee5253)' : 'var(--card)', 
                     color: msg.role === 'user' ? '#fff' : 'var(--t1)',
                     padding: '20px 24px', 
                     borderRadius: '24px',
                     borderTopRightRadius: msg.role === 'user' ? 6 : 24,
                     borderTopLeftRadius: msg.role === 'ai' ? 6 : 24,
-                    fontSize: 15.5,
-                    lineHeight: 1.7,
-                    fontWeight: 500,
-                    boxShadow: msg.role === 'user' ? '0 12px 24px rgba(108, 92, 231, 0.3)' : 'var(--shadow)',
+                    fontSize: 15,
+                    lineHeight: 1.75,
+                    fontWeight: 400,
+                    boxShadow: msg.role === 'user' ? '0 12px 24px rgba(238, 82, 83, 0.3)' : 'var(--shadow)',
                     border: msg.role === 'ai' ? '1px solid var(--border)' : 'none',
                     maxWidth: '80%',
-                    whiteSpace: 'pre-wrap',
                     letterSpacing: '0.2px'
                   }}>
-                    {msg.content}
-                    {msg.role === 'ai' && isTyping && i === messages.length - 1 && (
-                      <span style={{ display: 'inline-block', width: 10, height: 18, background: '#00d2d3', marginLeft: 6, animation: 'blink 1s infinite', borderRadius: 2 }}></span>
+                    {msg.role === 'ai' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {msg.isThinking ? (
+                          <div style={{ color: 'var(--t3)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, fontStyle: 'italic' }}>
+                            <div style={{ width: 14, height: 14, border: '2px solid var(--t3)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                            Thinking for {msg.thinkTime}s...
+                          </div>
+                        ) : msg.thinkTime > 0 ? (
+                          <div style={{ color: 'var(--t3)', fontSize: 13, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6, opacity: 0.8 }}>
+                            Thinking for {msg.thinkTime}s
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                          </div>
+                        ) : null}
+                        
+                        {msg.content && (
+                          <ReactMarkdown
+                            components={{
+                              h1: ({node, ...props}) => <h1 style={{fontSize: 22, fontWeight: 900, color: '#ff9f43', marginBottom: 16, marginTop: 8, borderBottom: '1px solid rgba(255,159,67,0.2)', paddingBottom: 8, letterSpacing: '0.5px'}} {...props} />,
+                              h2: ({node, ...props}) => <h2 style={{fontSize: 18, fontWeight: 800, color: '#ff6b6b', marginBottom: 12, marginTop: 20, letterSpacing: '0.5px'}} {...props} />,
+                              h3: ({node, ...props}) => <h3 style={{fontSize: 16, fontWeight: 700, color: '#feca57', marginBottom: 8, marginTop: 16}} {...props} />,
+                              p: ({node, ...props}) => <p style={{marginBottom: 14, color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.8, fontSize: 15.5}} {...props} />,
+                              strong: ({node, ...props}) => <strong style={{color: '#fff', fontWeight: 700, background: 'rgba(255,255,255,0.05)', padding: '0 4px', borderRadius: 4}} {...props} />,
+                              ul: ({node, ...props}) => <ul style={{paddingLeft: 24, marginBottom: 16}} {...props} />,
+                              ol: ({node, ...props}) => <ol style={{paddingLeft: 24, marginBottom: 16}} {...props} />,
+                              li: ({node, ...props}) => <li style={{marginBottom: 8, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.7}} {...props} />,
+                              code: ({node, inline, ...props}) => inline
+                                ? <code style={{background: 'rgba(255,159,67,0.15)', color: '#ff9f43', padding: '3px 8px', borderRadius: 6, fontSize: 13.5, fontFamily: 'monospace', fontWeight: 600}} {...props} />
+                                : <code style={{display: 'block', background: 'rgba(0,0,0,0.4)', color: '#ff9f43', padding: '16px 20px', borderRadius: 12, fontSize: 13.5, fontFamily: 'monospace', overflowX: 'auto', marginBottom: 16, border: '1px solid rgba(255,159,67,0.1)'}} {...props} />,
+                              blockquote: ({node, ...props}) => <blockquote style={{borderLeft: '4px solid #ff6b6b', paddingLeft: 16, color: 'rgba(255, 255, 255, 0.7)', fontStyle: 'italic', margin: '16px 0', background: 'rgba(255, 107, 107, 0.05)', padding: '12px 16px', borderRadius: '0 8px 8px 0'}} {...props} />,
+                              hr: ({node, ...props}) => <hr style={{border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '24px 0'}} {...props} />,
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
+                        )}
+                        {isTyping && i === messages.length - 1 && (
+                          <span style={{ display: 'inline-block', width: 10, height: 18, background: '#ff9f43', marginLeft: 6, animation: 'blink 1s infinite', borderRadius: 3, verticalAlign: 'middle', boxShadow: '0 0 10px rgba(255,159,67,0.5)' }}></span>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 16, fontWeight: 500, lineHeight: 1.6, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                        {msg.content}
+                      </div>
                     )}
                   </div>
                 </div>

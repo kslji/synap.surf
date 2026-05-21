@@ -1558,3 +1558,92 @@
 
 2026-05-21 19:00:02,168 | INFO | 
 ✅ Cycle complete in 62.7s | Equity: $50.00 | Positions: 0 | Win rate: 0% | AI calls: YES
+2026-05-21 23:49:06,595 | INFO | ======================================================================
+2026-05-21 23:49:06,596 | INFO |   🧠 AI BRAIN TRADING SYSTEM
+2026-05-21 23:49:06,596 | INFO |   Capital:       $50.0
+2026-05-21 23:49:06,596 | INFO |   Poll interval: 60 min (idle) / 1 min (with positions)
+2026-05-21 23:49:06,596 | INFO |   Claude model:  claude-sonnet-4-5
+2026-05-21 23:49:06,596 | INFO |   Mode:          PAPER TRADE
+2026-05-21 23:49:06,596 | INFO |   Nansen API:    ✅ Configured
+2026-05-21 23:49:06,596 | INFO |   CoinGecko:     ✅ Configured
+2026-05-21 23:49:06,596 | INFO |   Claude API:    ✅ Configured
+2026-05-21 23:49:06,596 | INFO | ======================================================================
+2026-05-21 23:49:06,596 | INFO | 🟡 PAPER TRADING MODE ON — Simulation only. 🟡
+2026-05-21 23:49:06,597 | INFO | 📂 Loaded portfolio: cash=$50.00, 0 open positions, realized P&L=$+0.00
+2026-05-21 23:49:06,597 | INFO | ✅ Telegram notifier ready.
+2026-05-21 23:49:06,597 | INFO | 🤖 Starting Telegram bot polling...
+2026-05-21 23:49:06,597 | INFO | 
+══════════════════════════════════════════════════════════════════════
+2026-05-21 23:49:06,598 | INFO |   🧠 BRAIN CYCLE — 2026-05-21 18:19:06 UTC
+2026-05-21 23:49:06,598 | INFO | ══════════════════════════════════════════════════════════════════════
+2026-05-21 23:49:06,598 | INFO | 
+📊 Step 1: Scanning for Volatility Leaders...
+2026-05-21 23:49:08,687 | INFO | 🔥 Volatility Leaders: PROVE, TST, GRASS, APEX, 2Z, PURR, HYPE, KAITO, BABY, AZTEC
+2026-05-21 23:49:08,688 | INFO | 
+⚡ Step 1.5: Quick price check to gate API calls...
+2026-05-21 23:49:08,848 | INFO |   ✅ No open positions — running full scan for new trades
+2026-05-21 23:49:08,848 | INFO | 
+🔍 Step 2: Fetching Nansen intelligence...
+2026-05-21 23:49:08,849 | INFO | 🔍 Nansen API: POST perp-screener
+2026-05-21 23:49:09,499 | INFO | 💳 Nansen credit used. Total: 25/1000 (975 remaining)
+2026-05-21 23:49:09,503 | INFO | 🔍 Nansen API: POST smart-money/netflow
+2026-05-21 23:49:10,680 | INFO | 💳 Nansen credit used. Total: 26/1000 (974 remaining)
+2026-05-21 23:49:10,684 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 23:49:10,685 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 23:49:10,685 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 23:49:10,685 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 23:49:10,685 | INFO |   📦 Cache hit: sm_netflow_all_24h
+2026-05-21 23:49:10,685 | INFO | 🔍 Nansen API: POST token-screener
+2026-05-21 23:49:11,869 | INFO | 💳 Nansen credit used. Total: 27/1000 (973 remaining)
+2026-05-21 23:49:11,874 | INFO | 📊 Nansen intelligence built. Credits: 27/1000
+2026-05-21 23:49:11,874 | INFO | 
+📰 Step 3: Fetching news & sentiment...
+2026-05-21 23:49:12,695 | INFO | 😱 Fear & Greed: 29 (Fear) trend=DECLINING
+2026-05-21 23:49:13,675 | INFO | 🔥 CoinGecko trending: ['HYPE', 'PENGU', 'VVV', 'ZEC', 'NEX', 'SOL', 'MEGA', 'SUI', 'ETH', 'LIT']
+2026-05-21 23:49:13,987 | INFO | 📂 Trending narratives: ['Quantum-Resistant', 'Parallelized EVM', 'Zero Knowledge (ZK)', 'YZi Labs (Prev. Binance Labs) Portfolio', 'IP Meme']
+2026-05-21 23:49:23,456 | INFO | 📰 Fetched 161 headlines from 8 RSS feeds
+2026-05-21 23:49:23,478 | INFO | 📊 Sentiment data built: F&G=29, trending=15 coins, headlines for 7 coins
+2026-05-21 23:49:23,478 | INFO | 
+👀 Step 4: Generating watchlist...
+2026-05-21 23:49:23,478 | INFO | 👀 Watchlist: 20 coins — 2Z, APEX, ARB, AVAX, AZTEC, BABY, BNB, BTC, ETH, GRASS, HYPE, KAITO, LINK, PROVE, PURR, SOL, SUI, TIA, TON, TST
+2026-05-21 23:49:23,479 | INFO | 
+📈 Step 5: Fetching technicals for 20 coins...
+2026-05-21 23:49:42,153 | INFO |   Got technicals for 20 coins
+2026-05-21 23:49:42,154 | INFO | 
+💰 Step 6: Checking SL proximity, TP hits, expiry exits...
+2026-05-21 23:49:42,154 | INFO |   No automatic exits triggered
+2026-05-21 23:49:42,154 | INFO | 
+📊 Step 7: Fetching funding rates...
+2026-05-21 23:49:42,643 | INFO | 
+🧠 Step 8: Consulting CLAUDE Brain...
+2026-05-21 23:49:42,993 | INFO | 📊 Sentiment data built: F&G=29, trending=15 coins, headlines for 5 coins
+2026-05-21 23:49:42,994 | INFO |   🧠 Sending 30,581 chars to Claude (claude-sonnet-4-5)...
+2026-05-21 23:50:02,966 | INFO | HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-05-21 23:50:03,014 | INFO |   🧠 Claude responded with 2,269 chars
+2026-05-21 23:50:03,017 | INFO |   🧠 AI Decision: 2 new trades, 0 position updates
+2026-05-21 23:50:03,017 | INFO |   👀 Watching: ['HYPE', 'ZEC', 'GRASS']
+2026-05-21 23:50:03,017 | INFO |   💭 HYPE shows massive smart money accumulation ($110M buy pressure, 13k traders) with strong 30m uptrend. ZEC has extreme buy pressure ($23M) with 18% price surge and strong momentum. GRASS displays 22% 
+2026-05-21 23:50:03,017 | INFO | 
+🚀 Step 9: Executing AI decisions...
+2026-05-21 23:50:03,017 | INFO |   📝 Market view: Fear & Greed at 29 (declining) creates contrarian opportunity in quality assets with smart money accumulation. Major coins (BTC, ETH) show weak trends and mixed signals - avoid. Focus on altcoins with clear Nansen buy pressure and technical confirmation. News flow negative (Cuban selling BTC, ETH brain drain) but smart money positioning contradicts retail fear - classic setup.
+2026-05-21 23:50:03,017 | WARNING | Cannot open LONG HYPE: Margin $40.00 exceeds max $7.50
+2026-05-21 23:50:03,017 | WARNING |   ❌ Failed to open LONG HYPE
+2026-05-21 23:50:03,017 | WARNING | Cannot open LONG ZEC: Margin $40.00 exceeds max $7.50
+2026-05-21 23:50:03,017 | WARNING |   ❌ Failed to open LONG ZEC
+2026-05-21 23:50:03,019 | INFO |   📊 Market Intelligence updated for dashboard
+2026-05-21 23:50:03,019 | INFO | 
+📋 Step 10: Portfolio snapshot...
+2026-05-21 23:50:03,019 | INFO | 
+────────────────────────────────────────────────────────────
+  📋 PORTFOLIO SNAPSHOT
+  Cash:            $50.00
+  Unrealized P&L:  $+0.00
+  Realized P&L:    $+0.00
+  Total Equity:    $50.00
+  Open Positions:  0
+────────────────────────────────────────────────────────────
+2026-05-21 23:50:03,019 | INFO |   💤 No open positions
+2026-05-21 23:50:03,019 | INFO | ────────────────────────────────────────────────────────────
+
+2026-05-21 23:50:03,021 | INFO | 
+✅ Cycle complete in 56.4s | Equity: $50.00 | Positions: 0 | Win rate: 0% | AI calls: YES

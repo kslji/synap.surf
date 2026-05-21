@@ -163,6 +163,17 @@ def _nansen_post(endpoint: str, body: dict, cache_key: str) -> Optional[dict]:
         data = resp.json()
         _tracker.use_credit()
         _cache.set(cache_key, data)
+        try:
+            with get_db() as db:
+                db.execute('''
+                    INSERT INTO nansen_cache (endpoint, cache_key, response_json, timestamp)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(cache_key) DO UPDATE SET 
+                        response_json = excluded.response_json,
+                        timestamp = CURRENT_TIMESTAMP
+                ''', (endpoint, cache_key, json.dumps(data)))
+        except Exception as dbe:
+            logger.error(f"Failed to cache Nansen to DB: {dbe}")
         return data
     except requests.exceptions.HTTPError as e:
         if resp is not None:
@@ -299,6 +310,23 @@ def get_smart_money_perp_trades(coin: Optional[str] = None) -> Optional[dict]:
     )
 
 
+def get_meme_coin_data() -> Optional[dict]:
+    """
+    Fetch trending tokens across major chains (includes meme coins) from Nansen.
+    We pull top 50 to ensure meme coins are captured.
+    """
+    body = {
+        "chains": ["ethereum", "solana", "base"],
+        "timeframe": "24h",
+        "pagination": {"page": 1, "per_page": 50},
+    }
+    return _nansen_post(
+        "token-screener",
+        body,
+        cache_key="meme_coin_data_24h",
+    )
+
+
 def build_nansen_intelligence(coins: list[str]) -> dict:
     """
     Build a comprehensive Nansen intelligence report for the given coins.
@@ -309,6 +337,7 @@ def build_nansen_intelligence(coins: list[str]) -> dict:
         "perp_screener": {...},
         "smart_money_flows": {"SOL": {...}, "ETH": {...}},
         "token_trends": {...},
+        "meme_coin_data": {...},
         "credits_used": 5,
         "credits_remaining": 995,
     }
@@ -317,6 +346,7 @@ def build_nansen_intelligence(coins: list[str]) -> dict:
         "perp_screener": None,
         "smart_money_flows": {},
         "token_trends": None,
+        "meme_coin_data": None,
         "credits_used": _tracker.credits_used,
         "credits_remaining": NANSEN_MONTHLY_BUDGET - _tracker.credits_used,
     }
@@ -332,6 +362,9 @@ def build_nansen_intelligence(coins: list[str]) -> dict:
 
     # 3. Token screener for narrative trends (1 credit)
     result["token_trends"] = get_token_screener()
+
+    # 4. Meme coin data (1 credit)
+    result["meme_coin_data"] = get_meme_coin_data()
 
     # Update credit counts
     result["credits_used"] = _tracker.credits_used

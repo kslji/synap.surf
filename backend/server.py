@@ -25,7 +25,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from pydantic import BaseModel
+import anthropic
+from algo_brain.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -36,12 +39,47 @@ import asyncio
 from contextlib import asynccontextmanager
 from backend.services import volatility_service, market_intel_service, trade_history_sync_service
 
+# ── Semantic Similarity Model (lazy-loaded at first use) ──────────────────────
+import hashlib
+import math
+from datetime import timedelta
+
+_embedding_model = None
+def _get_embedding_model():
+    """Lazy-load the sentence-transformers model (first call takes ~2s)."""
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception:
+            _embedding_model = False  # Mark as unavailable
+    return _embedding_model if _embedding_model else None
+
+def _embed(text: str):
+    """Returns a list of floats (embedding vector) or None if model unavailable."""
+    model = _get_embedding_model()
+    if model is None:
+        return None
+    return model.encode(text).tolist()
+
+def _cosine_similarity(a: list, b: list) -> float:
+    """Compute cosine similarity between two vectors."""
+    dot = sum(x * y for x, y in zip(a, b))
+    mag_a = math.sqrt(sum(x * x for x in a))
+    mag_b = math.sqrt(sum(x * x for x in b))
+    if mag_a == 0 or mag_b == 0:
+        return 0.0
+    return dot / (mag_a * mag_b)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     task1 = asyncio.create_task(volatility_service())
     task2 = asyncio.create_task(market_intel_service())
     task3 = asyncio.create_task(trade_history_sync_service())
+    # Pre-warm the sentence-transformers model in background so first user request is instant
+    asyncio.create_task(asyncio.to_thread(_get_embedding_model))
     yield
     # Shutdown
     task1.cancel()
@@ -49,6 +87,14 @@ async def lifespan(app: FastAPI):
     task3.cancel()
 
 app = FastAPI(title="AlgoBrain Dashboard", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 ROOT = Path("/Users/arjunsingh/Desktop/algo_brain")
 REACT_DIST = ROOT / "frontend" / "react-app" / "dist"
@@ -124,10 +170,10 @@ def get_stats():
         with get_db() as db:
             if HL_WALLET:
                 row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (HL_WALLET,)).fetchone()
-                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'live_positions'").fetchone()
             else:
-                row = db.execute("SELECT * FROM portfolios WHERE user_id = 'PAPER_USER' AND portfolio_type = 'PAPER'").fetchone()
-                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'paper_positions'").fetchone()
+                row = db.execute("SELECT * FROM portfolios WHERE portfolio_type = 'LIVE' ORDER BY ROWID DESC LIMIT 1").fetchone()
+                
+            kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'live_positions'").fetchone()
 
             if not row and HL_WALLET:
                 from algo_brain.telegram_bot import get_live_hl_portfolio
@@ -296,15 +342,40 @@ async def subscribe_strategy(request: Request):
 # ── API: AI Signals (Clean Feed) ──────────────────────────────────────────────
 @app.get("/api/decisions")
 async def get_decisions():
-    # Load raw trade events from trades_*.jsonl
     trades = _load_all_trades()
+    decisions_raw = _load_all_decisions()
+    
     feed = []
     for t in trades:
+        # Hide raw manual FILL events from the AI Signals feed
+        if t.get("event") == "FILL":
+            continue
         feed.append({"type": "trade_event", "timestamp": t.get("timestamp"), "data": t})
+        
+    for d_row in decisions_raw:
+        ts = d_row.get("timestamp")
+        dj = d_row.get("decision_json")
+        if dj:
+            try:
+                dec_obj = json.loads(dj)
+                for rec_trade in dec_obj.get("trades", []):
+                    signal_data = {
+                        "coin": rec_trade.get("coin"),
+                        "reasoning": rec_trade.get("reasoning", "").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"),
+                        "conviction": rec_trade.get("conviction"),
+                        "side": rec_trade.get("action", "LONG").replace("OPEN_", ""),
+                        "leverage": rec_trade.get("leverage"),
+                        "entry_price": rec_trade.get("entry_price"),
+                        "position_size_pct": rec_trade.get("position_size_pct"),
+                        "event": "SIGNAL"
+                    }
+                    feed.append({"type": "signal", "timestamp": ts, "data": signal_data})
+            except Exception:
+                pass
 
     # Sort by timestamp descending
     feed.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-    return feed[:10]
+    return feed[:15]
 
 
 # ── API: Watchlist ─────────────────────────────────────────────────────────────
@@ -322,19 +393,32 @@ async def get_watchlist():
 
 @app.get("/api/market_intel")
 async def get_market_intel():
+    intel = {
+        "market_view": "Syncing market data...",
+        "fear_greed": {"value": 50, "classification": "Neutral"},
+        "trending_coins": [],
+        "trending_narratives": [],
+        "scan_reasoning": "",
+        "top_coins": []
+    }
     try:
         with get_db() as db:
             row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence'").fetchone()
             if row:
-                return json.loads(row["value_json"])
+                intel_json = row["value_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder")
+                intel.update(json.loads(intel_json))
+            
+            dec_row = db.execute("SELECT decision_json FROM decision_logs ORDER BY timestamp DESC LIMIT 1").fetchone()
+            if dec_row and dec_row["decision_json"]:
+                dj = json.loads(dec_row["decision_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"))
+                if dj.get("market_assessment"):
+                    intel["market_view"] = dj.get("market_assessment")
+                if dj.get("scan_result"):
+                    intel["scan_reasoning"] = dj.get("scan_result", {}).get("reasoning", "")
+                    intel["top_coins"] = dj.get("scan_result", {}).get("top_coins", [])
     except Exception:
         pass
-    return {
-        "market_view": "Syncing market data...",
-        "fear_greed": {"value": 50, "classification": "Neutral"},
-        "trending_coins": [],
-        "trending_narratives": []
-    }
+    return intel
 
 
 # ── API: Hyperliquid Proxy ──────────────────────────────────────────────────
@@ -724,6 +808,229 @@ async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC
         ''', (strategy_id, timeframe, coin, metrics_json))
         
     return {"status": "success", "metrics": metrics, "trades": trades}
+
+# ── API: AI Chat ─────────────────────────────────────────────────────────────
+class ChatRequest(BaseModel):
+    prompt: str
+    context_type: str = "general"
+
+def _build_context(db, context_type: str) -> str:
+    """Build a concise, deduplicated context string for Claude."""
+    parts = []
+
+    if context_type in ("market_analysis", "general"):
+        row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence'").fetchone()
+        if row:
+            try:
+                intel = json.loads(row["value_json"])
+                fg = intel.get("fear_greed", {})
+                trending = ", ".join(intel.get("trending_coins", [])[:8])
+                narratives = ", ".join(intel.get("trending_narratives", [])[:4])
+                view = intel.get("market_view", "")
+                parts.append(
+                    f"MARKET INTEL:\n"
+                    f"- Fear & Greed: {fg.get('value')} ({fg.get('classification')}, {fg.get('trend')})\n"
+                    f"- Trending coins: {trending}\n"
+                    f"- Narratives: {narratives}\n"
+                    f"- AI Market View: {view}"
+                )
+            except Exception:
+                pass
+
+    if context_type in ("strategy_generation", "general"):
+        strats = db.execute("SELECT name, tags FROM strategies").fetchall()
+        if strats:
+            strat_lines = [f"{s['name']} ({s['tags']})" for s in strats]
+            parts.append(f"AVAILABLE STRATEGIES ({len(strats)} total):\n" + "\n".join(strat_lines))
+
+    if context_type in ("smart_money_holder", "general"):
+        rows = db.execute("SELECT endpoint, response_json FROM nansen_cache ORDER BY timestamp DESC LIMIT 3").fetchall()
+        if rows:
+            sm_parts = ["SMART MONEY HOLDER DATA:"]
+            for r in rows:
+                sm_parts.append(f"[{r['endpoint']}]\n{r['response_json'][:1500]}")
+            parts.append("\n".join(sm_parts))
+
+    if context_type in ("risk_management", "general"):
+        trades = db.execute(
+            "SELECT coin, side, entry_price, exit_price, pnl_usd, action, timestamp FROM trade_logs ORDER BY timestamp DESC LIMIT 8"
+        ).fetchall()
+        if trades:
+            trade_lines = [f"- {dict(t)}" for t in trades]
+            parts.append("USER RECENT TRADES:\n" + "\n".join(trade_lines))
+
+    # Scrub 'nansen' from the context before giving it to Claude
+    final_context = "\n\n".join(parts)
+    final_context = final_context.replace("Nansen", "Smart Money").replace("nansen", "smart money")
+    
+    return final_context
+
+@app.post("/api/chat")
+async def chat_endpoint(req: ChatRequest):
+    if not ANTHROPIC_API_KEY or ANTHROPIC_API_KEY == "sk-ant-your-key-here":
+        raise HTTPException(status_code=500, detail="Anthropic API key not configured")
+
+    import hashlib
+    from datetime import datetime, timezone, timedelta
+
+    # TTL per context type (seconds). risk_management is shorter as it's user-specific.
+    TTL_MAP = {
+        "strategy_generation": 7200,   # 2 hours — strategies rarely change
+        "market_analysis":     1800,   # 30 minutes
+        "smart_money_holder":  1800,   # 30 minutes
+        "risk_management":     900,    # 15 minutes — user trades change frequently
+        "general":             900,    # 15 minutes
+    }
+    ttl_seconds = TTL_MAP.get(req.context_type, 900)
+
+    # Build deterministic cache key from normalized prompt + context_type
+    normalized = f"{req.prompt.strip().lower()}|{req.context_type}"
+    cache_key = hashlib.sha256(normalized.encode()).hexdigest()
+
+    SIMILARITY_THRESHOLD = 0.88  # 88% cosine similarity = semantic match
+
+    # ── Tier 1: Exact hash match (free, instant) ──────────────────────────────
+    cached_response = None
+    matched_key = None
+    with get_db() as db:
+        row = db.execute(
+            "SELECT response FROM chat_cache WHERE cache_key = ? AND expires_at > CURRENT_TIMESTAMP",
+            (cache_key,)
+        ).fetchone()
+        if row:
+            cached_response = row["response"]
+            matched_key = cache_key
+
+    # ── Tier 2: Semantic similarity search (handles synonyms) ─────────────────
+    if cached_response is None:
+        prompt_embedding = await asyncio.to_thread(_embed, req.prompt.strip().lower())
+        if prompt_embedding is not None:
+            with get_db() as db:
+                candidates = db.execute(
+                    """SELECT cache_key, response, embedding_json FROM chat_cache
+                       WHERE context_type = ? AND expires_at > CURRENT_TIMESTAMP
+                       AND embedding_json IS NOT NULL""",
+                    (req.context_type,)
+                ).fetchall()
+            best_score = 0.0
+            for c in candidates:
+                try:
+                    cached_emb = json.loads(c["embedding_json"])
+                    score = _cosine_similarity(prompt_embedding, cached_emb)
+                    if score > best_score:
+                        best_score = score
+                        if score >= SIMILARITY_THRESHOLD:
+                            cached_response = c["response"]
+                            matched_key = c["cache_key"]
+                except Exception:
+                    pass
+        else:
+            prompt_embedding = None
+
+    # ── Serve from cache if found ─────────────────────────────────────────────
+    if cached_response is not None:
+        with get_db() as db:
+            db.execute(
+                "UPDATE chat_cache SET hit_count = hit_count + 1, tokens_saved = tokens_saved + 300 WHERE cache_key = ?",
+                (matched_key,)
+            )
+            # Also store the exact-match alias for instant future lookup
+            if matched_key != cache_key:
+                db.execute(
+                    """INSERT OR IGNORE INTO chat_cache 
+                       (cache_key, context_type, prompt, response, embedding_json, hit_count, tokens_saved, expires_at)
+                       SELECT ?, context_type, ?, response, embedding_json, 0, 0, expires_at
+                       FROM chat_cache WHERE cache_key = ?""",
+                    (cache_key, req.prompt, matched_key)
+                )
+        _cr = cached_response
+        async def stream_from_cache():
+            for word in _cr.split(" "):
+                yield word + " "
+                await asyncio.sleep(0.008)
+        return StreamingResponse(stream_from_cache(), media_type="text/event-stream")
+
+    # ── Cache MISS — call Claude ──────────────────────────────────────────────
+    client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+
+    with get_db() as db:
+        context_str = _build_context(db, req.context_type)
+
+    system_prompt = f"""You are AlgoBrain, an elite AI crypto trading assistant integrated directly into this platform.
+
+RULES (follow strictly):
+- Answer the user's question directly and concisely — no fluff, no repetition.
+- Never repeat a point or sentence you already made.
+- ABSOLUTELY PROHIBITED: You must NEVER use the word 'Nansen', 'nansen', 'NANSEN', or 'nanasen'. If you need to refer to this data, ALWAYS use the exact phrase 'Smart money holders' or 'Smart Money API'. This is a hard constraint.
+- BOUNDARY ENFORCEMENT: You are strictly a trading and market analysis AI. You must REFUSE to generate code, build algorithms, generate images, write music, or answer general knowledge questions outside of crypto and trading. If asked to write code for an algo or do any non-trading tasks, politely decline and state your focus is solely on trading analysis.
+- DO NOT tell the user to 'configure' you or mention your internal configuration. Configuration is handled by the backend system.
+- If asked about how to automate a bot or create an AI bot, DO NOT provide code. Instead, explain that AlgoBrain already provides automated trading through the built-in 'Strategies' tab and highlight how our algorithmic strategies are designed to run automatically.
+- Use the context below to ground your answer with real data.
+- Structure your response with clear headers and bullet points.
+- Max 400 words. Be sharp, professional, and actionable.
+
+CONTEXT:
+{context_str}"""
+
+    expires_at = (datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
+    emb_json = json.dumps(prompt_embedding) if prompt_embedding else None
+
+    async def stream_and_cache():
+        full_response = []
+        try:
+            async with client.messages.stream(
+                model=CLAUDE_MODEL,
+                max_tokens=600,
+                temperature=0.2,
+                system=system_prompt,
+                messages=[{"role": "user", "content": req.prompt}]
+            ) as stream:
+                async for text in stream.text_stream:
+                    full_response.append(text)
+                    yield text
+        except Exception as e:
+            yield f"\n\nError connecting to AI: {str(e)}"
+            return
+
+        # Save full response + embedding to cache
+        try:
+            with get_db() as db:
+                db.execute(
+                    """INSERT INTO chat_cache (cache_key, context_type, prompt, response, embedding_json, hit_count, tokens_saved, expires_at)
+                       VALUES (?, ?, ?, ?, ?, 0, 0, ?)
+                       ON CONFLICT(cache_key) DO UPDATE SET
+                         response = excluded.response,
+                         embedding_json = excluded.embedding_json,
+                         expires_at = excluded.expires_at""",
+                    (cache_key, req.context_type, req.prompt, "".join(full_response), emb_json, expires_at)
+                )
+        except Exception:
+            pass
+
+    return StreamingResponse(stream_and_cache(), media_type="text/event-stream")
+
+# ── API: Chat Cache Stats ──────────────────────────────────────────────────────
+@app.get("/api/chat/cache-stats")
+async def chat_cache_stats():
+    """Returns cache hit statistics and estimated token savings."""
+    with get_db() as db:
+        rows = db.execute(
+            """SELECT context_type, COUNT(*) as entries,
+               SUM(hit_count) as total_hits,
+               SUM(tokens_saved) as total_tokens_saved
+               FROM chat_cache
+               WHERE expires_at > CURRENT_TIMESTAMP
+               GROUP BY context_type"""
+        ).fetchall()
+        total = db.execute(
+            "SELECT COUNT(*) as c, SUM(hit_count) as h, SUM(tokens_saved) as t FROM chat_cache"
+        ).fetchone()
+    return {
+        "by_context": [dict(r) for r in rows],
+        "total_cached_prompts": total["c"] or 0,
+        "total_cache_hits": total["h"] or 0,
+        "total_tokens_saved": total["t"] or 0,
+    }
 
 if __name__ == "__main__":
     import uvicorn
