@@ -58,10 +58,23 @@ def init_db():
                 capital REAL,
                 leverage INTEGER,
                 timeframe TEXT,
+                target_pct REAL,
+                stop_loss_pct REAL,
+                asset_name TEXT,
+                ai_engine TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(wallet_address, strategy_id)
             )
         ''')
+        
+        # Safe migrations for existing table
+        try:
+            db.execute("ALTER TABLE subscriptions ADD COLUMN target_pct REAL")
+            db.execute("ALTER TABLE subscriptions ADD COLUMN stop_loss_pct REAL")
+            db.execute("ALTER TABLE subscriptions ADD COLUMN asset_name TEXT")
+            db.execute("ALTER TABLE subscriptions ADD COLUMN ai_engine TEXT")
+        except Exception:
+            pass
 
         # Cache Table for Backtest Results
         db.execute('''

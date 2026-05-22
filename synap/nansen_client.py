@@ -136,7 +136,7 @@ _tracker = NansenCreditTracker()
 
 def _headers() -> dict:
     return {
-        "apikey": NANSEN_API_KEY,
+        "api-key": NANSEN_API_KEY,
         "Content-Type": "application/json",
     }
 
@@ -217,6 +217,9 @@ def _nansen_get(endpoint: str, params: dict, cache_key: str) -> Optional[dict]:
     except requests.exceptions.HTTPError as e:
         if resp is not None:
             logger.error(f"Nansen API error ({resp.status_code}): {e}")
+            if resp.status_code in [401, 403]:
+                logger.error("Authentication failed. Check NANSEN_API_KEY. Pausing Nansen calls for this endpoint.")
+                _cache.set(cache_key, {}) # Cache an empty response to prevent spamming
             try:
                 logger.error(f"Response: {resp.text[:500]}")
             except Exception:
@@ -355,7 +358,7 @@ def build_nansen_intelligence(coins: list[str]) -> dict:
     result["perp_screener"] = get_perp_screener()
 
     # 2. Smart money netflows for each coin (1 credit each)
-    for coin in coins[:6]:  # Cap at 6 coins to save credits
+    for coin in coins[:4]:  # Cap at 4 coins to save credits
         flow = get_smart_money_netflows(coin)
         if flow:
             result["smart_money_flows"][coin] = flow

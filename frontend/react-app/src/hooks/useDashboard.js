@@ -12,16 +12,43 @@ export function useDashboard() {
   const [topCoins, setTopCoins] = useState([]);
 
   const fetchStats = async () => {
-    try { const d = await api('/api/stats'); setStats(d); } catch(e) {}
+    try { 
+      const wallet = localStorage.getItem('wallet_address');
+      if (!wallet || wallet === 'null') {
+        setStats({ equity: 0, pnl_pct: 0, win_rate: 0, realized_pnl: 0, total_trades: 0, positions: [], last_updated: '' });
+        return;
+      }
+      const d = await api(`/api/stats?wallet=${wallet}`); 
+      if (localStorage.getItem('wallet_address') === wallet) setStats(d); 
+    } catch(e) {}
   };
   const fetchTrades = async () => {
-    try { const d = await api('/api/trades'); setTrades(d); } catch(e) {}
+    try { 
+      const wallet = localStorage.getItem('wallet_address');
+      if (!wallet || wallet === 'null') {
+        setTrades([]);
+        return;
+      }
+      const d = await api(`/api/trades?wallet=${wallet}`); 
+      if (localStorage.getItem('wallet_address') === wallet) setTrades(d); 
+    } catch(e) {}
   };
   const fetchDecisions = async () => {
-    try { const d = await api('/api/decisions'); setDecisions(d); } catch(e) {}
+    try { 
+      const wallet = localStorage.getItem('wallet_address');
+      if (!wallet || wallet === 'null') {
+        setDecisions([]);
+        return;
+      }
+      const d = await api(`/api/decisions?wallet=${wallet}`); 
+      if (localStorage.getItem('wallet_address') === wallet) setDecisions(d); 
+    } catch(e) {}
   };
   const fetchIntel = async () => {
-    try { const d = await api('/api/market_intel'); setIntel(d); } catch(e) {}
+    try { 
+      const d = await api('/api/market_intel'); 
+      setIntel(d); 
+    } catch(e) {}
   };
   const fetchPerps = async () => {
     try {
@@ -48,7 +75,12 @@ export function useDashboard() {
     fetchAll();
     const i1 = setInterval(fetchAll, 15000);
     const i2 = setInterval(fetchPerps, 2 * 60 * 1000);
-    return () => { clearInterval(i1); clearInterval(i2); };
+    window.addEventListener('wallet_changed', fetchAll);
+    return () => { 
+      clearInterval(i1); 
+      clearInterval(i2); 
+      window.removeEventListener('wallet_changed', fetchAll); 
+    };
   }, []);
 
   const saveWatchlist = async (list) => {

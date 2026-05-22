@@ -335,9 +335,18 @@ def run_cycle(
 
         # ── Step 2: [GATED] Fetch Nansen intelligence ─────────────────────
         # Start with volatility leaders, core assets, and open positions
+        from backend.db import get_db
+        user_assets = []
+        try:
+            with get_db() as db:
+                subs = db.execute("SELECT DISTINCT asset_name FROM subscriptions WHERE status = 'ACTIVE' AND asset_name != 'AUTO'").fetchall()
+                user_assets = [s["asset_name"] for s in subs]
+        except Exception:
+            pass
+
         target_coins = list(
             set(
-                vol_leaders + CORE_WATCHLIST + [pos["coin"] for pos in trader.positions]
+                vol_leaders + CORE_WATCHLIST + [pos["coin"] for pos in trader.positions] + user_assets
             )
         )
 
@@ -616,18 +625,18 @@ def run_cycle(
                         )
                         continue
 
-                success = trader.open_position(
-                    coin=coin,
-                    side=side,
-                    entry_price=entry_price,
-                    size_usd=size_usd,
-                    leverage=leverage,
-                    stop_loss=trade["stop_loss"],
-                    tp1=trade["take_profit_1"],
-                    tp2=trade["take_profit_2"],
-                    conviction=trade["conviction"],
-                    reasoning=trade["reasoning"],
-                )
+                from backend.db import get_db
+                try:
+                    with get_db() as db:
+                        db.execute('''
+                            INSERT INTO signals_queue (strategy_id, coin, action, price)
+                            VALUES (?, ?, ?, ?)
+                        ''', ("ALGO AI BOT", coin, action, entry_price))
+                    success = True
+                    logger.info(f"  📥 Wrote signal {action} for {coin} to signals_queue.")
+                except Exception as e:
+                    logger.error(f"Failed to write signal to queue: {e}")
+                    success = False
 
                 if success:
                     logger.info(f"  ✅ Opened {side} {coin} @ ${entry_price:.4f}")
@@ -644,7 +653,18 @@ def run_cycle(
 
             # Apply position updates from AI
             if validated.get("position_updates"):
-                trader.apply_ai_updates(validated["position_updates"], prices)
+                from backend.db import get_db
+                try:
+                    with get_db() as db:
+                        for upd in validated["position_updates"]:
+                            if upd.get("action") == "CLOSE":
+                                db.execute('''
+                                    INSERT INTO signals_queue (strategy_id, coin, action, price)
+                                    VALUES (?, ?, ?, ?)
+                                ''', ("ALGO AI BOT", upd["coin"], "CLOSE", prices.get(upd["coin"], 0.0)))
+                                logger.info(f"  📥 Wrote signal CLOSE for {upd['coin']} to signals_queue.")
+                except Exception as e:
+                    logger.error(f"Failed to write close signal to queue: {e}")
                 # Broadcast closes to Telegram
                 if notifier:
                     for upd in validated["position_updates"]:

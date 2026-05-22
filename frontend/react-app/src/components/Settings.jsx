@@ -59,13 +59,6 @@ export default function Settings() {
       const address = await connectWallet();
       setWalletStatus('connected');
       toast({ type: 'success', title: 'Wallet Connected', message: `${address.substring(0,6)}...${address.slice(-4)} is now connected.`, duration: 5000 });
-      
-      // Save it as the trading wallet as well for backward compatibility
-      fetch('/api/settings/keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hl_wallet: address }),
-      }).catch(() => {});
     } catch (err) {
       setWalletStatus('error');
       toast({ type: 'error', title: 'Wallet Connection Failed', message: err.message, duration: 7000 });

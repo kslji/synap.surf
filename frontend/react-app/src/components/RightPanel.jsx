@@ -122,11 +122,12 @@ function PositionsModal({ positions, onClose }) {
 
   const handleClose = async (coin) => {
     setClosingCoin(coin);
+    const w = localStorage.getItem('wallet_address');
     try {
       await fetch('/api/trade/close', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coin })
+        body: JSON.stringify({ coin, wallet_address: w })
       });
     } catch (e) {}
     setClosingCoin(null);
@@ -155,6 +156,7 @@ function PositionsModal({ positions, onClose }) {
                 <th style={{ padding: '16px', fontWeight: 600 }}>PNL (ROE %)</th>
                 <th style={{ padding: '16px', fontWeight: 600 }}>Liq. Price</th>
                 <th style={{ padding: '16px 24px', fontWeight: 600 }}>Margin</th>
+                <th style={{ padding: '16px 24px', fontWeight: 600 }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -201,6 +203,15 @@ function PositionsModal({ positions, onClose }) {
                       </td>
                       <td style={{ padding: '16px 24px', fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>
                         ${Number(p.margin_used || 0).toFixed(2)} <span style={{ color: 'var(--t3)', fontWeight: 400 }}>({(p.leverage_type || 'cross').charAt(0).toUpperCase() + (p.leverage_type || 'cross').slice(1)})</span>
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <button 
+                          onClick={() => handleClose(p.coin)}
+                          disabled={closingCoin === p.coin}
+                          style={{ background: 'rgba(233, 69, 96, 0.15)', color: 'var(--red)', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: 11, fontWeight: 800, cursor: 'pointer', transition: 'background 0.2s' }}
+                        >
+                          {closingCoin === p.coin ? 'CLOSING...' : 'CLOSE'}
+                        </button>
                       </td>
                     </tr>
                   );
@@ -282,11 +293,13 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   const [balRefreshing, setBalRefreshing] = useState(false);
   
   const fetchBalance = useCallback(async () => {
+    const savedWallet = localStorage.getItem('wallet_address');
+    if (!savedWallet || savedWallet === 'null') {
+      setWalletBalance(null);
+      return;
+    }
     try {
-      const savedWallet = localStorage.getItem('hl_wallet');
-      const url = savedWallet
-        ? `/api/wallet/balance?wallet=${encodeURIComponent(savedWallet)}`
-        : '/api/wallet/balance';
+      const url = `/api/wallet/balance?wallet=${encodeURIComponent(savedWallet)}`;
       const res = await fetch(url);
       if (res.ok) setWalletBalance(await res.json());
     } catch (_) {}
@@ -343,6 +356,37 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     setBotParams(prev => ({ ...prev, [key]: val }));
   };
 
+  const saveBotParameters = async () => {
+    const w = localStorage.getItem('wallet_address');
+    if (!w) {
+      addToast('Please connect wallet first', 'error');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/strategy/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_address: w,
+          strategy_id: 'ALGO AI BOT',
+          capital: parseFloat(botParams.MARGIN) || 50,
+          leverage: parseInt(botParams.LEVERAGE) || 10,
+          timeframe: `${botParams.MAX_HOLD_HOURS}h`,
+          target_pct: botParams.TARGET_ROE_PCT === 'AUTO' ? null : parseFloat(botParams.TARGET_ROE_PCT),
+          stop_loss_pct: botParams.STOP_LOSS_PCT === 'AUTO' ? null : parseFloat(botParams.STOP_LOSS_PCT),
+          asset_name: botParams.ASSET,
+          ai_engine: aiEngine.toUpperCase()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed to save');
+      addToast('AI Bot Parameters Saved!', 'success');
+    } catch (e) {
+      addToast(e.message, 'error');
+    }
+  };
+
   const COIN_META = {
     BTC:  { emoji: '₿', color: '#f7931a' },
     ETH:  { emoji: 'Ξ', color: '#627eea' },
@@ -379,18 +423,15 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     }
     
     try {
-      // Auto-sync wallet from localStorage to backend if available
-      const savedWallet = localStorage.getItem('hl_wallet');
-      if (savedWallet) {
-        await fetch('/api/settings/keys', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hl_wallet: savedWallet }),
-        }).catch(() => {});
+      const w = localStorage.getItem('wallet_address');
+      if (!w) {
+        addToast('Please connect wallet first', 'error');
+        setTradeLoading(false);
+        return;
       }
 
       let endpoint = '/api/trade/open';
-      let payload = { coin: tradeCoin };
+      let payload = { coin: tradeCoin, wallet_address: w };
       
       if (action === 'CLOSE') {
         endpoint = '/api/trade/close';
@@ -723,7 +764,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 <span className="m-tgl grok-tooltip" data-tooltip="Right now Grok is unavailable" style={{ fontSize: 8, padding: '4px 10px', opacity: 0.5, cursor: 'not-allowed' }}>GROK</span>
               </div>
             </div>
-            <button className="bc-save-btn">SAVE PARAMETERS</button>
+            <button className="bc-save-btn" onClick={saveBotParameters}>SAVE PARAMETERS</button>
             <button className="bc-save-btn" onClick={() => setPosModal(true)} style={{ marginTop: 8, background: 'rgba(255,255,255,0.05)', color: 'var(--t1)' }}>VIEW OPEN POSITIONS</button>
           </div>
         </section>

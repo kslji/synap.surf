@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [walletAddress, setWalletAddress] = useState(() => localStorage.getItem('hl_wallet') || '');
+  const [walletAddress, setWalletAddress] = useState(() => localStorage.getItem('wallet_address') || '');
   const [userProfile, setUserProfile] = useState({ email: '', subscriptions: [] });
 
   const fetchUserProfile = async (address) => {
@@ -31,28 +31,61 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const connectWallet = async () => {
-    if (typeof window.ethereum !== 'undefined') {
+  const connectWallet = async (walletType = 'metamask') => {
+    let provider = window.ethereum;
+    if (walletType === 'phantom' && window.phantom?.ethereum) provider = window.phantom.ethereum;
+    if (walletType === 'backpack' && window.backpack?.ethereum) provider = window.backpack.ethereum;
+    
+    // Rabby typically injects into window.ethereum, but we can check window.rabby just in case
+    // For now we assume Rabby intercepts window.ethereum if it's the active wallet
+    
+    if (provider) {
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
         const address = accounts[0];
         setWalletAddress(address);
-        localStorage.setItem('hl_wallet', address);
+        localStorage.setItem('wallet_address', address);
+        window.dispatchEvent(new Event('wallet_changed'));
         await loginWallet(address);
         return address;
       } catch (err) {
-        console.error('Error connecting wallet', err);
+        console.error(`Error connecting ${walletType}`, err);
         throw err;
       }
     } else {
-      throw new Error('MetaMask is not installed');
+      let name = 'MetaMask';
+      if (walletType === 'phantom') name = 'Phantom';
+      if (walletType === 'backpack') name = 'Backpack';
+      if (walletType === 'rabby') name = 'Rabby';
+      throw new Error(`${name} is not installed`);
     }
   };
 
-  const disconnectWallet = () => {
+  const disconnectWallet = async () => {
+    // Attempt to natively disconnect providers so next login forces popup
+    try {
+      if (window.ethereum?.disconnect) window.ethereum.disconnect();
+      if (window.phantom?.ethereum?.disconnect) window.phantom.ethereum.disconnect();
+      // Revoke permissions if supported
+      if (window.ethereum) {
+        await window.ethereum.request({
+          method: "wallet_revokePermissions",
+          params: [{ eth_accounts: {} }]
+        }).catch(() => {});
+      }
+      if (window.phantom?.ethereum) {
+        await window.phantom.ethereum.request({
+          method: "wallet_revokePermissions",
+          params: [{ eth_accounts: {} }]
+        }).catch(() => {});
+      }
+    } catch(e) {}
+
     setWalletAddress('');
+    localStorage.removeItem('wallet_address');
     setUserProfile({ email: '', subscriptions: [] });
-    localStorage.removeItem('hl_wallet');
+    window.dispatchEvent(new Event('wallet_changed'));
+    window.location.reload(); // Instantly refresh UI state
   };
 
   // Watch for account changes
@@ -63,12 +96,24 @@ export function AuthProvider({ children }) {
           const address = accounts[0];
           setWalletAddress(address);
           localStorage.setItem('hl_wallet', address);
+          window.dispatchEvent(new Event('wallet_changed'));
           loginWallet(address);
         } else {
           disconnectWallet();
         }
       });
     }
+  }, []);
+
+  // Watch for local storage changes from manual connection
+  useEffect(() => {
+    const syncWallet = () => {
+      const address = localStorage.getItem('hl_wallet') || '';
+      setWalletAddress(address);
+      if (address) loginWallet(address);
+    };
+    window.addEventListener('wallet_changed', syncWallet);
+    return () => window.removeEventListener('wallet_changed', syncWallet);
   }, []);
 
   // Fetch initial profile

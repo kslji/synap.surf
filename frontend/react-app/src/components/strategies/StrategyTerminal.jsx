@@ -114,17 +114,17 @@ export default function StrategyTerminal() {
       .catch(console.error);
       
     // Fetch wallet balance
-    const savedWallet = localStorage.getItem('hl_wallet');
-    const url = savedWallet 
-      ? `/api/wallet/balance?wallet=${encodeURIComponent(savedWallet)}`
-      : '/api/wallet/balance';
-      
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (data.configured) setWalletBalance(data);
-      })
-      .catch(console.error);
+    const savedWallet = localStorage.getItem('wallet_address');
+    if (!savedWallet || savedWallet === 'null') {
+      setWalletBalance(null);
+    } else {
+      fetch(`/api/wallet/balance?wallet=${encodeURIComponent(savedWallet)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.configured) setWalletBalance(data);
+        })
+        .catch(console.error);
+    }
 
     // Fetch max leverage for selected coin
     fetch(`/api/coin/leverage/${coin}`)
@@ -161,7 +161,7 @@ export default function StrategyTerminal() {
   const handleConfirmExecute = async () => {
     setShowConfirm(false);
     try {
-      const wallet = localStorage.getItem('hl_wallet') || 'TEST_WALLET';
+      const wallet = localStorage.getItem('wallet_address') || 'TEST_WALLET';
       const res = await fetch('/api/strategies/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

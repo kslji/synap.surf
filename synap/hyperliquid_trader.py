@@ -23,8 +23,6 @@ from hyperliquid.info import Info
 from hyperliquid.utils import constants
 
 from synap.config import (
-    HL_PRIVATE_KEY,
-    HL_WALLET,
     HL_TAKER_FEE,
     HL_SLIPPAGE_RATE,
     MAX_OPEN_POSITIONS,
@@ -47,14 +45,12 @@ class HyperliquidTrader:
     Syncs with exchange user_state and local tracking JSON metadata.
     """
 
-    def __init__(self):
-        if not HL_PRIVATE_KEY or not HL_WALLET:
-            raise ValueError(
-                "HL_PRIVATE_KEY and HL_WALLET must be set in the .env file for Live Trading."
-            )
+    def __init__(self, private_key: str, wallet_address: str):
+        if not private_key or not wallet_address:
+            raise ValueError("private_key and wallet_address must be provided for Live Trading.")
 
-        self.wallet = Account.from_key(HL_PRIVATE_KEY)
-        self.user_address = HL_WALLET
+        self.wallet = Account.from_key(private_key)
+        self.user_address = wallet_address
         self.base_url = constants.MAINNET_API_URL
 
         self.exchange = Exchange(
@@ -418,6 +414,31 @@ class HyperliquidTrader:
                 positions = self._load_local_state()
                 positions.append(local_pos)
                 self._save_local_state(positions)
+
+                # Submit Native Hyperliquid TP/SL Orders
+                try:
+                    if tp1 > 0:
+                        logger.info(f"Submitting Native TP Order at ${tp1}")
+                        self.exchange.order(
+                            name=coin,
+                            is_buy=not is_buy,
+                            sz=sz,
+                            limit_px=tp1,
+                            order_type={"trigger": {"isMarket": True, "triggerPx": tp1, "tpsl": "tp"}},
+                            reduce_only=True
+                        )
+                    if stop_loss > 0:
+                        logger.info(f"Submitting Native SL Order at ${stop_loss}")
+                        self.exchange.order(
+                            name=coin,
+                            is_buy=not is_buy,
+                            sz=sz,
+                            limit_px=stop_loss,
+                            order_type={"trigger": {"isMarket": True, "triggerPx": stop_loss, "tpsl": "sl"}},
+                            reduce_only=True
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to submit native TP/SL orders: {e}")
 
                 # Log trade open in journal
                 trade_journal.log_trade_open(

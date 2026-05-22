@@ -82,19 +82,7 @@ export default function Sidebar({ view, setView, theme, toggleTheme }) {
             }
           </svg>
         </a>
-        <a className={`sb-item ${walletAddress ? 'active' : ''}`} href="#" title={walletAddress ? 'Disconnect Wallet' : 'Connect Wallet'}
-           style={{ '--hover-color': walletAddress ? '#ff6b6b' : '#1dd1a1', marginTop: 'auto' }}
-           onClick={async e => { 
-             e.preventDefault(); 
-             if (walletAddress) disconnectWallet();
-             else await connectWallet(); 
-           }}>
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-            <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-            <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-          </svg>
-        </a>
+
       </nav>
     </aside>
   );

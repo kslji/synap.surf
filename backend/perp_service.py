@@ -15,7 +15,7 @@ from synap.market_data import get_top_3_perps_with_details
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 logger = logging.getLogger(__name__)
 
-ROOT = Path("/Users/arjunsingh/Desktop/algo_brain")
+ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_FILE = ROOT / "synap" / "logs" / "top_perps.json"
 
 def update_top_perps():

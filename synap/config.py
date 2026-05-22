@@ -54,7 +54,7 @@ POSITION_MONITOR_INTERVAL_SECONDS = int(
     os.getenv("BRAIN_POSITION_INTERVAL", "60")
 )  # Check every 1 min (positions open — SL/TP monitoring only)
 TELEGRAM_REPORT_INTERVAL_SECONDS = 1 * 3600  # Report every 1 hours
-NANSEN_CACHE_TTL_SECONDS = 2 * 3600  # Cache Nansen data for 2 hours
+NANSEN_CACHE_TTL_SECONDS = int(2.5 * 3600)  # Cache Nansen data for 2.5 hours
 NEWS_CACHE_TTL_SECONDS = 40 * 60  # Cache news data for 40 min
 COINGECKO_CACHE_TTL_SECONDS = 10 * 60  # CoinGecko trending updates every 10 min
 
@@ -79,8 +79,6 @@ HYPERLIQUID_API_URL = "https://api.hyperliquid.xyz"
 CANDLE_INTERVAL = "1m"  # Default (Fast) interval
 CANDLE_LOOKBACK = 200  # Number of candles to fetch per coin
 
-HL_PRIVATE_KEY = os.getenv("HL_PRIVATE_KEY", "").strip()
-HL_WALLET = os.getenv("HL_WALLET", "").strip()
 LIVE_TRADING = os.getenv("LIVE_TRADING", "False").lower() in ("true", "1", "yes")
 LIVE_PORTFOLIO_STATE_FILE = LOGS_DIR / "portfolio_state_live.json"
 

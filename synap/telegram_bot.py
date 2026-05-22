@@ -27,8 +27,8 @@ from hyperliquid.utils import constants
 
 from synap.config import (
     TELEGRAM_BOT_TOKEN,
-    HL_WALLET,
 )
+HL_WALLET = None
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))

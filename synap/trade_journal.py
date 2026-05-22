@@ -164,14 +164,14 @@ def log_trade_update(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def log_ai_decision(decision: dict, raw_prompt_size: int = 0, raw_response_size: int = 0):
+def log_ai_decision(decision: dict, raw_prompt_size: int = 0, raw_response_size: int = 0, user_id: str = None):
     """Log the full AI decision for review and debugging."""
     try:
         with get_db() as db:
             db.execute('''
-                INSERT INTO decision_logs (prompt_chars, response_chars, decision_json)
-                VALUES (?, ?, ?)
-            ''', (raw_prompt_size, raw_response_size, json.dumps(decision, default=str)))
+                INSERT INTO decision_logs (user_id, prompt_chars, response_chars, decision_json)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, raw_prompt_size, raw_response_size, json.dumps(decision, default=str)))
     except Exception as e:
         logger.error(f"DB Error log_ai_decision: {e}")
 

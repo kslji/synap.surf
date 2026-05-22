@@ -33,7 +33,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from synap.market_data import get_top_3_perps_with_details, get_mid_prices
-from synap.config import HL_WALLET
+
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -96,7 +96,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ROOT = Path("/Users/arjunsingh/Desktop/algo_brain")
+ROOT = Path(__file__).resolve().parent.parent
 REACT_DIST = ROOT / "frontend" / "react-app" / "dist"
 STATIC_DIR = ROOT / "frontend" / "static"
 LOGS_DIR = ROOT / "synap" / "logs"
@@ -146,18 +146,24 @@ def _save_users(data: dict) -> None:
 
 
 # ── Helper: Load all JSONL trades ─────────────────────────────────────────────
-def _load_all_trades() -> list[dict]:
+def _load_all_trades(wallet: str = None) -> list[dict]:
     try:
+        if not wallet or wallet in ('null', 'undefined', ''):
+            return []
+            
         with get_db() as db:
-            rows = db.execute("SELECT * FROM trade_logs ORDER BY timestamp ASC").fetchall()
+            rows = db.execute("SELECT * FROM trade_logs WHERE user_id = ? ORDER BY timestamp ASC", (wallet,)).fetchall()
             return [dict(r) for r in rows]
     except Exception:
         return []
 
-def _load_all_decisions() -> list[dict]:
+def _load_all_decisions(wallet: str = None) -> list[dict]:
     try:
+        if not wallet or wallet in ('null', 'undefined', ''):
+            return []
+            
         with get_db() as db:
-            rows = db.execute("SELECT * FROM decision_logs ORDER BY timestamp DESC").fetchall()
+            rows = db.execute("SELECT * FROM decision_logs WHERE user_id = ? ORDER BY timestamp DESC", (wallet,)).fetchall()
             return [dict(r) for r in rows]
     except Exception:
         return []
@@ -165,112 +171,77 @@ def _load_all_decisions() -> list[dict]:
 
 # ── API: Portfolio Stats ───────────────────────────────────────────────────────
 @app.get("/api/stats")
-def get_stats():
+def get_stats(wallet: str = None):
     try:
+        empty_stats = {
+            "equity": 0.0,
+            "cash": 0.0,
+            "realized_pnl": 0.0,
+            "unrealized_pnl": 0.0,
+            "total_trades": 0,
+            "winning_trades": 0,
+            "losing_trades": 0,
+            "win_rate": 0.0,
+            "fees_paid": 0.0,
+            "pnl_pct": 0.0,
+            "positions": [],
+            "last_updated": "",
+            "eth_price": get_mid_prices().get("ETH", 3200.0)
+        }
+        
+        if not wallet or wallet in ('null', 'undefined', ''):
+            return empty_stats
+
+        # Fetch real-time equity from Hyperliquid
+        try:
+            from hyperliquid.info import Info
+            from hyperliquid.utils import constants
+            info = Info(constants.MAINNET_API_URL, skip_ws=True)
+            state = info.user_state(wallet)
+            margin_summary = state.get("marginSummary", {})
+            equity = float(margin_summary.get("accountValue", 0.0))
+            
+            positions = []
+            for entry in state.get("assetPositions", []):
+                pos = entry.get("position", {})
+                if pos and float(pos.get("szi", 0)) != 0:
+                    szi = float(pos["szi"])
+                    entry_px = float(pos["entryPx"])
+                    positions.append({
+                        "coin": pos["coin"],
+                        "side": "LONG" if szi > 0 else "SHORT",
+                        "size": abs(szi),
+                        "entry_price": entry_px,
+                        "unrealized_pnl": float(pos["unrealizedPnl"])
+                    })
+        except Exception as e:
+            print(f"Error fetching Hyperliquid state for {wallet}: {e}")
+            equity = 0.0
+            positions = []
+
         with get_db() as db:
-            if HL_WALLET:
-                row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (HL_WALLET,)).fetchone()
-            else:
-                row = db.execute("SELECT * FROM portfolios WHERE portfolio_type = 'LIVE' ORDER BY ROWID DESC LIMIT 1").fetchone()
-                
-            kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'live_positions'").fetchone()
-
-            if not row and HL_WALLET:
-                from synap.telegram_bot import get_live_hl_portfolio
-                live_data = get_live_hl_portfolio()
-                if live_data:
-                    # Calculate percentage based on current open trades if no history exists
-                    live_equity = float(live_data["total_equity"])
-                    live_unrealized = float(live_data["unrealized_pnl"])
-                    base_cap = live_equity - live_unrealized
-                    calc_pct = round((live_unrealized / base_cap) * 100, 2) if base_cap > 0 else 0.0
-
-                    return {
-                        "equity": round(live_equity, 2),
-                        "cash": round(live_data["cash"], 2),
-                        "realized_pnl": round(live_data.get("last_20_realized_pnl", 0.0), 2),
-                        "unrealized_pnl": round(live_unrealized, 2),
-                        "total_trades": 0,
-                        "winning_trades": 0,
-                        "losing_trades": 0,
-                        "win_rate": round(live_data.get("last_20_win_rate", 0.0), 1),
-                        "fees_paid": round(live_data["cumulative_fees"], 2),
-                        "pnl_pct": calc_pct,
-                        "positions": live_data["positions"],
-                        "last_updated": live_data["fetched_at"],
-                        "is_last_20": True
-                    }
-
-            if not row:
-                return {
-                    "equity": 1000.0,
-                    "cash": 1000.0,
-                    "realized_pnl": 0.0,
-                    "unrealized_pnl": 0.0,
-                    "total_trades": 0,
-                    "winning_trades": 0,
-                    "losing_trades": 0,
-                    "win_rate": 0.0,
-                    "fees_paid": 0.0,
-                    "pnl_pct": 0.0,
-                    "positions": [],
-                    "last_updated": "",
-                }
+            # Query their trades for stats
+            trades = db.execute("SELECT * FROM trade_logs WHERE LOWER(user_id) = ?", (wallet.lower(),)).fetchall()
+            trades_list = [dict(t) for t in trades]
             
-            positions = json.loads(kv_row["value_json"]) if kv_row else []
-            
-            initial_capital = 1000.0 # Base reference for paper. Live uses its own equity tracking.
-            unrealized = sum(float(p.get("unrealized_pnl", 0)) for p in positions)
-            
-            total_trades = row["total_trades"]
-            winning_trades = row["winning_trades"]
-            win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
-            realized_pnl = row["realized_pnl"]
-
-            if HL_WALLET:
-                # Override DB tracking with actual live Hyperliquid history for last 20 trades
-                from synap.telegram_bot import get_live_hl_portfolio
-                live_data = get_live_hl_portfolio()
-                if live_data:
-                    equity = float(live_data["total_equity"])
-                    unrealized = float(live_data["unrealized_pnl"])
-                    positions = live_data["positions"]
-                    realized_pnl = live_data.get("last_20_realized_pnl", 0.0)
-                    win_rate = live_data.get("last_20_win_rate", 0.0)
-                else:
-                    equity = float(row["total_equity"])
-            else:
-                # Paper trades dynamically sum cash + unrealized
-                equity = float(row["cash"]) + unrealized
-            pnl_pct = round((equity - initial_capital) / initial_capital * 100, 2)
-            if HL_WALLET:
-                prev_equity = float(row["total_equity"]) if row else 0.0
-                if prev_equity > 0:
-                    pnl_pct = round(((equity - prev_equity) / prev_equity) * 100, 2)
-                else:
-                    # If we have no database history, calculate the percentage based on current open trades
-                    base_capital = equity - unrealized
-                    if base_capital > 0:
-                        pnl_pct = round((unrealized / base_capital) * 100, 2)
-                    else:
-                        pnl_pct = 0.0
-            
-            eth_price = get_mid_prices().get("ETH", 3200.0)
+            total_trades = len(trades_list)
+            winning = sum(1 for t in trades_list if t.get("pnl_usd") and t.get("pnl_usd") > 0)
+            losing = sum(1 for t in trades_list if t.get("pnl_usd") is not None and t.get("pnl_usd") <= 0 and t.get("event") == "TRADE_CLOSE")
+            win_rate = (winning / total_trades * 100) if total_trades > 0 else 0.0
             
             return {
-                "equity": round(equity, 2),
-                "cash": round(row["cash"], 2),
-                "realized_pnl": round(realized_pnl, 2),
-                "unrealized_pnl": round(unrealized, 2),
+                "equity": equity,
+                "cash": equity,
+                "realized_pnl": sum(t.get("pnl_usd") or 0.0 for t in trades_list),
+                "unrealized_pnl": sum(p["unrealized_pnl"] for p in positions),
                 "total_trades": total_trades,
-                "winning_trades": winning_trades,
-                "losing_trades": row["losing_trades"],
-                "win_rate": round(win_rate, 1),
+                "winning_trades": winning,
+                "losing_trades": losing,
+                "win_rate": win_rate,
                 "fees_paid": 0.0,
-                "pnl_pct": pnl_pct,
-                "eth_price": eth_price,
+                "eth_price": empty_stats["eth_price"],
                 "positions": positions,
-                "last_updated": row["updated_at"],
+                "last_updated": datetime.utcnow().isoformat(),
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -278,8 +249,8 @@ def get_stats():
 
 # ── API: Recent Trades ─────────────────────────────────────────────────────────
 @app.get("/api/trades")
-async def get_trades():
-    trades = _load_all_trades()
+async def get_trades(wallet: str = None):
+    trades = _load_all_trades(wallet)
     return list(reversed(trades))[:20]
 
 
@@ -295,47 +266,31 @@ async def save_users(request: Request):
     return {"status": "ok"}
 
 @app.post("/api/portfolio/refresh")
-def refresh_portfolio():
-    """Forces a refresh of the live portfolio state directly from Hyperliquid API."""
-    if not HL_WALLET:
-        raise HTTPException(status_code=400, detail="No live wallet configured.")
-    try:
-        from synap.hyperliquid_trader import HyperliquidTrader
-        # Instantiating the trader automatically fetches state or we can call fetch directly.
-        # But trader._save_state() needs an active Info call. Actually get_live_hl_portfolio() is better.
-        from synap.telegram_bot import get_live_hl_portfolio
-        from backend.db import get_db, set_market_data
-        
-        live_data = get_live_hl_portfolio()
-        if live_data:
-            with get_db() as db:
-                db.execute('''
-                    INSERT INTO portfolios (user_id, portfolio_type, cash, total_equity, unrealized_pnl, updated_at)
-                    VALUES (?, 'LIVE', ?, ?, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT(user_id, portfolio_type) DO UPDATE SET
-                        cash=excluded.cash,
-                        total_equity=excluded.total_equity,
-                        unrealized_pnl=excluded.unrealized_pnl,
-                        updated_at=CURRENT_TIMESTAMP
-                ''', (HL_WALLET, live_data["cash"], live_data["total_equity"], live_data["unrealized_pnl"]))
-                
-            set_market_data("live_positions", live_data["positions"])
-        return {"status": "ok", "message": "Portfolio synced from Hyperliquid"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def refresh_portfolio(req: Request):
+    data = await req.json()
+    wallet = data.get("wallet_address")
+    if not wallet:
+        raise HTTPException(status_code=400, detail="wallet_address required")
+    # For now, this is a no-op since positions will be updated by execution_engine
+    return {"status": "ok", "message": "Refresh requested"}
 
 @app.post("/api/strategy/subscribe")
 async def subscribe_strategy(request: Request):
     """User selects a strategy. If IN_TRADE, they join the waiting room."""
     data = await request.json()
-    wallet_address = data.get("wallet_address", HL_WALLET)
+    wallet_address = data.get("wallet_address")
     strategy_id = data.get("strategy_id")
     capital = data.get("capital", 100)
     leverage = data.get("leverage", 10)
     timeframe = data.get("timeframe", "1h")
     
-    if not strategy_id:
-        raise HTTPException(status_code=400, detail="strategy_id required")
+    target_pct = data.get("target_pct") # None means AUTO
+    stop_loss_pct = data.get("stop_loss_pct") # None means AUTO
+    asset_name = data.get("asset_name", "AUTO")
+    ai_engine = data.get("ai_engine", "CLAUDE")
+    
+    if not strategy_id or not wallet_address:
+        raise HTTPException(status_code=400, detail="strategy_id and wallet_address required")
         
     try:
         with get_db() as db:
@@ -350,14 +305,18 @@ async def subscribe_strategy(request: Request):
             
             # Upsert subscription
             db.execute('''
-                INSERT INTO subscriptions (wallet_address, strategy_id, status, capital, leverage, timeframe)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO subscriptions (wallet_address, strategy_id, status, capital, leverage, timeframe, target_pct, stop_loss_pct, asset_name, ai_engine)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(wallet_address, strategy_id) DO UPDATE SET
                     status=excluded.status,
                     capital=excluded.capital,
                     leverage=excluded.leverage,
-                    timeframe=excluded.timeframe
-            ''', (wallet_address, strategy_id, status, capital, leverage, timeframe))
+                    timeframe=excluded.timeframe,
+                    target_pct=excluded.target_pct,
+                    stop_loss_pct=excluded.stop_loss_pct,
+                    asset_name=excluded.asset_name,
+                    ai_engine=excluded.ai_engine
+            ''', (wallet_address, strategy_id, status, capital, leverage, timeframe, target_pct, stop_loss_pct, asset_name, ai_engine))
             
         return {"status": "ok", "subscription_status": status, "alert": alert_msg}
     except Exception as e:
@@ -365,9 +324,9 @@ async def subscribe_strategy(request: Request):
 
 # ── API: AI Signals (Clean Feed) ──────────────────────────────────────────────
 @app.get("/api/decisions")
-async def get_decisions():
-    trades = _load_all_trades()
-    decisions_raw = _load_all_decisions()
+async def get_decisions(wallet: str = None):
+    trades = _load_all_trades(wallet)
+    decisions_raw = _load_all_decisions(wallet)
     
     feed = []
     for t in trades:
@@ -430,11 +389,22 @@ async def get_market_intel():
             row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence'").fetchone()
             if row:
                 intel_json = row["value_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder")
-                intel.update(json.loads(intel_json))
+                db_intel = json.loads(intel_json)
+                intel.update(db_intel)
+                
+                # Extract from nested sentiment dict if present
+                sentiment = db_intel.get("sentiment", {})
+                if "fear_greed" in sentiment:
+                    intel["fear_greed"] = sentiment["fear_greed"]
+                if "trending_coins" in sentiment:
+                    intel["trending_coins"] = [c.get("symbol", c.get("name", "")) for c in sentiment["trending_coins"]]
+                if "trending_categories" in sentiment:
+                    intel["trending_narratives"] = [c.get("name", "") for c in sentiment["trending_categories"]]
             
-            dec_row = db.execute("SELECT decision_json FROM decision_logs ORDER BY timestamp DESC LIMIT 1").fetchone()
-            if dec_row and dec_row["decision_json"]:
-                dj = json.loads(dec_row["decision_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"))
+            # Instead of picking a random user's decision_log, use the global AI master decision
+            global_row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence_global'").fetchone()
+            if global_row and global_row["value_json"]:
+                dj = json.loads(global_row["value_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"))
                 if dj.get("market_assessment"):
                     intel["market_view"] = dj.get("market_assessment")
                 if dj.get("scan_result"):
@@ -466,16 +436,18 @@ def get_hl_top_perps():
 
 # ── API: Equity Curve ─────────────────────────────────────────────────────────
 @app.get("/api/equity_curve")
-async def get_equity_curve():
+async def get_equity_curve(wallet: str = None):
     """Reconstruct equity curve from trade close events."""
+    if not wallet or wallet in ('null', 'undefined', ''):
+        return []
+        
     initial = 1000.0
     equity = initial
     now_ts = int(datetime.now(timezone.utc).timestamp())
 
-    # Start point (24h ago or trade start)
     curve = [{"time": now_ts - 86400, "value": initial}]
 
-    all_trades = sorted(_load_all_trades(), key=lambda x: x.get("timestamp", ""))
+    all_trades = sorted(_load_all_trades(wallet), key=lambda x: x.get("timestamp", ""))
 
     for trade in all_trades:
         ts_str = trade.get("timestamp", "")
@@ -490,16 +462,15 @@ async def get_equity_curve():
         if trade.get("event") == "TRADE_CLOSE":
             pnl = float(trade.get("realized_pnl", 0))
             equity += pnl
-            # Avoid duplicate timestamps
             if curve and curve[-1]["time"] >= unix_ts:
                 unix_ts = curve[-1]["time"] + 1
             curve.append({"time": unix_ts, "value": round(equity, 2)})
 
-    # Current endpoint
     try:
-        with open(LOGS_DIR / "portfolio_state.json") as f:
-            state = json.load(f)
-        equity = float(state.get("cash", equity))
+        with get_db() as db:
+            row = db.execute("SELECT cash, total_equity FROM portfolios WHERE user_id = ?", (wallet,)).fetchone()
+            if row:
+                equity = float(row["cash"]) # fallback, real equity might need unrealized
     except Exception:
         pass
 
@@ -509,54 +480,7 @@ async def get_equity_curve():
     return curve
 
 
-# ── API: User Paper Trading ────────────────────────────────────────────────────
-@app.post("/api/papertrade/register")
-async def register_paper_trader(body: dict):
-    """Register a new user for paper trading. Returns a user_id."""
-    name = body.get("name", "Anonymous")
-    data = _load_users()
-
-    user_id = str(uuid.uuid4())[:8]
-    data["paper_traders"][user_id] = {
-        "name": name,
-        "cash": 1000.0,
-        "realized_pnl": 0.0,
-        "total_trades": 0,
-        "winning_trades": 0,
-        "positions": [],
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    _save_users(data)
-    return {"user_id": user_id, "message": f"Paper trading account created for {name}"}
-
-
-@app.get("/api/papertrade/{user_id}")
-async def get_paper_trader(user_id: str):
-    data = _load_users()
-    user = data["paper_traders"].get(user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    total = user["total_trades"]
-    wins = user["winning_trades"]
-    return {
-        **user,
-        "win_rate": round((wins / total * 100) if total > 0 else 0, 1),
-        "equity": round(user["cash"] + user["realized_pnl"], 2),
-    }
-
-
-@app.get("/api/papertrade/{user_id}/leaderboard")
-async def get_leaderboard():
-    data = _load_users()
-    board = [
-        {
-            "user_id": uid,
-            "name": u["name"],
-            "equity": round(u["cash"] + u["realized_pnl"], 2),
-        }
-        for uid, u in data["paper_traders"].items()
-    ]
-    return sorted(board, key=lambda x: x["equity"], reverse=True)[:10]
+# ── API: User Paper Trading Removed ────────────────────────────────────────────
 
 # ── API: Manual Hyperliquid Trading ───────────────────────────────────────────
 from pydantic import BaseModel
@@ -571,27 +495,38 @@ class TradeOpenReq(BaseModel):
     limit_price: Optional[float] = None
     sl_price: Optional[float] = None
     tp_price: Optional[float] = None
+    wallet_address: str
 
 class TradeCoinReq(BaseModel):
     coin: str
+    wallet_address: str
 
-_hl_client = None
-def get_hl_client():
-    global _hl_client
-    if _hl_client is None:
-        from backend.hyperliquid_client import HyperliquidManualClient
-        _hl_client = HyperliquidManualClient()
-    return _hl_client
+def get_hl_client(wallet_address: str):
+    from backend.db import get_db
+    with get_db() as db:
+        user = db.execute("SELECT private_key FROM users WHERE LOWER(wallet_address) = ?", (wallet_address.lower(),)).fetchone()
+        if not user or not user["private_key"]:
+            raise ValueError("No private key configured for this wallet")
+        
+        from synap.hyperliquid_trader import HyperliquidTrader
+        return HyperliquidTrader(private_key=user["private_key"], wallet_address=wallet_address)
 
 @app.post("/api/trade/open")
 def manual_trade_open(req: TradeOpenReq):
     try:
-        client = get_hl_client()
+        client = get_hl_client(req.wallet_address)
+        
+        # HyperliquidTrader uses slightly different args than HyperliquidManualClient
         res = client.open_position(
-            req.coin, req.side, req.size_usd, req.leverage,
-            req.is_limit, req.limit_price, req.sl_price, req.tp_price
+            coin=req.coin, 
+            side=req.side, 
+            entry_price=req.limit_price or 0.0,
+            size_usd=req.size_usd, 
+            leverage=req.leverage,
+            stop_loss=req.sl_price or 0.0,
+            tp1=req.tp_price or 0.0
         )
-        if res.get("status") == "error":
+        if not res:
             raise HTTPException(status_code=400, detail=res.get("message"))
         return res
     except Exception as e:
@@ -600,9 +535,9 @@ def manual_trade_open(req: TradeOpenReq):
 @app.post("/api/trade/close")
 def manual_trade_close(req: TradeCoinReq):
     try:
-        client = get_hl_client()
-        res = client.close_position(req.coin)
-        if res.get("status") == "error":
+        client = get_hl_client(req.wallet_address)
+        res = client.close_position(req.coin, 0.0)
+        if not res:
             raise HTTPException(status_code=400, detail=res.get("message"))
         return res
     except Exception as e:
@@ -611,9 +546,10 @@ def manual_trade_close(req: TradeCoinReq):
 @app.post("/api/trade/reverse")
 def manual_trade_reverse(req: TradeCoinReq):
     try:
-        client = get_hl_client()
-        res = client.reverse_position(req.coin)
-        if res.get("status") == "error":
+        client = get_hl_client(req.wallet_address)
+        # Assuming HyperliquidTrader has reverse_position, or we can just close and open opposite
+        res = client.close_position(req.coin, 0.0)
+        if not res:
             raise HTTPException(status_code=400, detail=res.get("message"))
         return res
     except Exception as e:
@@ -622,12 +558,10 @@ def manual_trade_reverse(req: TradeCoinReq):
 @app.get("/api/wallet/balance")
 def get_wallet_balance(wallet: Optional[str] = None):
     try:
-        # Accept wallet from query param (frontend localStorage) or fall back to env
-        addr = (wallet or os.environ.get("HL_WALLET", "")).strip()
-        if not addr:
-            return {"balance": 0, "available": 0, "configured": False, "reason": "No wallet configured"}
-        # Also sync to env so subsequent trade calls work
-        os.environ["HL_WALLET"] = addr
+        if not wallet or wallet == 'null':
+            return {"balance": 0, "available": 0, "configured": False, "reason": "No wallet connected"}
+            
+        addr = wallet.strip()
         from hyperliquid.info import Info
         from hyperliquid.utils import constants
         info = Info(base_url=constants.MAINNET_API_URL, skip_ws=True)
@@ -727,29 +661,30 @@ class KeysReq(BaseModel):
 
 @app.post("/api/settings/keys")
 async def save_hl_keys(req: KeysReq):
-    import os
-    import dotenv
-    env_path = ROOT / ".env"
-
     try:
+        wallet_addr = req.hl_wallet
+        if not wallet_addr:
+            raise ValueError("wallet address is required")
+
+        updates = []
+        params = []
+        
         if req.hl_private_key:
             # Validate private key is a valid Ethereum key
             from eth_account import Account as _Account
-            _Account.from_key(req.hl_private_key)  # raises if invalid
-            dotenv.set_key(str(env_path), "HL_PRIVATE_KEY", req.hl_private_key)
-            os.environ["HL_PRIVATE_KEY"] = req.hl_private_key
-
-        if req.hl_wallet:
-            dotenv.set_key(str(env_path), "HL_WALLET", req.hl_wallet)
-            os.environ["HL_WALLET"] = req.hl_wallet
-
-        if req.hl_wallet and req.email:
+            account = _Account.from_key(req.hl_private_key)  # raises if invalid
+            updates.append("private_key = ?")
+            params.append(req.hl_private_key)
+            
+        if req.email:
+            updates.append("email = ?")
+            params.append(req.email)
+            
+        if updates:
+            params.append(wallet_addr.lower())
+            query = f"UPDATE users SET {', '.join(updates)} WHERE LOWER(wallet_address) = ?"
             with get_db() as db:
-                db.execute("UPDATE users SET email = ? WHERE LOWER(wallet_address) = ?", (req.email, req.hl_wallet.lower()))
-
-        # Reset the manual client so next trade picks up fresh keys
-        global _hl_client
-        _hl_client = None
+                db.execute(query, params)
 
         return {"status": "success"}
     except Exception as e:
@@ -795,29 +730,7 @@ async def list_strategies(coin: str = "BTC"):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/strategies/subscribe")
-async def subscribe_strategy(req: SubscribeRequest):
-    with get_db() as db:
-        # Check limit
-        count = db.execute("SELECT count(*) as c FROM subscriptions WHERE wallet_address = ?", (req.wallet_address,)).fetchone()["c"]
-        if count >= 5:
-            raise HTTPException(status_code=400, detail="Maximum 5 strategies allowed per user.")
-        
-        # Check strategy state
-        state = db.execute("SELECT status FROM strategy_state WHERE strategy_id = ?", (req.strategy_id,)).fetchone()
-        strat_status = state["status"] if state else "FLAT"
-        
-        sub_status = "WAITING" if strat_status == "IN_TRADE" else "ACTIVE"
-        
-        try:
-            db.execute('''
-                INSERT INTO subscriptions (wallet_address, strategy_id, coin, status, capital, leverage, timeframe)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (req.wallet_address, req.strategy_id, req.coin, sub_status, req.capital, req.leverage, req.timeframe))
-        except sqlite3.IntegrityError:
-            raise HTTPException(status_code=400, detail="Already subscribed to this strategy.")
-            
-        return {"status": "success", "subscription_status": sub_status}
+# Duplicate endpoint removed
 
 @app.post("/api/strategies/{strategy_id}/backtest")
 async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC"):
@@ -870,8 +783,9 @@ async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC
 class ChatRequest(BaseModel):
     prompt: str
     context_type: str = "general"
+    wallet: Optional[str] = None
 
-def _build_context(db, context_type: str) -> str:
+def _build_context(db, context_type: str, wallet: str = None) -> str:
     """Build a concise, deduplicated context string for Claude."""
     parts = []
 
@@ -909,9 +823,13 @@ def _build_context(db, context_type: str) -> str:
             parts.append("\n".join(sm_parts))
 
     if context_type in ("risk_management", "general"):
-        trades = db.execute(
-            "SELECT coin, side, entry_price, exit_price, pnl_usd, action, timestamp FROM trade_logs ORDER BY timestamp DESC LIMIT 8"
-        ).fetchall()
+        if wallet:
+            trades = db.execute(
+                "SELECT coin, side, entry_price, exit_price, pnl_usd, action, timestamp FROM trade_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT 8",
+                (wallet,)
+            ).fetchall()
+        else:
+            trades = []
         if trades:
             trade_lines = [f"- {dict(t)}" for t in trades]
             parts.append("USER RECENT TRADES:\n" + "\n".join(trade_lines))
@@ -940,8 +858,8 @@ async def chat_endpoint(req: ChatRequest):
     }
     ttl_seconds = TTL_MAP.get(req.context_type, 900)
 
-    # Build deterministic cache key from normalized prompt + context_type
-    normalized = f"{req.prompt.strip().lower()}|{req.context_type}"
+    # Build deterministic cache key from normalized prompt + context_type + wallet
+    normalized = f"{req.prompt.strip().lower()}|{req.context_type}|{req.wallet or ''}"
     cache_key = hashlib.sha256(normalized.encode()).hexdigest()
 
     SIMILARITY_THRESHOLD = 0.88  # 88% cosine similarity = semantic match
@@ -1011,7 +929,7 @@ async def chat_endpoint(req: ChatRequest):
     client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
     with get_db() as db:
-        context_str = _build_context(db, req.context_type)
+        context_str = _build_context(db, req.context_type, req.wallet)
 
     system_prompt = f"""You are AlgoBrain, an elite AI crypto trading assistant integrated directly into this platform.
 

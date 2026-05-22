@@ -6,7 +6,7 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from backend.db import get_db, set_market_data, log_trade
-from synap.config import HL_WALLET
+
 from synap import market_data
 from synap import news_sentiment
 from synap import nansen_client
@@ -66,7 +66,7 @@ async def market_intel_service():
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
-            set_market_data('market_intelligence_global', intel)
+            set_market_data('market_intelligence', intel)
             logger.info("Updated raw market intelligence.")
             
         except Exception as e:
@@ -78,40 +78,40 @@ async def trade_history_sync_service():
     """Fetches user_fills from Hyperliquid to capture manual trades, runs every 5 minutes."""
     while True:
         try:
-            if HL_WALLET:
-                # Need to run blocking Info call in an executor
-                from hyperliquid.info import Info
-                from hyperliquid.utils import constants
+            from hyperliquid.info import Info
+            from hyperliquid.utils import constants
+            info = Info(constants.MAINNET_API_URL, skip_ws=True)
+            
+            users = []
+            with get_db() as db:
+                rows = db.execute("SELECT wallet_address FROM users").fetchall()
+                users = [r["wallet_address"] for r in rows if r["wallet_address"]]
                 
-                info = Info(constants.MAINNET_API_URL, skip_ws=True)
-                fills = await asyncio.to_thread(info.user_fills, HL_WALLET)
-                
-                # Deduplicate and sync to trade_logs
-                if fills:
-                    with get_db() as db:
-                        # Get latest trade timestamp from DB to avoid inserting old fills
-                        last_db_trade = db.execute("SELECT timestamp FROM trade_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1", (HL_WALLET,)).fetchone()
-                        # We use a simple strategy: insert fills that are newer than 24h, and use unique constraints or check existing.
-                        # Since trade_logs doesn't have a strict unique ID from HL right now, we will do a basic check by timestamp and coin.
-                        
-                        for fill in fills:
-                            fill_time = fill.get("time", 0)
-                            dt = datetime.fromtimestamp(fill_time / 1000, tz=timezone.utc)
-                            
-                            # Simple deduplication (assuming we don't insert same coin side at exact same millisecond)
-                            existing = db.execute("SELECT id FROM trade_logs WHERE user_id = ? AND coin = ? AND side = ? AND timestamp = ?", 
-                                                  (HL_WALLET, fill["coin"], fill["dir"], dt)).fetchone()
-                            
-                            if not existing:
-                                # Determine if it's manual. A true link would match exactly with AI trades. 
-                                # For MVP, we insert it as a MANUAL_FILL if it's missing.
-                                sz = float(fill.get("sz", 0))
-                                px = float(fill.get("px", 0))
-                                pnl = float(fill.get("closedPnl", 0))
-                                db.execute('''
-                                    INSERT INTO trade_logs (user_id, event, coin, side, entry_price, exit_price, pnl_usd, position_size_usd, action, details, timestamp)
-                                    VALUES (?, 'FILL', ?, ?, ?, ?, ?, ?, 'MANUAL_OR_EXTERNAL_TRADE', 'Direct fill from exchange', ?)
-                                ''', (HL_WALLET, fill["coin"], fill["dir"], px, px if pnl != 0 else None, pnl if pnl != 0 else None, sz * px, dt))
+            for wallet in users:
+                if not wallet or not wallet.startswith('0x') or len(wallet) != 42:
+                    continue
+                try:
+                    fills = await asyncio.to_thread(info.user_fills, wallet)
+                    
+                    if fills:
+                        with get_db() as db:
+                            for fill in fills:
+                                fill_time = fill.get("time", 0)
+                                dt = datetime.fromtimestamp(fill_time / 1000, tz=timezone.utc)
+                                
+                                existing = db.execute("SELECT id FROM trade_logs WHERE user_id = ? AND coin = ? AND side = ? AND timestamp = ?", 
+                                                      (wallet, fill["coin"], fill["dir"], dt)).fetchone()
+                                
+                                if not existing:
+                                    sz = float(fill.get("sz", 0))
+                                    px = float(fill.get("px", 0))
+                                    pnl = float(fill.get("closedPnl", 0))
+                                    db.execute('''
+                                        INSERT INTO trade_logs (user_id, event, coin, side, entry_price, exit_price, pnl_usd, position_size_usd, action, details, timestamp)
+                                        VALUES (?, 'FILL', ?, ?, ?, ?, ?, ?, 'MANUAL_OR_EXTERNAL_TRADE', 'Direct fill from exchange', ?)
+                                    ''', (wallet, fill["coin"], fill["dir"], px, px if pnl != 0 else None, pnl if pnl != 0 else None, sz * px, dt))
+                except Exception as ex:
+                    logger.error(f"Error fetching fills for {wallet}: {ex}")
         except Exception as e:
             logger.error(f"Error in trade_history_sync_service: {e}")
             
