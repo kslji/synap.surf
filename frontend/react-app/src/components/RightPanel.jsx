@@ -4,50 +4,56 @@ import { useToast } from './Toast.jsx';
 
 function SignalModal({ item, onClose }) {
   const t = item.data;
+  const isLong = t.side?.toUpperCase() !== 'SHORT';
+  const themeColor = isLong ? 'var(--green)' : 'var(--red)';
+  const themeBg = isLong ? 'rgba(24, 184, 122, 0.05)' : 'rgba(233, 69, 96, 0.05)';
+  const themeBorder = isLong ? 'rgba(24, 184, 122, 0.2)' : 'rgba(233, 69, 96, 0.2)';
+
   return (
-    <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content">
-        <span className="modal-close" onClick={onClose}>×</span>
-        <div className="modal-header" style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900 }}>{t.coin}</h2>
-                <span className={`sc-type ${t.event?.toLowerCase().includes('open') ? 'long' : 'close'}`} style={{ fontSize: 10, padding: '4px 8px' }}>
-                  {t.event?.replace('TRADE_', '')}
-                </span>
-              </div>
-              <div style={{ color: 'var(--t3)', fontSize: 11, fontWeight: 700 }}>{relTime(item.timestamp)}</div>
+    <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()} style={{ backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+      <div className="modal-content" style={{ maxWidth: 500, width: '90%', background: '#13171a', border: `1px solid ${themeBorder}`, borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: `0 20px 60px ${themeBg}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 28px', borderBottom: `1px solid ${themeBorder}`, background: `linear-gradient(to right, ${themeBg}, transparent)` }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+              <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{t.coin}</h2>
+              <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: '6px', background: isLong ? 'rgba(24,184,122,0.15)' : 'rgba(233,69,96,0.15)', color: themeColor, textTransform: 'uppercase', letterSpacing: 1 }}>
+                {t.event?.replace('TRADE_', '') || 'SIGNAL'}
+              </span>
             </div>
+            <div style={{ color: 'var(--t3)', fontSize: 12, fontWeight: 600 }}>{relTime(item.timestamp)}</div>
           </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--t3)', fontSize: 24, cursor: 'pointer', padding: 0, transition: 'color 0.2s' }}>×</button>
         </div>
         
-        <div className="modal-body">
-          <div className="modal-reasoning-section" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16 }}>
-            <h4 className="section-label" style={{ color: 'var(--accent)', marginBottom: 8 }}>AI REASONING</h4>
-            <p className="reasoning-text" style={{ fontSize: 13, lineHeight: 1.6, opacity: 0.9 }}>
+        <div className="modal-body" style={{ padding: '32px 28px' }}>
+          <div style={{ marginBottom: 32 }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 800, color: 'var(--accent)', letterSpacing: 1.5, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 10px var(--accent)' }}></span>
+              AI REASONING
+            </h4>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'var(--t1)', fontWeight: 500 }}>
               {t.reasoning || t.details || t.reason}
             </p>
           </div>
 
-          <div className="modal-stats-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
             {t.conviction && !isNaN(t.conviction) && (
-              <div className="m-stat">
-                <span className="m-label">CONVICTION</span>
-                <span className="m-val highlight">{Math.round(t.conviction * 100)}%</span>
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+                <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>CONVICTION</span>
+                <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: 'var(--accent)' }}>{Math.round(t.conviction * 100)}%</span>
               </div>
             )}
-            <div className="m-stat">
-              <span className="m-label">SIDE</span>
-              <span className={`m-val ${t.side?.toLowerCase() || 'long'}`}>{t.side || 'LONG'}</span>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>SIDE</span>
+              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: themeColor }}>{t.side || 'LONG'}</span>
             </div>
-            <div className="m-stat">
-              <span className="m-label">LEVERAGE</span>
-              <span className="m-val">{t.leverage || '5'}x</span>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>LEVERAGE</span>
+              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: '#fff' }}>{t.leverage || '5'}x</span>
             </div>
-            <div className="m-stat">
-              <span className="m-label">PRICE</span>
-              <span className="m-val">{t.entry_price ? `$${t.entry_price}` : (t.price ? `$${t.price}` : 'Market')}</span>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+              <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>PRICE</span>
+              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: '#fff' }}>{t.entry_price ? `$${t.entry_price}` : (t.price ? `$${t.price}` : 'Market')}</span>
             </div>
           </div>
         </div>
@@ -127,43 +133,81 @@ function PositionsModal({ positions, onClose }) {
   };
 
   return (
-    <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content" style={{ maxWidth: 500 }}>
-        <span className="modal-close" onClick={onClose}>×</span>
-        <div className="modal-header" style={{ marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--t1)' }}>OPEN POSITIONS</h2>
+    <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="modal-content" style={{ maxWidth: 1000, width: '90%', background: '#13171a', border: '1px solid var(--border)', borderRadius: '16px', padding: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'inline-block', width: 4, height: 16, background: 'var(--accent)', borderRadius: 2 }}></span>
+            Active Positions
+          </h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--t3)', fontSize: 24, cursor: 'pointer', padding: 0 }}>×</button>
         </div>
-        <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-          {!positions || positions.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--t3)' }}>
-              No active positions.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {positions.map((p, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--t1)' }}>{p.coin}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: p.side === 'LONG' ? 'var(--accent)' : 'var(--red)' }}>{p.side} {p.leverage}x</span>
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: p.pnl_usd >= 0 ? 'var(--accent)' : 'var(--red)' }}>
-                        {p.pnl_usd >= 0 ? '+' : '-'}${Math.abs(p.pnl_usd).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handleClose(p.coin)}
-                    disabled={closingCoin === p.coin}
-                    style={{ background: 'var(--t3)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
-                  >
-                    {closingCoin === p.coin ? 'CLOSING...' : 'CLOSE'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+        
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--t2)', fontSize: 13, fontWeight: 700 }}>
+                <th style={{ padding: '16px 24px', fontWeight: 600 }}>Coin</th>
+                <th style={{ padding: '16px', fontWeight: 600 }}>Size</th>
+                <th style={{ padding: '16px', fontWeight: 600 }}>Position Value</th>
+                <th style={{ padding: '16px', fontWeight: 600 }}>Entry Price</th>
+                <th style={{ padding: '16px', fontWeight: 600 }}>Mark Price</th>
+                <th style={{ padding: '16px', fontWeight: 600 }}>PNL (ROE %)</th>
+                <th style={{ padding: '16px', fontWeight: 600 }}>Liq. Price</th>
+                <th style={{ padding: '16px 24px', fontWeight: 600 }}>Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!positions || positions.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: 'var(--t3)' }}>No active positions.</td>
+                </tr>
+              ) : (
+                positions.map((p, i) => {
+                  const isLong = p.side?.toUpperCase() === 'LONG';
+                  const pnlUsd = p.pnl_usd !== undefined ? p.pnl_usd : (p.unrealized_pnl || 0);
+                  const pnlPct = p.pnl_pct !== undefined ? p.pnl_pct : (p.unrealized_pnl_pct || 0);
+                  const isPos = pnlUsd >= 0;
+                  
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'relative', transition: 'background 0.2s', ':hover': { background: 'rgba(255,255,255,0.02)' } }}>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: isLong ? 'var(--green)' : 'var(--red)' }}></div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--t1)' }}>{p.coin}</span>
+                          <span style={{ fontSize: 12, color: 'var(--t3)' }}>{p.leverage}x</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px', fontSize: 13, color: isLong ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+                        {p.size} {p.coin}
+                      </td>
+                      <td style={{ padding: '16px', fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>
+                        {Number(p.size_usd || 0).toFixed(2)} USDC
+                      </td>
+                      <td style={{ padding: '16px', fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>
+                        {Number(p.entry_price || 0).toFixed(4)}
+                      </td>
+                      <td style={{ padding: '16px', fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>
+                        {Number(p.mark_price || p.entry_price || 0).toFixed(4)}
+                      </td>
+                      <td style={{ padding: '16px', fontSize: 13, color: isPos ? 'var(--green)' : 'var(--red)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {isPos ? '+' : '-'}${Math.abs(pnlUsd).toFixed(2)} ({isPos ? '+' : ''}{Number(pnlPct).toFixed(1)}%)
+                        <a href={`https://app.hyperliquid.xyz/trade/${p.coin}`} target="_blank" rel="noreferrer" style={{ background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', padding: 0, display: 'flex', opacity: 0.7, textDecoration: 'none' }} title={`Trade ${p.coin} on Hyperliquid`}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        </a>
+                      </td>
+                      <td style={{ padding: '16px', fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>
+                        {Number(p.liquidation_price || 0).toFixed(4)}
+                      </td>
+                      <td style={{ padding: '16px 24px', fontSize: 13, color: 'var(--t1)', fontWeight: 600 }}>
+                        ${Number(p.margin_used || 0).toFixed(2)} <span style={{ color: 'var(--t3)', fontWeight: 400 }}>({(p.leverage_type || 'cross').charAt(0).toUpperCase() + (p.leverage_type || 'cross').slice(1)})</span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -235,6 +279,8 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
 
   // Wallet balance
   const [walletBalance, setWalletBalance] = useState(null);
+  const [balRefreshing, setBalRefreshing] = useState(false);
+  
   const fetchBalance = useCallback(async () => {
     try {
       const savedWallet = localStorage.getItem('hl_wallet');
@@ -246,6 +292,13 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     } catch (_) {}
   }, []);
   useEffect(() => { fetchBalance(); }, [fetchBalance]);
+
+  const handleFetchBalance = async () => {
+    if (balRefreshing) return;
+    setBalRefreshing(true);
+    await fetchBalance();
+    setTimeout(() => setBalRefreshing(false), 500);
+  };
 
   // Close coin dropdown on outside click
   useEffect(() => {
@@ -305,9 +358,9 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     ARB:  { emoji: '◉', color: '#12aaff' },
   };
   const coins = Object.keys(COIN_META);
-  const positions = stats.positions || [];
-  const rpnl = stats.realized_pnl || 0;
-  const unpnl = positions.reduce((acc, p) => acc + (p.pnl_usd || 0), 0);
+  const positions = (stats && Array.isArray(stats.positions)) ? stats.positions : [];
+  const rpnl = Number(stats?.realized_pnl) || 0;
+  const unpnl = stats?.unrealized_pnl !== undefined ? Number(stats.unrealized_pnl) : positions.reduce((acc, p) => acc + (Number(p?.pnl_usd !== undefined ? p.pnl_usd : p?.unrealized_pnl) || 0), 0);
 
   const handleTrade = async (action) => {
     if (tradeLoading) return;
@@ -420,7 +473,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  NOTIFS <span className="edit-link" onClick={() => setTgModal(true)}>Edit</span>
+                  NOTIFS
                 </label>
                 <label className="switch mini" style={{ margin: 0 }}>
                   <input type="checkbox" defaultChecked />
@@ -445,7 +498,12 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                   {walletBalance?.configured ? `$${avail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                 </div>
               </div>
-              <button onClick={fetchBalance} style={{ background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 16, padding: 4, borderRadius: 8, transition: 'color 0.2s' }} title="Refresh balance">↻</button>
+              <button onClick={handleFetchBalance} style={{ background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', padding: 4, borderRadius: 8, transition: 'color 0.2s', display: 'flex', alignItems: 'center' }} title="Refresh balance">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: balRefreshing ? 'spin 1s linear infinite' : 'none' }}>
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                </svg>
+              </button>
             </div>
 
             {/* Custom Coin Picker */}
@@ -652,7 +710,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               );
             })}
             <div className="bc-field" style={{ marginTop: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>TELEGRAM NOTIFS <span className="edit-link" onClick={() => setTgModal(true)}>Edit</span></label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>TELEGRAM NOTIFS</label>
               <label className="switch mini">
                 <input type="checkbox" defaultChecked />
                 <span className="slider round" />
@@ -686,9 +744,17 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       </button>
       <aside className="right-panel" style={isPanelOpen ? { width: panelWidth } : {}}>
       {modal && <SignalModal item={modal} onClose={() => setModal(null)} />}
+      {posModal && <PositionsModal positions={positions} onClose={() => setPosModal(false)} />}
       <section className="rp-section">
         <div className="rp-hdr">
-          <h3>PERFORMANCE</h3>
+          <h3>
+            PERFORMANCE
+            {stats?.is_last_20 && (
+              <span style={{ fontSize: '10px', color: '#ff9f43', textTransform: 'none', marginLeft: '12px', fontWeight: '800', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 8px', borderRadius: '6px', letterSpacing: '0' }}>
+                (based on last 20 trades)
+              </span>
+            )}
+          </h3>
         </div>
         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           <div className="stat-card">
@@ -701,7 +767,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
           </div>
           <div className="stat-card">
             <span className="stat-label">WIN RATE</span>
-            <span className="stat-val highlight">{stats.win_rate || '68'}%</span>
+            <span className="stat-val highlight">{typeof stats.win_rate === 'number' ? stats.win_rate.toFixed(0) : '0'}%</span>
           </div>
         </div>
       </section>
@@ -715,27 +781,58 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 <span>NO ACTIVE POSITIONS</span>
                 <p>Open trades will appear here automatically.</p>
               </div>
-            : positions.map((p, i) => (
-                <div key={i} className="pos-item">
-                  <div className="pos-info">
-                    <span className="pos-coin">{p.coin}</span>
-                    <span className={`pos-side ${p.side?.toLowerCase()}`}>{p.side} {p.leverage}x</span>
+            : positions.map((p, i) => {
+                const pnlUsd = p.pnl_usd !== undefined ? p.pnl_usd : (p.unrealized_pnl || 0);
+                const pnlPct = p.pnl_pct !== undefined ? p.pnl_pct : (p.unrealized_pnl_pct || 0);
+                return (
+                <div key={i} className="pos-item" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: 'var(--shadow)', transition: 'all 0.2s ease', cursor: 'pointer' }}
+                  onClick={() => setPosModal(true)}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = p.side?.toUpperCase() === 'LONG' ? 'var(--green)' : 'var(--red)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: p.side?.toUpperCase() === 'LONG' ? 'rgba(24, 184, 122, 0.1)' : 'rgba(233, 69, 96, 0.1)', color: p.side?.toUpperCase() === 'LONG' ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '900' }}>
+                        {p.coin?.slice(0, 2)}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '16px', fontWeight: '900', color: 'var(--t1)', lineHeight: '1.2' }}>{p.coin}</span>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: p.side?.toUpperCase() === 'LONG' ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {p.side?.toUpperCase() === 'LONG' ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>}
+                          {p.side?.toUpperCase()} {p.leverage}x
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <span style={{ fontSize: '16px', fontWeight: '900', color: pnlUsd >= 0 ? 'var(--green)' : 'var(--red)', letterSpacing: '-0.5px' }}>
+                        {pnlUsd >= 0 ? '+' : '-'}${Math.abs(pnlUsd).toFixed(2)}
+                      </span>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: pnlUsd >= 0 ? 'var(--green)' : 'var(--red)', background: pnlUsd >= 0 ? 'rgba(24, 184, 122, 0.1)' : 'rgba(233, 69, 96, 0.1)', padding: '2px 8px', borderRadius: '6px', marginTop: '4px' }}>
+                        {pnlUsd >= 0 ? '+' : ''}{(Number(pnlPct) || 0).toFixed(2)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="pos-pnl">
-                    <span className={`pnl-val ${p.pnl_usd >= 0 ? 'pos' : 'neg'}`}>
-                      {p.pnl_usd >= 0 ? '+' : '-'}${Math.abs(p.pnl_usd).toFixed(2)}
-                    </span>
-                    <span className="pnl-pct">({p.pnl_pct.toFixed(2)}%)</span>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border)', paddingTop: '12px', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Margin</span>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--t1)' }}>${(Number(p.size_usd) || 0).toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Entry</span>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--t1)' }}>${Number(p.entry_price || 0).toFixed(4)}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
         </div>
       </section>
 
       <section className="rp-section" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div className="rp-hdr"><h3>AI SIGNALS</h3></div>
         <div className="signals-list">
-          {decisions.slice(0, 10).map((d, i) => (
+          {(Array.isArray(decisions) ? decisions : []).slice(0, 10).map((d, i) => (
             <SignalCard key={i} item={d} onClick={() => setModal(d)} />
           ))}
         </div>

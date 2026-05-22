@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 
 export default function AIPage() {
   const [messages, setMessages] = useState([]);
+  const [feedbacks, setFeedbacks] = useState({});
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -26,6 +27,21 @@ export default function AIPage() {
   }, [messages]);
 
   const accumulatedRef = useRef('');
+
+  const handleFeedback = async (index, type, text) => {
+    const current = feedbacks[index];
+    const newFeedback = current === type ? null : type;
+    
+    setFeedbacks(prev => ({ ...prev, [index]: newFeedback }));
+    
+    try {
+      await fetch('http://localhost:8000/api/ai/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_index: index, feedback: newFeedback || 'none', text: text.substring(0, 100) })
+      });
+    } catch(err) {}
+  };
 
   const handleSend = async (text, contextType = 'general') => {
     const userMsg = typeof text === 'string' ? text : input.trim();
@@ -91,7 +107,7 @@ export default function AIPage() {
     <div className="main-content fade-in" style={{ 
       display: 'flex', flexDirection: 'column', flex: 1, 
       background: 'radial-gradient(circle at 50% 0%, rgba(255, 159, 67, 0.1) 0%, var(--bg) 60%)', 
-      height: '100%', minHeight: 0, position: 'relative', overflow: 'hidden' 
+      height: '100vh', minHeight: 0, position: 'relative', overflow: 'hidden' 
     }}>
       
       {/* Dynamic Background Glows */}
@@ -101,7 +117,7 @@ export default function AIPage() {
 
 
       {/* Chat Area */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 40px 40px 40px', display: 'flex', flexDirection: 'column', zIndex: 1 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '40px 40px 160px 40px', display: 'flex', flexDirection: 'column', zIndex: 1 }}>
         <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32, flex: 1 }}>
           
           {messages.length === 0 ? (
@@ -163,61 +179,41 @@ export default function AIPage() {
               
               {messages.map((msg, i) => (
                 <div key={i} style={{ display: 'flex', gap: 20, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                  {msg.role === 'ai' && (
-                    <div style={{ 
-                      width: 44, height: 44, borderRadius: '14px', background: 'linear-gradient(135deg, #1e2329, #0d1117)', 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)'
-                    }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/>
-                      </svg>
-                    </div>
-                  )}
                   <div style={{ 
-                    background: msg.role === 'user' ? 'linear-gradient(135deg, #ff9f43, #ee5253)' : 'var(--card)', 
-                    color: msg.role === 'user' ? '#fff' : 'var(--t1)',
-                    padding: '20px 24px', 
-                    borderRadius: '24px',
-                    borderTopRightRadius: msg.role === 'user' ? 6 : 24,
-                    borderTopLeftRadius: msg.role === 'ai' ? 6 : 24,
+                    background: msg.role === 'user' ? 'rgba(255,255,255,0.06)' : 'transparent', 
+                    color: 'var(--t1)',
+                    padding: msg.role === 'user' ? '12px 20px' : '8px 0', 
+                    borderRadius: '20px',
                     fontSize: 15,
                     lineHeight: 1.75,
                     fontWeight: 400,
-                    boxShadow: msg.role === 'user' ? '0 12px 24px rgba(238, 82, 83, 0.3)' : 'var(--shadow)',
-                    border: msg.role === 'ai' ? '1px solid var(--border)' : 'none',
-                    maxWidth: '80%',
-                    letterSpacing: '0.2px'
+                    maxWidth: '85%',
+                    letterSpacing: '0.1px'
                   }}>
                     {msg.role === 'ai' ? (
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {msg.isThinking ? (
-                          <div style={{ color: 'var(--t3)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, fontStyle: 'italic' }}>
+                          <div style={{ color: 'var(--t3)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, fontStyle: 'italic', marginBottom: 12 }}>
                             <div style={{ width: 14, height: 14, border: '2px solid var(--t3)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                            Thinking for {msg.thinkTime}s...
-                          </div>
-                        ) : msg.thinkTime > 0 ? (
-                          <div style={{ color: 'var(--t3)', fontSize: 13, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6, opacity: 0.8 }}>
-                            Thinking for {msg.thinkTime}s
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                            Thinking...
                           </div>
                         ) : null}
                         
                         {msg.content && (
                           <ReactMarkdown
                             components={{
-                              h1: ({node, ...props}) => <h1 style={{fontSize: 22, fontWeight: 900, color: '#ff9f43', marginBottom: 16, marginTop: 8, borderBottom: '1px solid rgba(255,159,67,0.2)', paddingBottom: 8, letterSpacing: '0.5px'}} {...props} />,
-                              h2: ({node, ...props}) => <h2 style={{fontSize: 18, fontWeight: 800, color: '#ff6b6b', marginBottom: 12, marginTop: 20, letterSpacing: '0.5px'}} {...props} />,
-                              h3: ({node, ...props}) => <h3 style={{fontSize: 16, fontWeight: 700, color: '#feca57', marginBottom: 8, marginTop: 16}} {...props} />,
-                              p: ({node, ...props}) => <p style={{marginBottom: 14, color: 'rgba(255, 255, 255, 0.95)', lineHeight: 1.8, fontSize: 15.5}} {...props} />,
-                              strong: ({node, ...props}) => <strong style={{color: '#fff', fontWeight: 700, background: 'rgba(255,255,255,0.05)', padding: '0 4px', borderRadius: 4}} {...props} />,
+                              h1: ({node, ...props}) => <h1 style={{fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 16, marginTop: 8}} {...props} />,
+                              h2: ({node, ...props}) => <h2 style={{fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 12, marginTop: 16}} {...props} />,
+                              h3: ({node, ...props}) => <h3 style={{fontSize: 16, fontWeight: 600, color: '#e2e8f0', marginBottom: 8, marginTop: 12}} {...props} />,
+                              p: ({node, ...props}) => <p style={{marginBottom: 16, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.7, fontSize: 15}} {...props} />,
+                              strong: ({node, ...props}) => <strong style={{color: '#fff', fontWeight: 600}} {...props} />,
                               ul: ({node, ...props}) => <ul style={{paddingLeft: 24, marginBottom: 16}} {...props} />,
                               ol: ({node, ...props}) => <ol style={{paddingLeft: 24, marginBottom: 16}} {...props} />,
                               li: ({node, ...props}) => <li style={{marginBottom: 8, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.7}} {...props} />,
                               code: ({node, inline, ...props}) => inline
-                                ? <code style={{background: 'rgba(255,159,67,0.15)', color: '#ff9f43', padding: '3px 8px', borderRadius: 6, fontSize: 13.5, fontFamily: 'monospace', fontWeight: 600}} {...props} />
-                                : <code style={{display: 'block', background: 'rgba(0,0,0,0.4)', color: '#ff9f43', padding: '16px 20px', borderRadius: 12, fontSize: 13.5, fontFamily: 'monospace', overflowX: 'auto', marginBottom: 16, border: '1px solid rgba(255,159,67,0.1)'}} {...props} />,
-                              blockquote: ({node, ...props}) => <blockquote style={{borderLeft: '4px solid #ff6b6b', paddingLeft: 16, color: 'rgba(255, 255, 255, 0.7)', fontStyle: 'italic', margin: '16px 0', background: 'rgba(255, 107, 107, 0.05)', padding: '12px 16px', borderRadius: '0 8px 8px 0'}} {...props} />,
+                                ? <code style={{background: 'rgba(255,255,255,0.1)', color: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 13.5, fontFamily: 'monospace'}} {...props} />
+                                : <code style={{display: 'block', background: '#1e1e1e', color: '#d4d4d4', padding: '16px', borderRadius: 8, fontSize: 13.5, fontFamily: 'monospace', overflowX: 'auto', marginBottom: 16}} {...props} />,
+                              blockquote: ({node, ...props}) => <blockquote style={{borderLeft: '3px solid rgba(255,255,255,0.2)', paddingLeft: 16, color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', margin: '16px 0'}} {...props} />,
                               hr: ({node, ...props}) => <hr style={{border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '24px 0'}} {...props} />,
                             }}
                           >
@@ -225,11 +221,54 @@ export default function AIPage() {
                           </ReactMarkdown>
                         )}
                         {isTyping && i === messages.length - 1 && (
-                          <span style={{ display: 'inline-block', width: 10, height: 18, background: '#ff9f43', marginLeft: 6, animation: 'blink 1s infinite', borderRadius: 3, verticalAlign: 'middle', boxShadow: '0 0 10px rgba(255,159,67,0.5)' }}></span>
+                          <span style={{ display: 'inline-block', width: 8, height: 16, background: 'rgba(255,255,255,0.8)', marginLeft: 4, animation: 'blink 1s infinite', borderRadius: 2, verticalAlign: 'middle' }}></span>
+                        )}
+
+                        {/* Action Icons (Copy, Like, Dislike) */}
+                        {!msg.isThinking && msg.content && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, opacity: 0.6 }}>
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(msg.content);
+                                const el = document.getElementById(`copy-icon-${i}`);
+                                if (el) {
+                                  el.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
+                                  setTimeout(() => {
+                                    el.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>';
+                                  }, 2000);
+                                }
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+                              title="Copy"
+                            >
+                              <svg id={`copy-icon-${i}`} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                              </svg>
+                            </button>
+                            <button 
+                              onClick={() => handleFeedback(i, 'like', msg.content)}
+                              style={{ background: 'none', border: 'none', color: feedbacks[i] === 'like' ? '#10b981' : '#fff', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                              title="Good response"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                              </svg>
+                            </button>
+                            <button 
+                              onClick={() => handleFeedback(i, 'dislike', msg.content)}
+                              style={{ background: 'none', border: 'none', color: feedbacks[i] === 'dislike' ? '#ef4444' : '#fff', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                              title="Bad response"
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
+                              </svg>
+                            </button>
+                          </div>
                         )}
                       </div>
                     ) : (
-                      <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 16, fontWeight: 500, lineHeight: 1.6, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                      <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 16, fontWeight: 500, lineHeight: 1.6 }}>
                         {msg.content}
                       </div>
                     )}
@@ -243,51 +282,55 @@ export default function AIPage() {
       </div>
 
       {/* Clean Input Area */}
-      <div style={{ padding: '24px 40px 32px 40px', zIndex: 1, flexShrink: 0, background: 'var(--bg)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 90, right: 0, padding: '16px 40px 12px 40px', zIndex: 100, background: 'linear-gradient(to top, var(--bg) 80%, transparent)' }}>
         <div style={{ 
-          maxWidth: '800px', margin: '0 auto', position: 'relative',
-          background: 'var(--card)', borderRadius: 16,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15)', border: '1px solid var(--border)',
-          transition: 'border 0.3s ease, box-shadow 0.3s ease'
+          maxWidth: '768px', margin: '0 auto', position: 'relative',
+          background: '#2A2A2A', borderRadius: 24,
+          border: '1px solid rgba(255,255,255,0.08)',
+          transition: 'border 0.3s ease, box-shadow 0.3s ease',
+          display: 'flex', flexDirection: 'column'
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = '#00d2d3'; }}
-        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.background = '#2F2F2F'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = '#2A2A2A'; }}
         >
-          <input 
-            type="text" 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask ALGO BRAIN anything about trading..."
-            style={{ 
-              width: '100%', padding: '18px 64px 18px 24px', borderRadius: 16, 
-              border: 'none', background: 'transparent', 
-              color: 'var(--t1)', fontSize: 15, fontWeight: 500,
-              outline: 'none'
-            }}
-          />
-          <button 
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isTyping}
-            style={{ 
-              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', 
-              background: input.trim() && !isTyping ? 'linear-gradient(135deg, #00d2d3, #6c5ce7)' : 'transparent', 
-              width: 40, height: 40, borderRadius: '12px', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: input.trim() && !isTyping ? 'pointer' : 'default',
-              transition: 'all 0.2s',
-              border: 'none',
-              opacity: input.trim() && !isTyping ? 1 : 0.5
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={input.trim() && !isTyping ? '#fff' : 'var(--t3)'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'translateX(-1px)' }}>
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '8px 12px 8px 20px' }}>
+            <input 
+              type="text" 
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Message AlgoBrain..."
+              style={{ 
+                flex: 1, padding: '12px 0', 
+                border: 'none', background: 'transparent', 
+                color: 'var(--t1)', fontSize: 15, fontWeight: 400,
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            <button 
+              onClick={() => handleSend()}
+              disabled={!input.trim() || isTyping}
+              style={{ 
+                background: input.trim() && !isTyping ? '#fff' : 'rgba(255,255,255,0.05)', 
+                width: 36, height: 36, borderRadius: '50%', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: input.trim() && !isTyping ? 'pointer' : 'default',
+                transition: 'all 0.2s',
+                border: 'none',
+                marginLeft: 12,
+                color: input.trim() && !isTyping ? '#000' : 'var(--t3)'
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+            </button>
+          </div>
         </div>
-        <p style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 12, marginTop: 12, fontWeight: 500 }}>
-          ALGO BRAIN can make mistakes. Consider verifying important trading decisions.
+        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 8, marginBottom: 0, paddingBottom: 0, fontWeight: 400, letterSpacing: 0.2, lineHeight: 1 }}>
+          AI can make mistakes. Please double-check responses.
         </p>
       </div>
 

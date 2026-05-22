@@ -23,6 +23,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 wallet_address TEXT PRIMARY KEY,
                 private_key TEXT,
+                email TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -97,6 +98,17 @@ def init_db():
                 tokens_saved INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expires_at TIMESTAMP         -- NULL = never expires
+            )
+        ''')
+
+        # AI Feedback Table (for tracking likes/dislikes on AI responses)
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS ai_feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_index INTEGER,
+                feedback TEXT,
+                text TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 

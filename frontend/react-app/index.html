@@ -7,9 +7,113 @@
     <meta name="description" content="AlgoBrain — Real-time AI-powered algorithmic trading dashboard with live positions, signals, and market intelligence." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <!-- Instant theme application: reads localStorage BEFORE React mounts to prevent white/blank flash -->
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('theme') || 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          // Apply background immediately so there is ZERO flash
+          var bg = theme === 'dark' ? '#0b0e11' : '#eef1f4';
+          document.documentElement.style.background = bg;
+          document.documentElement.style.minHeight = '100vh';
+          document.body && (document.body.style.background = bg);
+        } catch(e) {}
+      })();
+    </script>
+    <style>
+      html, body, #root {
+        min-height: 100vh;
+        background: #eef1f4;
+      }
+      /* Skeleton theme variables — light mode defaults */
+      :root {
+        --sk-bg: #eef1f4;
+        --sk-card: #ffffff;
+        --sk-shimmer: #e2e8f0;
+      }
+      /* Dark mode overrides applied immediately by the script above */
+      html[data-theme='dark'], html[data-theme='dark'] body, html[data-theme='dark'] #root {
+        background: #0b0e11;
+      }
+      html[data-theme='dark'] {
+        --sk-bg: #0b0e11;
+        --sk-card: #1e2329;
+        --sk-shimmer: #2a2f36;
+      }
+      /* Shimmer animation */
+      @keyframes shimmer {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+      }
+      #app-skeleton div[style*="sk-shimmer"], #app-skeleton div[style*="background:var(--sk-shimmer)"] {
+        animation: shimmer 1.5s ease-in-out infinite;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Pre-React skeleton: shown instantly while JS bundle loads. React replaces this on mount. -->
+      <div id="app-skeleton" style="display:flex;height:100vh;width:100vw;background:var(--sk-bg);font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;">
+        
+        <!-- Sidebar skeleton -->
+        <div style="width:64px;min-height:100vh;background:#0d1117;display:flex;flex-direction:column;align-items:center;padding:20px 0;gap:20px;flex-shrink:0;">
+          <div style="width:36px;height:36px;background:rgba(255,159,67,0.3);border-radius:10px;"></div>
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:16px;align-items:center;">
+            <div style="width:36px;height:36px;background:rgba(255,255,255,0.08);border-radius:10px;"></div>
+            <div style="width:36px;height:36px;background:rgba(255,255,255,0.08);border-radius:10px;"></div>
+            <div style="width:36px;height:36px;background:rgba(255,255,255,0.08);border-radius:10px;"></div>
+            <div style="width:36px;height:36px;background:rgba(255,255,255,0.08);border-radius:10px;"></div>
+            <div style="width:36px;height:36px;background:rgba(255,255,255,0.08);border-radius:10px;"></div>
+          </div>
+        </div>
+
+        <!-- Main content skeleton -->
+        <div style="flex:1;padding:20px 24px;display:flex;flex-direction:column;gap:16px;overflow:hidden;">
+          
+          <!-- Topbar -->
+          <div style="height:48px;background:var(--sk-card);border-radius:14px;width:100%;"></div>
+          
+          <!-- Hero row: balance + market intel -->
+          <div style="display:flex;gap:16px;height:200px;">
+            <div style="flex:1;background:var(--sk-card);border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:12px;">
+              <div style="width:100px;height:10px;background:var(--sk-shimmer);border-radius:6px;"></div>
+              <div style="width:180px;height:32px;background:var(--sk-shimmer);border-radius:8px;"></div>
+              <div style="width:120px;height:10px;background:var(--sk-shimmer);border-radius:6px;"></div>
+            </div>
+            <div style="flex:1.6;background:var(--sk-card);border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:12px;">
+              <div style="width:150px;height:10px;background:var(--sk-shimmer);border-radius:6px;"></div>
+              <div style="width:100%;height:80px;background:var(--sk-shimmer);border-radius:10px;opacity:0.5;"></div>
+              <div style="width:200px;height:10px;background:var(--sk-shimmer);border-radius:6px;"></div>
+            </div>
+          </div>
+
+          <!-- Ticker row -->
+          <div style="height:56px;background:var(--sk-card);border-radius:16px;width:100%;"></div>
+
+          <!-- Trade history table -->
+          <div style="flex:1;background:var(--sk-card);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+            <div style="width:140px;height:12px;background:var(--sk-shimmer);border-radius:6px;"></div>
+            <div style="height:1px;background:var(--sk-shimmer);opacity:0.3;"></div>
+            <div style="width:100%;height:36px;background:var(--sk-shimmer);border-radius:8px;opacity:0.5;"></div>
+            <div style="width:95%;height:36px;background:var(--sk-shimmer);border-radius:8px;opacity:0.4;"></div>
+            <div style="width:90%;height:36px;background:var(--sk-shimmer);border-radius:8px;opacity:0.3;"></div>
+          </div>
+        </div>
+
+        <!-- Right panel skeleton -->
+        <div style="width:340px;min-height:100vh;background:var(--sk-card);border-left:1px solid rgba(255,255,255,0.06);padding:20px;display:flex;flex-direction:column;gap:16px;flex-shrink:0;">
+          <div style="width:120px;height:12px;background:var(--sk-shimmer);border-radius:6px;"></div>
+          <div style="height:80px;background:var(--sk-shimmer);border-radius:12px;opacity:0.5;"></div>
+          <div style="height:1px;background:rgba(255,255,255,0.06);"></div>
+          <div style="width:100px;height:12px;background:var(--sk-shimmer);border-radius:6px;"></div>
+          <div style="height:60px;background:var(--sk-shimmer);border-radius:12px;opacity:0.5;"></div>
+          <div style="height:60px;background:var(--sk-shimmer);border-radius:12px;opacity:0.4;"></div>
+          <div style="height:60px;background:var(--sk-shimmer);border-radius:12px;opacity:0.3;"></div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

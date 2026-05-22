@@ -80,18 +80,28 @@ def get_live_hl_portfolio() -> Optional[dict]:
                 upnl = float(pos["unrealizedPnl"])
                 unrealized_pnl += upnl
 
-                # 10x leverage default. Compute ROE % based on margin used
-                leverage = 10
-                raw_notional = abs(szi) * entry_px
-                margin = raw_notional / leverage if leverage > 0 else raw_notional
+                # Leverage info
+                lev_val = pos.get("leverage", {})
+                leverage = lev_val.get("value", 10) if isinstance(lev_val, dict) else 10
+                lev_type = lev_val.get("type", "cross") if isinstance(lev_val, dict) else "cross"
+                
+                pos_value = float(pos.get("positionValue", abs(szi) * entry_px))
+                mark_px = pos_value / abs(szi) if abs(szi) > 0 else entry_px
+                liq_px = float(pos.get("liquidationPx", 0))
+                margin = float(pos.get("marginUsed", pos_value / leverage if leverage > 0 else pos_value))
+
                 roe_pct = (upnl / margin * 100) if margin > 0 else 0.0
 
                 positions.append({
                     "coin": coin,
                     "side": side,
                     "size": abs(szi),
-                    "size_usd": raw_notional,
+                    "size_usd": pos_value,
                     "entry_price": entry_px,
+                    "mark_price": mark_px,
+                    "liquidation_price": liq_px,
+                    "margin_used": margin,
+                    "leverage_type": lev_type,
                     "unrealized_pnl": upnl,
                     "unrealized_pnl_pct": roe_pct,
                     "leverage": leverage
@@ -100,10 +110,28 @@ def get_live_hl_portfolio() -> Optional[dict]:
         # 4. Load cumulative fees from live state file
         cumulative_fees = 0.0
 
+        # 5. Fetch last 20 trades for Realized PnL & Win Rate
+        last_20_pnl = 0.0
+        last_20_wr = 0.0
+        try:
+            fills = info.user_fills(HL_WALLET) or []
+            closed_fills = [f for f in fills if float(f.get("closedPnl", 0)) != 0]
+            # Sort chronologically, then take last 20
+            closed_fills.sort(key=lambda x: x.get("time", 0))
+            last_20 = closed_fills[-20:]
+            if last_20:
+                last_20_pnl = sum(float(f["closedPnl"]) for f in last_20)
+                wins = sum(1 for f in last_20 if float(f["closedPnl"]) > 0)
+                last_20_wr = (wins / len(last_20)) * 100
+        except Exception as e:
+            logger.error(f"Error fetching user fills: {e}")
+
         return {
             "cash": cash,
             "total_equity": equity,
             "unrealized_pnl": unrealized_pnl,
+            "last_20_realized_pnl": last_20_pnl,
+            "last_20_win_rate": last_20_wr,
             "positions": positions,
             "open_position_count": len(positions),
             "fetched_at": fetched_at_str,

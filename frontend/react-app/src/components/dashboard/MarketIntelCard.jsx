@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { relTime } from '../../utils.js';
 
-export default function MarketIntelCard({ intel }) {
+export default function MarketIntelCard({ intel: rawIntel }) {
+  const intel = rawIntel || {};
+  const [activeModal, setActiveModal] = useState(null);
+  
   const fg = intel.fear_greed;
-  const isFear = fg && fg.classification.toLowerCase().includes('fear');
+  const isFear = fg && fg.classification && fg.classification.toLowerCase().includes('fear');
   const status = intel.updated_at ? `Updated ${relTime(intel.updated_at)}` : 'Syncing...';
   const renderText = (text) => {
     if (!text) return 'Syncing...';
@@ -15,6 +19,7 @@ export default function MarketIntelCard({ intel }) {
   };
 
   return (
+    <>
     <section className="intel-card premium">
       <div className="intel-header">
         <div className="intel-title-group">
@@ -37,22 +42,38 @@ export default function MarketIntelCard({ intel }) {
         </div>
       </div>
       <div className="intel-grid">
-        <div className="intel-col-left" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="intel-body-box">
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, display: 'block', marginBottom: 6 }}>MACRO ASSESSMENT</span>
-            {renderText(intel.market_view)}
+        <div className="intel-col-left" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="intel-body-box" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
+               onClick={() => setActiveModal('macro')}
+               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'; }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 10px var(--accent)' }}></span>
+              <span style={{ fontSize: 13, fontWeight: 900, color: '#fff', letterSpacing: 1.5 }}>MACRO ASSESSMENT</span>
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--t2)', fontWeight: 500, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {renderText(intel.market_view)}
+            </div>
           </div>
+          
           {intel.scan_reasoning && (
-            <div className="intel-body-box" style={{ background: 'rgba(0, 210, 211, 0.05)', border: '1px solid rgba(0, 210, 211, 0.15)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)', letterSpacing: 1 }}>OPPORTUNITY SCAN</span>
+            <div className="intel-body-box" style={{ background: 'rgba(24, 184, 122, 0.05)', border: '1px solid rgba(24, 184, 122, 0.2)', padding: '16px', borderRadius: '12px', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }}
+                 onClick={() => setActiveModal('scan')}
+                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(24, 184, 122, 0.15)'; e.currentTarget.style.borderColor = 'rgba(24, 184, 122, 0.4)'; }}
+                 onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(24, 184, 122, 0.2)'; }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 3, background: 'var(--green)' }}></div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--green)', letterSpacing: 1.5, textShadow: '0 0 15px rgba(24,184,122,0.4)' }}>OPPORTUNITY SCAN</span>
+                </div>
                 {intel.top_coins && intel.top_coins.length > 0 && (
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {intel.top_coins.map(c => <span key={c} style={{ fontSize: 9, fontWeight: 800, background: 'var(--accent)', color: '#fff', padding: '2px 6px', borderRadius: 4 }}>{c}</span>)}
+                    {intel.top_coins.map(c => <span key={c} style={{ fontSize: 11, fontWeight: 800, background: 'rgba(24,184,122,0.2)', color: 'var(--green)', padding: '4px 8px', borderRadius: 6 }}>{c}</span>)}
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--t2)' }}>
+              <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--t1)', fontWeight: 500, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {renderText(intel.scan_reasoning)}
               </div>
             </div>
@@ -84,5 +105,43 @@ export default function MarketIntelCard({ intel }) {
         </div>
       </div>
     </section>
+
+    {activeModal === 'macro' && (
+      <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setActiveModal(null)} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: '#13171a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'linear-gradient(to right, rgba(0,210,211,0.05), transparent)' }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', gap: 12, letterSpacing: 1.5 }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 15px var(--accent)' }}></span>
+              MACRO ASSESSMENT
+            </h2>
+            <button onClick={() => setActiveModal(null)} style={{ background: 'transparent', border: 'none', color: 'var(--t3)', fontSize: 24, cursor: 'pointer', padding: 0, transition: 'color 0.2s' }}>×</button>
+          </div>
+          <div style={{ padding: '32px 24px', fontSize: 16, lineHeight: 1.8, color: 'var(--t1)', fontWeight: 500, maxHeight: '70vh', overflowY: 'auto' }}>
+            {renderText(intel.market_view)}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {activeModal === 'scan' && intel.scan_reasoning && (
+      <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setActiveModal(null)} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: '#13171a', border: '1px solid rgba(24,184,122,0.2)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(24,184,122,0.1)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(24,184,122,0.1)', background: 'linear-gradient(to right, rgba(24,184,122,0.05), transparent)' }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 12, letterSpacing: 1.5, textShadow: '0 0 20px rgba(24,184,122,0.4)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+              OPPORTUNITY SCAN
+            </h2>
+            <button onClick={() => setActiveModal(null)} style={{ background: 'transparent', border: 'none', color: 'var(--t3)', fontSize: 24, cursor: 'pointer', padding: 0, transition: 'color 0.2s' }}>×</button>
+          </div>
+          <div style={{ padding: '32px 24px', fontSize: 16, lineHeight: 1.8, color: 'var(--t1)', fontWeight: 500, maxHeight: '70vh', overflowY: 'auto' }}>
+            <div style={{ marginBottom: 24, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {intel.top_coins && intel.top_coins.map(c => <span key={c} style={{ fontSize: 14, fontWeight: 800, background: 'rgba(24,184,122,0.2)', color: 'var(--green)', padding: '6px 12px', borderRadius: 8 }}>{c}</span>)}
+            </div>
+            {renderText(intel.scan_reasoning)}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -3,7 +3,7 @@ import { fmt } from '../../utils.js';
 
 export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const pct = stats.pnl_pct || 0;
+  const pct = Number(stats?.pnl_pct) || 0;
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
@@ -21,7 +21,13 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
     <section className="bal-card compact">
       <div className="bal-top">
         <div className="bal-info">
-          <span className="bal-label">TOTAL EQUITY</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span className="bal-label" style={{ marginBottom: 0 }}>TOTAL EQUITY</span>
+            <div className="bot-status-chip" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="bsc-dot running" style={{ background: 'var(--accent)', width: 6, height: 6, borderRadius: '50%' }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', letterSpacing: '0.5px' }}>Points: 0</span>
+            </div>
+          </div>
           <div className="bal-main-row">
             <h1 id="equityValue">${fmt(stats.equity)}</h1>
             <span className={`bal-badge${pct < 0 ? ' neg' : ''}`}>{pct >= 0 ? '+' : ''}{pct.toFixed(2)}%</span>

@@ -179,19 +179,26 @@ def get_stats():
                 from algo_brain.telegram_bot import get_live_hl_portfolio
                 live_data = get_live_hl_portfolio()
                 if live_data:
+                    # Calculate percentage based on current open trades if no history exists
+                    live_equity = float(live_data["total_equity"])
+                    live_unrealized = float(live_data["unrealized_pnl"])
+                    base_cap = live_equity - live_unrealized
+                    calc_pct = round((live_unrealized / base_cap) * 100, 2) if base_cap > 0 else 0.0
+
                     return {
-                        "equity": round(live_data["total_equity"], 2),
+                        "equity": round(live_equity, 2),
                         "cash": round(live_data["cash"], 2),
-                        "realized_pnl": 0.0,
-                        "unrealized_pnl": round(live_data["unrealized_pnl"], 2),
+                        "realized_pnl": round(live_data.get("last_20_realized_pnl", 0.0), 2),
+                        "unrealized_pnl": round(live_unrealized, 2),
                         "total_trades": 0,
                         "winning_trades": 0,
                         "losing_trades": 0,
-                        "win_rate": 0.0,
+                        "win_rate": round(live_data.get("last_20_win_rate", 0.0), 1),
                         "fees_paid": round(live_data["cumulative_fees"], 2),
-                        "pnl_pct": 0.0,
+                        "pnl_pct": calc_pct,
                         "positions": live_data["positions"],
                         "last_updated": live_data["fetched_at"],
+                        "is_last_20": True
                     }
 
             if not row:
@@ -215,28 +222,45 @@ def get_stats():
             initial_capital = 1000.0 # Base reference for paper. Live uses its own equity tracking.
             unrealized = sum(float(p.get("unrealized_pnl", 0)) for p in positions)
             
-            if HL_WALLET:
-                # Live total_equity from DB already includes unrealized from the API fetch.
-                equity = float(row["total_equity"])
-            else:
-                # Paper trades dynamically sum cash + unrealized
-                equity = float(row["cash"]) + unrealized
-            
             total_trades = row["total_trades"]
             winning_trades = row["winning_trades"]
             win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
-            
+            realized_pnl = row["realized_pnl"]
+
+            if HL_WALLET:
+                # Override DB tracking with actual live Hyperliquid history for last 20 trades
+                from algo_brain.telegram_bot import get_live_hl_portfolio
+                live_data = get_live_hl_portfolio()
+                if live_data:
+                    equity = float(live_data["total_equity"])
+                    unrealized = float(live_data["unrealized_pnl"])
+                    positions = live_data["positions"]
+                    realized_pnl = live_data.get("last_20_realized_pnl", 0.0)
+                    win_rate = live_data.get("last_20_win_rate", 0.0)
+                else:
+                    equity = float(row["total_equity"])
+            else:
+                # Paper trades dynamically sum cash + unrealized
+                equity = float(row["cash"]) + unrealized
             pnl_pct = round((equity - initial_capital) / initial_capital * 100, 2)
             if HL_WALLET:
-                # In live mode, we might not know initial capital. Using realized_pnl over cash as rough proxy or leave it 0 if we don't have accurate history.
-                pnl_pct = 0.0 # Optionally leave out pct for live
+                prev_equity = float(row["total_equity"]) if row else 0.0
+                if prev_equity > 0:
+                    pnl_pct = round(((equity - prev_equity) / prev_equity) * 100, 2)
+                else:
+                    # If we have no database history, calculate the percentage based on current open trades
+                    base_capital = equity - unrealized
+                    if base_capital > 0:
+                        pnl_pct = round((unrealized / base_capital) * 100, 2)
+                    else:
+                        pnl_pct = 0.0
             
             eth_price = get_mid_prices().get("ETH", 3200.0)
             
             return {
                 "equity": round(equity, 2),
-                "cash": round(float(row["cash"]), 2),
-                "realized_pnl": round(float(row["realized_pnl"]), 2),
+                "cash": round(row["cash"], 2),
+                "realized_pnl": round(realized_pnl, 2),
                 "unrealized_pnl": round(unrealized, 2),
                 "total_trades": total_trades,
                 "winning_trades": winning_trades,
@@ -665,12 +689,41 @@ def get_candles_data(coin: str, timeframe: str = "1h", lookback: int = 500):
         print(f"Candles error: {e}")
         traceback.print_exc()
         return []
+class AuthLoginReq(BaseModel):
+    wallet_address: str
+
+@app.post("/api/auth/login")
+async def auth_login(req: AuthLoginReq):
+    wallet = req.wallet_address.lower()
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE LOWER(wallet_address) = ?", (wallet,)).fetchone()
+        if not user:
+            db.execute("INSERT INTO users (wallet_address) VALUES (?)", (req.wallet_address,))
+    return {"status": "success"}
+
+@app.get("/api/auth/me")
+async def auth_me(wallet: str):
+    w = wallet.lower()
+    with get_db() as db:
+        user = db.execute("SELECT wallet_address, email FROM users WHERE LOWER(wallet_address) = ?", (w,)).fetchone()
+        if not user:
+            # Return empty structure if not found, since frontend might check connection blindly
+            return {"wallet_address": wallet, "email": "", "subscriptions": []}
+            
+        subs = db.execute("SELECT * FROM subscriptions WHERE LOWER(wallet_address) = ? AND status = 'ACTIVE'", (w,)).fetchall()
+        
+        return {
+            "wallet_address": user["wallet_address"],
+            "email": user["email"],
+            "subscriptions": [dict(s) for s in subs]
+        }
 
 
 
 class KeysReq(BaseModel):
     hl_private_key: Optional[str] = None
     hl_wallet: Optional[str] = None
+    email: Optional[str] = None
 
 @app.post("/api/settings/keys")
 async def save_hl_keys(req: KeysReq):
@@ -689,6 +742,10 @@ async def save_hl_keys(req: KeysReq):
         if req.hl_wallet:
             dotenv.set_key(str(env_path), "HL_WALLET", req.hl_wallet)
             os.environ["HL_WALLET"] = req.hl_wallet
+
+        if req.hl_wallet and req.email:
+            with get_db() as db:
+                db.execute("UPDATE users SET email = ? WHERE LOWER(wallet_address) = ?", (req.email, req.hl_wallet.lower()))
 
         # Reset the manual client so next trade picks up fresh keys
         global _hl_client
@@ -1031,6 +1088,29 @@ async def chat_cache_stats():
         "total_cache_hits": total["h"] or 0,
         "total_tokens_saved": total["t"] or 0,
     }
+
+class FeedbackRequest(BaseModel):
+    message_index: int
+    feedback: str
+    text: str
+
+@app.post("/api/ai/feedback")
+async def ai_feedback(req: FeedbackRequest):
+    """Stores user thumbs up/down feedback on AI responses, toggling if already set."""
+    try:
+        with get_db() as db:
+            # First, clear any existing feedback for this message index in this session
+            db.execute("DELETE FROM ai_feedback WHERE message_index = ?", (req.message_index,))
+            
+            # If the feedback is not 'none', insert the new state
+            if req.feedback != 'none':
+                db.execute(
+                    "INSERT INTO ai_feedback (message_index, feedback, text) VALUES (?, ?, ?)",
+                    (req.message_index, req.feedback, req.text)
+                )
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,7 +1,7 @@
 import { absTime, coinIcon, coinClass } from '../../utils.js';
 
 export default function TradeHistory({ trades }) {
-  const closed = trades.filter(t => t.event === 'TRADE_CLOSE' || t.event === 'FILL');
+  const closed = (Array.isArray(trades) ? trades : []).filter(t => t.event === 'TRADE_CLOSE' || t.event === 'FILL');
   return (
     <section className="table-section">
       <div className="table-hdr">

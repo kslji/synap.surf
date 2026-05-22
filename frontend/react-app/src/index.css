@@ -322,7 +322,7 @@ button {
   flex-direction: column;
   justify-content: space-between;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  min-height: 200px;
+  min-height: 160px;
   height: 100%;
 }
 
