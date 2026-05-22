@@ -6,10 +6,10 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from backend.db import get_db, set_market_data, log_trade
-from algo_brain.config import HL_WALLET
-from algo_brain import market_data
-from algo_brain import news_sentiment
-from algo_brain import nansen_client
+from synap.config import HL_WALLET
+from synap import market_data
+from synap import news_sentiment
+from synap import nansen_client
 
 logger = logging.getLogger("backend.services")
 

@@ -4,11 +4,11 @@ import sys
 import os
 from pathlib import Path
 
-# Add parent to path to import algo_brain
+# Add parent to path to import synap
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from algo_brain.paper_trader import PaperTrader
-from algo_brain.market_data import get_mid_prices
+from synap.paper_trader import PaperTrader
+from synap.market_data import get_mid_prices
 
 # Configure logging
 logging.basicConfig(
@@ -16,7 +16,7 @@ logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("algo_brain/logs/position_updater.log")
+        logging.FileHandler("synap/logs/position_updater.log")
     ]
 )
 logger = logging.getLogger(__name__)

@@ -4,19 +4,19 @@ import logging
 from pathlib import Path
 from datetime import datetime, timezone
 
-# Add parent to path to import algo_brain
+# Add parent to path to import synap
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from algo_brain.market_data import get_top_3_perps_with_details
+from synap.market_data import get_top_3_perps_with_details
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 logger = logging.getLogger(__name__)
 
-ROOT = Path("/Users/arjunsingh/Desktop/algorithmic")
-OUTPUT_FILE = ROOT / "algo_brain" / "logs" / "top_perps.json"
+ROOT = Path("/Users/arjunsingh/Desktop/algo_brain")
+OUTPUT_FILE = ROOT / "synap" / "logs" / "top_perps.json"
 
 def update_top_perps():
     """Fetch top perps and save to JSON file."""

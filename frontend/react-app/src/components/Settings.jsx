@@ -243,7 +243,7 @@ export default function Settings() {
                   <div>
                     <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--t3)', marginBottom: 8, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Subscription</h3>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-1px' }}>Algo Pro</h2>
+                      <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-1px' }}>Synap Pro</h2>
                     </div>
                   </div>
                   <div style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 800, letterSpacing: '1px' }}>

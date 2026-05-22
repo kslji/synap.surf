@@ -20,7 +20,7 @@ from html import unescape
 
 import requests
 
-from algo_brain.config import (
+from synap.config import (
     COINGECKO_API_KEY,
     COINGECKO_BASE_URL,
     FEAR_GREED_URL,

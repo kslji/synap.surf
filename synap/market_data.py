@@ -13,11 +13,11 @@ import pandas as pd
 from hyperliquid.info import Info
 from hyperliquid.utils import constants
 
-from algo_brain.config import (
+from synap.config import (
     CANDLE_INTERVAL,
     CANDLE_LOOKBACK,
 )
-from algo_brain import strategies
+from synap import strategies
 
 logger = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ def get_mtf_technicals(coin: str) -> dict:
     Fetch and compute technicals for both FAST (1m) and SLOW (30m) timeframes.
     This gives Claude the ability to see 1-minute scalps and 2-day trends.
     """
-    from algo_brain.config import FAST_INTERVAL, SLOW_INTERVAL, CANDLE_LOOKBACK
+    from synap.config import FAST_INTERVAL, SLOW_INTERVAL, CANDLE_LOOKBACK
 
     results = {}
 

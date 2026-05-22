@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from algo_brain.config import (
+from synap.config import (
     INITIAL_CAPITAL,
     MAX_OPEN_POSITIONS,
     MAX_CAPITAL_PER_TRADE_PCT,
@@ -30,7 +30,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from backend.db import get_db
-from algo_brain import trade_journal
+from synap import trade_journal
 
 logger = logging.getLogger(__name__)
 

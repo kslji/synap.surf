@@ -1,7 +1,7 @@
 """
 dashboard/server.py — FastAPI backend for the AlgoBrain dashboard.
 
-Reads from algo_brain/logs/ and serves:
+Reads from synap/logs/ and serves:
   - Portfolio stats
   - Trade history
   - AI decisions
@@ -28,12 +28,12 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import anthropic
-from algo_brain.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
+from synap.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from algo_brain.market_data import get_top_3_perps_with_details, get_mid_prices
-from algo_brain.config import HL_WALLET
+from synap.market_data import get_top_3_perps_with_details, get_mid_prices
+from synap.config import HL_WALLET
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -99,7 +99,7 @@ app.add_middleware(
 ROOT = Path("/Users/arjunsingh/Desktop/algo_brain")
 REACT_DIST = ROOT / "frontend" / "react-app" / "dist"
 STATIC_DIR = ROOT / "frontend" / "static"
-LOGS_DIR = ROOT / "algo_brain" / "logs"
+LOGS_DIR = ROOT / "synap" / "logs"
 USERS_FILE = ROOT / "frontend" / "users.json"
 
 # ── Mount static files ─────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ def get_stats():
             kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'live_positions'").fetchone()
 
             if not row and HL_WALLET:
-                from algo_brain.telegram_bot import get_live_hl_portfolio
+                from synap.telegram_bot import get_live_hl_portfolio
                 live_data = get_live_hl_portfolio()
                 if live_data:
                     # Calculate percentage based on current open trades if no history exists
@@ -229,7 +229,7 @@ def get_stats():
 
             if HL_WALLET:
                 # Override DB tracking with actual live Hyperliquid history for last 20 trades
-                from algo_brain.telegram_bot import get_live_hl_portfolio
+                from synap.telegram_bot import get_live_hl_portfolio
                 live_data = get_live_hl_portfolio()
                 if live_data:
                     equity = float(live_data["total_equity"])
@@ -300,10 +300,10 @@ def refresh_portfolio():
     if not HL_WALLET:
         raise HTTPException(status_code=400, detail="No live wallet configured.")
     try:
-        from algo_brain.hyperliquid_trader import HyperliquidTrader
+        from synap.hyperliquid_trader import HyperliquidTrader
         # Instantiating the trader automatically fetches state or we can call fetch directly.
         # But trader._save_state() needs an active Info call. Actually get_live_hl_portfolio() is better.
-        from algo_brain.telegram_bot import get_live_hl_portfolio
+        from synap.telegram_bot import get_live_hl_portfolio
         from backend.db import get_db, set_market_data
         
         live_data = get_live_hl_portfolio()
@@ -668,7 +668,7 @@ def get_all_coins():
 @app.get("/api/candles")
 def get_candles_data(coin: str, timeframe: str = "1h", lookback: int = 500):
     try:
-        from algo_brain.market_data import fetch_candles
+        from synap.market_data import fetch_candles
         df = fetch_candles(coin.upper(), interval=timeframe, n=lookback)
         if df.empty:
             return []
@@ -833,8 +833,8 @@ async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC
     trades = []
     
     try:
-        from algo_brain.market_data import fetch_candles
-        from algo_brain.strategies.backtest import run_simulation
+        from synap.market_data import fetch_candles
+        from synap.strategies.backtest import run_simulation
         
         # Calculate candles for 30 days (1 month)
         tf_candles = {'1m': 43200, '5m': 8640, '15m': 2880, '1h': 720, '4h': 180, '1d': 30}

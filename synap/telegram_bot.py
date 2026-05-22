@@ -1,5 +1,5 @@
 """
-algo_brain/telegram_bot.py — Telegram signal broadcaster + subscriber bot.
+synap/telegram_bot.py — Telegram signal broadcaster + subscriber bot.
 
 Features:
   - /start        → Subscribe to signals
@@ -25,7 +25,7 @@ import requests
 from hyperliquid.info import Info
 from hyperliquid.utils import constants
 
-from algo_brain.config import (
+from synap.config import (
     TELEGRAM_BOT_TOKEN,
     HL_WALLET,
 )

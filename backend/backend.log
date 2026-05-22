@@ -469,3 +469,4 @@ Nansen API error (403): 403 Client Error: Forbidden for url: https://api.nansen.
 Response: {"error": "Insufficient credits", "detail": "Insufficient credits remaining to call this endpoint."}
 Nansen API error (403): 403 Client Error: Forbidden for url: https://api.nansen.ai/api/v1/token-screener
 Response: {"error": "Insufficient credits", "detail": "Insufficient credits remaining to call this endpoint."}
+Error in trade_history_sync_service: no such table: trade_logs

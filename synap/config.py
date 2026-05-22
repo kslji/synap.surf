@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-algo_brain/config.py — Central configuration for the AI Brain trading system.
+synap/config.py — Central configuration for the AI Brain trading system.
 All settings, API keys, risk parameters, and tuning knobs live here.
 """
 

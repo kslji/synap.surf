@@ -1,4 +1,4 @@
-# MiroFish + AlgoBrain Setup Guide
+# MiroFish + Synap Setup Guide
 ## Mac Mini (16GB RAM) — Zero Error Configuration
 ## CHAIN -  sui , sol , bnb, btc , eth , avax, hype , xrp, ada , zec
 ---
@@ -142,7 +142,7 @@ LLM_MODEL_NAME=qwen2.5:7b
 
 ### Claude Brain 401 error
 → Unrelated to models. Your `ANTHROPIC_API_KEY` in the main `.env` has whitespace or isn't loading.
-Add `.strip()` to wherever it's read in `algo_brain/config.py`:
+Add `.strip()` to wherever it's read in `synap/config.py`:
 ```python
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "").strip()
 ```

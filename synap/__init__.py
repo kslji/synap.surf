@@ -1,4 +1,4 @@
-# algo_brain/ — AI-driven multi-coin crypto perps paper trading system
+# synap/ — AI-driven multi-coin crypto perps paper trading system
 # Uses Claude AI as the central decision engine, combining:
 #   - Nansen smart money data
 #   - CoinGecko trending + market data

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, List
-from algo_brain.strategies.indicators import compute_rsi, compute_bollinger_bands
+from synap.strategies.indicators import compute_rsi, compute_bollinger_bands
 
 def run_simulation(df: pd.DataFrame, strategy_id: str, initial_capital: float = 1000.0, leverage: int = 1) -> Dict[str, Any]:
     """

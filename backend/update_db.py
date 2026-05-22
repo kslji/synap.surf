@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'algo_brain.db')
+DB_PATH = os.path.join(os.path.dirname(__file__), 'synap.db')
 conn = sqlite3.connect(DB_PATH)
 
 # Alter subscriptions table to add coin

@@ -29,7 +29,7 @@ from typing import Union
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-from algo_brain.config import (  # noqa: E402
+from synap.config import (  # noqa: E402
     MAIN_LOOP_INTERVAL_SECONDS,
     POSITION_MONITOR_INTERVAL_SECONDS,
     INITIAL_CAPITAL,
@@ -45,13 +45,13 @@ from algo_brain.config import (  # noqa: E402
     LIVE_TRADING,
     DEFAULT_LEVERAGE,
 )
-from algo_brain import market_data  # noqa: E402
-from algo_brain import nansen_client  # noqa: E402
-from algo_brain import news_sentiment  # noqa: E402
-from algo_brain.paper_trader import PaperTrader  # noqa: E402
-from algo_brain.hyperliquid_trader import HyperliquidTrader  # noqa: E402
-from algo_brain import trade_journal  # noqa: E402
-from algo_brain.telegram_bot import TelegramNotifier, start_bot_thread  # noqa: E402
+from synap import market_data  # noqa: E402
+from synap import nansen_client  # noqa: E402
+from synap import news_sentiment  # noqa: E402
+from synap.paper_trader import PaperTrader  # noqa: E402
+from synap.hyperliquid_trader import HyperliquidTrader  # noqa: E402
+from synap import trade_journal  # noqa: E402
+from synap.telegram_bot import TelegramNotifier, start_bot_thread  # noqa: E402
 
 # ── Logging setup ────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -464,7 +464,7 @@ def run_cycle(
                     f"Calling Claude for exit decision..."
                 )
                 try:
-                    from algo_brain import claude_brain
+                    from synap import claude_brain
                     sl_decision = claude_brain.get_sl_decision(pos, current, prices)
                     if sl_decision:
                         action = sl_decision.get("action", "EXIT")
@@ -547,7 +547,7 @@ def run_cycle(
                 }
             else:
                 # Direct call to Claude Brain (MiroFish removed)
-                from algo_brain import claude_brain as brain_instance
+                from synap import claude_brain as brain_instance
 
                 # Refresh headlines for the final watchlist
                 sentiment_data = news_sentiment.build_sentiment_data(watchlist)
@@ -569,7 +569,7 @@ def run_cycle(
 
             # ── Step 9: Validate and execute decision ─────────────────────
             logger.info("\n🚀 Step 9: Executing AI decisions...")
-            from algo_brain import claude_brain
+            from synap import claude_brain
 
             validated = claude_brain.validate_decision(decision)
 

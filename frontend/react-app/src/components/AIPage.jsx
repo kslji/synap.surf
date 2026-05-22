@@ -299,7 +299,7 @@ export default function AIPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Message AlgoBrain..."
+              placeholder="Message Synap..."
               style={{ 
                 flex: 1, padding: '12px 0', 
                 border: 'none', background: 'transparent', 

@@ -23,7 +23,7 @@ from typing import Optional
 
 import anthropic
 
-from algo_brain.config import (
+from synap.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_MODEL,
     CLAUDE_MAX_TOKENS,
@@ -372,7 +372,7 @@ def get_ai_decision(
         decision = json.loads(response_text)
 
         # Log the AI decision
-        from algo_brain.trade_journal import log_ai_decision
+        from synap.trade_journal import log_ai_decision
 
         log_ai_decision(decision, len(data_packet), len(raw_response))
 

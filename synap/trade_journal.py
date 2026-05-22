@@ -21,7 +21,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from backend.db import get_db
 
-from algo_brain.config import LOGS_DIR
+from synap.config import LOGS_DIR
 
 logger = logging.getLogger(__name__)
 

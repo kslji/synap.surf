@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-algo_brain/hyperliquid_trader.py — Hyperliquid Live mainnet trading execution engine.
+synap/hyperliquid_trader.py — Hyperliquid Live mainnet trading execution engine.
 
 Handles:
   - Placing real market open and close orders on Hyperliquid.
@@ -22,7 +22,7 @@ from hyperliquid.exchange import Exchange
 from hyperliquid.info import Info
 from hyperliquid.utils import constants
 
-from algo_brain.config import (
+from synap.config import (
     HL_PRIVATE_KEY,
     HL_WALLET,
     HL_TAKER_FEE,
@@ -31,7 +31,7 @@ from algo_brain.config import (
     MAX_HOLD_HOURS,
     MIN_ROE_EXIT_PCT,
 )
-from algo_brain import trade_journal
+from synap import trade_journal
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))

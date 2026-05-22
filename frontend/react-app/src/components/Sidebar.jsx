@@ -4,7 +4,7 @@ export default function Sidebar({ view, setView, theme, toggleTheme }) {
   const { walletAddress, connectWallet, disconnectWallet } = useAuth();
   return (
     <aside className="sidebar">
-      <div className="sb-logo">
+      <div className="sb-logo" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
         <svg width="46" height="46" viewBox="0 0 100 100" fill="none">
           <defs>
             <linearGradient id="logoAccent" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -12,10 +12,8 @@ export default function Sidebar({ view, setView, theme, toggleTheme }) {
               <stop offset="100%" stopColor="#fff" />
             </linearGradient>
           </defs>
-          {/* Main A Shape */}
-          <path d="M15 85L50 15L65 45" stroke="#fff" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round"/>
-          {/* Accent Bolt/B Element */}
-          <path d="M45 55L75 55L60 85L85 85" stroke="url(#logoAccent)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round"/>
+          {/* Synap 'S' Shape */}
+          <path d="M80 25H40L30 50h40l-10 25H20" stroke="url(#logoAccent)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
           <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
         </svg>
       </div>

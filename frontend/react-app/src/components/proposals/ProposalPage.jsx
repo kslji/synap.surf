@@ -203,7 +203,7 @@ export default function ProposalPage() {
 
         <footer style={{ marginTop: 40, textAlign: 'center', opacity: 0.6 }}>
           <p style={{ fontSize: 12, color: 'var(--t3)' }}>
-            &copy; 2026 AlgoBrain Intelligence Unit &middot; Decentralized Feedback Protocol
+            &copy; 2026 Synap Intelligence Unit &middot; Decentralized Feedback Protocol
           </p>
         </footer>
       </div>

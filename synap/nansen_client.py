@@ -15,7 +15,7 @@ from typing import Optional, Any
 
 import requests
 
-from algo_brain.config import (
+from synap.config import (
     NANSEN_API_KEY,
     NANSEN_BASE_URL,
     NANSEN_MONTHLY_BUDGET,

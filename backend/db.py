@@ -3,7 +3,7 @@ import os
 import json
 from contextlib import contextmanager
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'algo_brain.db')
+DB_PATH = os.path.join(os.path.dirname(__file__), 'synap.db')
 
 @contextmanager
 def get_db():
