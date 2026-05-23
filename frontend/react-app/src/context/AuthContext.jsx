@@ -66,19 +66,14 @@ export function AuthProvider({ children }) {
     try {
       if (window.ethereum?.disconnect) window.ethereum.disconnect();
       if (window.phantom?.ethereum?.disconnect) window.phantom.ethereum.disconnect();
-      // Revoke permissions if supported
-      if (window.ethereum) {
-        await window.ethereum.request({
-          method: "wallet_revokePermissions",
-          params: [{ eth_accounts: {} }]
-        }).catch(() => {});
-      }
-      if (window.phantom?.ethereum) {
-        await window.phantom.ethereum.request({
-          method: "wallet_revokePermissions",
-          params: [{ eth_accounts: {} }]
-        }).catch(() => {});
-      }
+      if (window.phantom?.solana?.disconnect) window.phantom.solana.disconnect();
+      if (window.rabby?.disconnect) window.rabby.disconnect();
+      
+      // Revoke permissions if supported (EIP-2255)
+      const revokeParams = { method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] };
+      if (window.ethereum) await window.ethereum.request(revokeParams).catch(() => {});
+      if (window.phantom?.ethereum) await window.phantom.ethereum.request(revokeParams).catch(() => {});
+      if (window.rabby) await window.rabby.request(revokeParams).catch(() => {});
     } catch(e) {}
 
     setWalletAddress('');

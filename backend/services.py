@@ -5,7 +5,8 @@ import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from backend.db import get_db, set_market_data, log_trade
+from backend.database import get_async_db
+# set_market_data and log_trade should be updated too
 
 from synap import market_data
 from synap import news_sentiment
@@ -20,10 +21,12 @@ async def volatility_service():
             logger.info("Running Volatility Service (Top Perps)...")
             top_data = await asyncio.to_thread(market_data.get_top_3_perps_with_details)
             if top_data and top_data.get("ctxs"):
-                await asyncio.to_thread(set_market_data, 'top_perps', {
+                db = get_async_db()
+                import json
+                await db.market_data.update_one({'key': 'top_perps'}, {'$set': {'value_json': json.dumps({
                     "data": top_data,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                })
+                    'updated_at': datetime.now(timezone.utc).isoformat()
+                })}}, upsert=True)
                 logger.info("Updated top_perps cache")
         except Exception as e:
             logger.error(f"Error in volatility_service: {e}")
@@ -41,14 +44,14 @@ async def market_intel_service():
             # 1. Get top volatile coins from DB to focus our search
             target_coins = ["BTC", "ETH", "SOL"]
             try:
-                with get_db() as db:
-                    row = db.execute("SELECT value_json FROM market_data WHERE key = 'top_perps'").fetchone()
-                    import json
-                    if row:
-                        vol_data = json.loads(row["value_json"])
-                        ctxs = vol_data.get("data", {}).get("ctxs", [])
-                        if ctxs:
-                            target_coins = [c["name"] for c in ctxs[:5]]
+                db = get_async_db()
+                row = await db.market_data.find_one({"key": "top_perps"})
+                import json
+                if row and "value_json" in row:
+                    vol_data = json.loads(row["value_json"])
+                    ctxs = vol_data.get("data", {}).get("ctxs", [])
+                    if ctxs:
+                        target_coins = [c["name"] for c in ctxs[:5]]
             except Exception:
                 pass
             
@@ -66,7 +69,8 @@ async def market_intel_service():
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
-            set_market_data('market_intelligence', intel)
+            db = get_async_db()
+            await db.market_data.update_one({'key': 'market_intelligence'}, {'$set': {'value_json': json.dumps(intel)}}, upsert=True)
             logger.info("Updated raw market intelligence.")
             
         except Exception as e:
@@ -82,10 +86,9 @@ async def trade_history_sync_service():
             from hyperliquid.utils import constants
             info = Info(constants.MAINNET_API_URL, skip_ws=True)
             
-            users = []
-            with get_db() as db:
-                rows = db.execute("SELECT wallet_address FROM users").fetchall()
-                users = [r["wallet_address"] for r in rows if r["wallet_address"]]
+            db = get_async_db()
+            rows = await db.users.find({}).to_list(length=None)
+            users = [r.get("wallet_address") for r in rows if r.get("wallet_address")]
                 
             for wallet in users:
                 if not wallet or not wallet.startswith('0x') or len(wallet) != 42:
@@ -94,22 +97,29 @@ async def trade_history_sync_service():
                     fills = await asyncio.to_thread(info.user_fills, wallet)
                     
                     if fills:
-                        with get_db() as db:
-                            for fill in fills:
-                                fill_time = fill.get("time", 0)
-                                dt = datetime.fromtimestamp(fill_time / 1000, tz=timezone.utc)
-                                
-                                existing = db.execute("SELECT id FROM trade_logs WHERE user_id = ? AND coin = ? AND side = ? AND timestamp = ?", 
-                                                      (wallet, fill["coin"], fill["dir"], dt)).fetchone()
-                                
-                                if not existing:
-                                    sz = float(fill.get("sz", 0))
-                                    px = float(fill.get("px", 0))
-                                    pnl = float(fill.get("closedPnl", 0))
-                                    db.execute('''
-                                        INSERT INTO trade_logs (user_id, event, coin, side, entry_price, exit_price, pnl_usd, position_size_usd, action, details, timestamp)
-                                        VALUES (?, 'FILL', ?, ?, ?, ?, ?, ?, 'MANUAL_OR_EXTERNAL_TRADE', 'Direct fill from exchange', ?)
-                                    ''', (wallet, fill["coin"], fill["dir"], px, px if pnl != 0 else None, pnl if pnl != 0 else None, sz * px, dt))
+                        for fill in fills:
+                            fill_time = fill.get("time", 0)
+                            dt = datetime.fromtimestamp(fill_time / 1000, tz=timezone.utc)
+                            
+                            existing = await db.trade_logs.find_one({"user_id": wallet, "coin": fill["coin"], "side": fill["dir"], "timestamp": dt})
+                            
+                            if not existing:
+                                sz = float(fill.get("sz", 0))
+                                px = float(fill.get("px", 0))
+                                pnl = float(fill.get("closedPnl", 0))
+                                await db.trade_logs.insert_one({
+                                    "user_id": wallet,
+                                    "event": "FILL",
+                                    "coin": fill["coin"],
+                                    "side": fill["dir"],
+                                    "entry_price": px,
+                                    "exit_price": px if pnl != 0 else None,
+                                    "pnl_usd": pnl if pnl != 0 else None,
+                                    "position_size_usd": sz * px,
+                                    "action": "MANUAL_OR_EXTERNAL_TRADE",
+                                    "details": "Direct fill from exchange",
+                                    "timestamp": dt
+                                })
                 except Exception as ex:
                     logger.error(f"Error fetching fills for {wallet}: {ex}")
         except Exception as e:

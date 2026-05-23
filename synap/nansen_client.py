@@ -25,7 +25,7 @@ from synap.config import (
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from backend.db import get_db
+from backend.database import get_sync_db as get_db
 
 logger = logging.getLogger(__name__)
 
@@ -46,18 +46,18 @@ class NansenCreditTracker:
 
     def _load(self):
         try:
-            with get_db() as db:
-                row = db.execute("SELECT value_json FROM market_data WHERE key = 'nansen_credits'").fetchone()
-                if row:
-                    data = json.loads(row["value_json"])
-                    saved_month = datetime.fromisoformat(data["month_start"])
-                    # Reset if new month
-                    if saved_month.month != datetime.now(timezone.utc).month:
-                        self.credits_used = 0
-                        self._save()
-                    else:
-                        self.credits_used = data.get("credits_used", 0)
-                        self.month_start = saved_month
+            db = get_db()
+            row = db.market_data.find_one({"key": "nansen_credits"})
+            if row:
+                data = json.loads(row["value_json"]) if isinstance(row.get("value_json"), str) else row.get("value_json", row)
+                saved_month = datetime.fromisoformat(data["month_start"])
+                # Reset if new month
+                if saved_month.month != datetime.now(timezone.utc).month:
+                    self.credits_used = 0
+                    self._save()
+                else:
+                    self.credits_used = data.get("credits_used", 0)
+                    self.month_start = saved_month
         except Exception:
             pass
 
@@ -68,11 +68,12 @@ class NansenCreditTracker:
                 "month_start": self.month_start.isoformat(),
                 "last_updated": datetime.now(timezone.utc).isoformat(),
             }
-            with get_db() as db:
-                db.execute('''
-                    INSERT INTO market_data (key, value_json) VALUES ('nansen_credits', ?)
-                    ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
-                ''', (json.dumps(data, default=str),))
+            db = get_db()
+            db.market_data.update_one(
+                {"key": "nansen_credits"},
+                {"$set": {"value_json": json.dumps(data, default=str), "updated_at": datetime.now(timezone.utc).isoformat()}},
+                upsert=True
+            )
         except Exception as e:
             logger.warning(f"Failed to save credit tracker: {e}")
 
@@ -136,7 +137,7 @@ _tracker = NansenCreditTracker()
 
 def _headers() -> dict:
     return {
-        "api-key": NANSEN_API_KEY,
+        "apikey": NANSEN_API_KEY,
         "Content-Type": "application/json",
     }
 
@@ -164,14 +165,16 @@ def _nansen_post(endpoint: str, body: dict, cache_key: str) -> Optional[dict]:
         _tracker.use_credit()
         _cache.set(cache_key, data)
         try:
-            with get_db() as db:
-                db.execute('''
-                    INSERT INTO nansen_cache (endpoint, cache_key, response_json, timestamp)
-                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                    ON CONFLICT(cache_key) DO UPDATE SET 
-                        response_json = excluded.response_json,
-                        timestamp = CURRENT_TIMESTAMP
-                ''', (endpoint, cache_key, json.dumps(data)))
+            db = get_db()
+            db.nansen_cache.update_one(
+                {"cache_key": cache_key},
+                {"$set": {
+                    "endpoint": endpoint,
+                    "response_json": json.dumps(data),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }},
+                upsert=True
+            )
         except Exception as dbe:
             logger.error(f"Failed to cache Nansen to DB: {dbe}")
         return data

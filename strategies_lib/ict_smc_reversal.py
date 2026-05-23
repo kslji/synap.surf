@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class IctSmcReversalStrategy:
-    """ICT/SMC liquidity sweep reversal — all 5 bugs fixed."""
+    """ICT/SMC liquidity sweep reversal"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  max_intraday_loss_pct=1.0, take_profit_pct=2.0, sl_pct=1.0,

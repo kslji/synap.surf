@@ -4,10 +4,11 @@ import { useToast } from './Toast.jsx';
 
 function SignalModal({ item, onClose }) {
   const t = item.data;
-  const isLong = t.side?.toUpperCase() !== 'SHORT';
-  const themeColor = isLong ? 'var(--green)' : 'var(--red)';
-  const themeBg = isLong ? 'rgba(24, 184, 122, 0.05)' : 'rgba(233, 69, 96, 0.05)';
-  const themeBorder = isLong ? 'rgba(24, 184, 122, 0.2)' : 'rgba(233, 69, 96, 0.2)';
+  const isLong = t.side?.toUpperCase() === 'LONG';
+  const isSkip = t.side?.toUpperCase() === 'SKIP';
+  const themeColor = isSkip ? 'var(--t3)' : (isLong ? 'var(--green)' : 'var(--red)');
+  const themeBg = isSkip ? 'rgba(255, 255, 255, 0.05)' : (isLong ? 'rgba(24, 184, 122, 0.05)' : 'rgba(233, 69, 96, 0.05)');
+  const themeBorder = isSkip ? 'rgba(255, 255, 255, 0.1)' : (isLong ? 'rgba(24, 184, 122, 0.2)' : 'rgba(233, 69, 96, 0.2)');
 
   return (
     <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()} style={{ backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
@@ -16,7 +17,7 @@ function SignalModal({ item, onClose }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
               <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{t.coin}</h2>
-              <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: '6px', background: isLong ? 'rgba(24,184,122,0.15)' : 'rgba(233,69,96,0.15)', color: themeColor, textTransform: 'uppercase', letterSpacing: 1 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: '6px', background: isSkip ? 'rgba(255,255,255,0.1)' : (isLong ? 'rgba(24,184,122,0.15)' : 'rgba(233,69,96,0.15)'), color: themeColor, textTransform: 'uppercase', letterSpacing: 1 }}>
                 {t.event?.replace('TRADE_', '') || 'SIGNAL'}
               </span>
             </div>
@@ -53,7 +54,7 @@ function SignalModal({ item, onClose }) {
             </div>
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
               <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>PRICE</span>
-              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: '#fff' }}>{t.entry_price ? `$${t.entry_price}` : (t.price ? `$${t.price}` : 'Market')}</span>
+              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: '#fff' }}>{t.exit_price ? `$${t.exit_price}` : (t.entry_price ? `$${t.entry_price}` : (t.price ? `$${t.price}` : 'Market'))}</span>
             </div>
           </div>
         </div>
@@ -117,22 +118,7 @@ function TelegramModal({ onClose }) {
   );
 }
 
-function PositionsModal({ positions, onClose }) {
-  const [closingCoin, setClosingCoin] = useState(null);
-
-  const handleClose = async (coin) => {
-    setClosingCoin(coin);
-    const w = localStorage.getItem('wallet_address');
-    try {
-      await fetch('/api/trade/close', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coin, wallet_address: w })
-      });
-    } catch (e) {}
-    setClosingCoin(null);
-  };
-
+function PositionsModal({ positions, onClose, handleClose, closingCoin }) {
   return (
     <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="modal-content" style={{ maxWidth: 1000, width: '90%', background: '#13171a', border: '1px solid var(--border)', borderRadius: '16px', padding: 0, overflow: 'hidden' }}>
@@ -229,10 +215,10 @@ function SignalCard({ item, onClick }) {
   const t = item.data;
   const time = relTime(item.timestamp);
   let type = 'SIGNAL', typeCls = 'signal', meta = t.reasoning || t.details || 'Analyzing opportunities...';
-  if (t.event === 'TRADE_OPEN') { type = 'OPEN'; typeCls = (t.side || 'LONG').toLowerCase(); meta = t.reasoning || `Entry $${t.entry_price} · SL $${t.stop_loss}`; }
+  if (t.side === 'SKIP') { type = 'SKIP'; typeCls = 'update'; meta = t.reasoning; }
+  else if (t.event === 'TRADE_OPEN' || t.event === 'SIGNAL') { type = t.side === 'LONG' ? 'LONG' : 'SHORT'; typeCls = (t.side || 'LONG').toLowerCase(); meta = t.reasoning || `Entry $${t.entry_price}`; }
   else if (t.event === 'TRADE_CLOSE') { type = 'CLOSE'; typeCls = 'close'; meta = t.reasoning || `Exit $${t.exit_price} · PnL $${t.pnl_usd}`; }
   else if (t.event === 'TRADE_UPDATE') { type = 'UPDATE'; typeCls = 'update'; meta = t.reasoning || (t.action ? t.action.replace('_', ' ') : 'Risk Adjustment'); }
-  else if (t.event === 'FILL') { type = 'FILL'; typeCls = 'update'; meta = t.details || `Manual fill at $${t.entry_price}`; }
   const conv = t.conviction ? Math.round(t.conviction * 100) : null;
   return (
     <div className="signal-card" onClick={onClick}>
@@ -279,6 +265,19 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   }, [isResizing]);
 
   // New trade state
+  const [activeCoins, setActiveCoins] = useState(['BTC', 'ETH', 'SOL', 'HYPE', 'IMX', 'MERL', 'SUI', 'SEI', 'DOGE', 'LINK', 'AVAX', 'ARB']);
+  
+  useEffect(() => {
+    fetch('/api/watchlist')
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.watchlist && d.watchlist.length > 0) {
+          setActiveCoins(d.watchlist);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [tradeCoin, setTradeCoin] = useState('HYPE');
   const [coinDropOpen, setCoinDropOpen] = useState(false);
   const [tradeSize, setTradeSize] = useState(0);
@@ -287,6 +286,23 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   const [tpPrice, setTpPrice] = useState('');
   const [slPrice, setSlPrice] = useState('');
   const [tradeLoading, setTradeLoading] = useState(false);
+  const [closingCoin, setClosingCoin] = useState(null);
+
+  const handleClose = async (coin) => {
+    setClosingCoin(coin);
+    const w = localStorage.getItem('wallet_address');
+    try {
+      const res = await fetch('/api/trade/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coin, wallet_address: w })
+      });
+      if (res.ok) {
+        window.dispatchEvent(new Event('wallet_changed'));
+      }
+    } catch (e) {}
+    setClosingCoin(null);
+  };
 
   // Wallet balance
   const [walletBalance, setWalletBalance] = useState(null);
@@ -344,9 +360,8 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   }, [tradeCoin]);
 
   const [botParams, setBotParams] = useState({
-    MARGIN: '50',
-    LEVERAGE: '10',
-    MAX_HOLD_HOURS: '24',
+    MARGIN: '10',
+    LEVERAGE: 'AUTO',
     TARGET_ROE_PCT: 'AUTO',
     STOP_LOSS_PCT: 'AUTO',
     ASSET: 'AUTO'
@@ -359,7 +374,20 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   const saveBotParameters = async () => {
     const w = localStorage.getItem('wallet_address');
     if (!w) {
-      addToast('Please connect wallet first', 'error');
+      toast({ type: 'error', title: 'Wallet Not Connected', message: 'Please connect wallet first' });
+      return;
+    }
+    
+    const capital = botParams.MARGIN === 'AUTO' ? 0 : parseFloat(botParams.MARGIN) || 50;
+    const lev = botParams.LEVERAGE === 'AUTO' ? 0 : parseInt(botParams.LEVERAGE) || 10;
+    
+    if (botParams.MARGIN !== 'AUTO' && capital < 10) {
+      toast({ 
+        type: 'error', 
+        title: 'Minimum Margin Required', 
+        message: 'A minimum margin of $10 is required to take an AI trade.', 
+        duration: 7000 
+      });
       return;
     }
     
@@ -370,9 +398,9 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
         body: JSON.stringify({
           wallet_address: w,
           strategy_id: 'ALGO AI BOT',
-          capital: parseFloat(botParams.MARGIN) || 50,
-          leverage: parseInt(botParams.LEVERAGE) || 10,
-          timeframe: `${botParams.MAX_HOLD_HOURS}h`,
+          auto_risk: botParams.MARGIN === 'AUTO' || botParams.LEVERAGE === 'AUTO',
+          capital: botParams.MARGIN === 'AUTO' ? 'AUTO' : capital,
+          leverage: botParams.LEVERAGE === 'AUTO' ? 'AUTO' : lev,
           target_pct: botParams.TARGET_ROE_PCT === 'AUTO' ? null : parseFloat(botParams.TARGET_ROE_PCT),
           stop_loss_pct: botParams.STOP_LOSS_PCT === 'AUTO' ? null : parseFloat(botParams.STOP_LOSS_PCT),
           asset_name: botParams.ASSET,
@@ -381,9 +409,9 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to save');
-      addToast('AI Bot Parameters Saved!', 'success');
+      toast({ type: 'success', title: 'Settings Saved', message: 'AI Bot Parameters Saved!', duration: 5000 });
     } catch (e) {
-      addToast(e.message, 'error');
+      toast({ type: 'error', title: 'Error', message: e.message, duration: 7000 });
     }
   };
 
@@ -425,7 +453,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     try {
       const w = localStorage.getItem('wallet_address');
       if (!w) {
-        addToast('Please connect wallet first', 'error');
+        toast({ type: 'error', title: 'Wallet Not Connected', message: 'Please connect wallet first' });
         setTradeLoading(false);
         return;
       }
@@ -435,15 +463,12 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       
       if (action === 'CLOSE') {
         endpoint = '/api/trade/close';
-      } else if (action === 'REVERSE') {
-        endpoint = '/api/trade/reverse';
       } else {
         payload = {
           ...payload,
           side: action,
-          size_usd: tradeSize || 0,
+          size_usd: (tradeSize || 0) * (tradeLev || 1),
           leverage: tradeLev || 1,
-
           is_limit: hlOrderMode === 'limit',
         };
         if (hlOrderMode === 'limit' && tradeLimitPrice) payload.limit_price = parseFloat(tradeLimitPrice);
@@ -466,6 +491,17 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
         throw new Error(detail);
       }
       toast({ type: 'success', title: 'Trade Submitted', message: `${action} on ${tradeCoin} executed successfully.`, duration: 5000 });
+      
+      // Reset inputs and slider to default values
+      setTradeSize(0);
+      setTradeLev(1);
+      setTradeLimitPrice('');
+      setTpPrice('');
+      setSlPrice('');
+      setShowTPSL(false);
+      
+      // Trigger dashboard refresh
+      window.dispatchEvent(new Event('wallet_changed'));
     } catch (err) {
       if (err.message.includes('Failed to fetch') || err.message.includes('ECONNREFUSED')) {
         toast({ type: 'error', title: 'Backend Offline', message: 'Server is not running. Start the backend and try again.', duration: 7000 });
@@ -501,7 +537,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
         <aside className="right-panel" style={isPanelOpen ? { width: panelWidth } : {}}>
         {modal && <SignalModal item={modal} onClose={() => setModal(null)} />}
         {tgModal && <TelegramModal onClose={() => setTgModal(false)} />}
-        {posModal && <PositionsModal positions={positions} onClose={() => setPosModal(false)} />}
+        {posModal && <PositionsModal positions={positions} onClose={() => setPosModal(false)} handleClose={handleClose} closingCoin={closingCoin} />}
         
         {/* HYPERLIQUID SECTION */}
         <section className="rp-section">
@@ -509,8 +545,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
           <div className="trade-ticket">
             <div className="tt-tabs">
               <div style={{ display: 'flex', gap: 16 }}>
-                <span className={`tt-tab ${hlOrderMode === 'market' ? 'active' : ''}`} onClick={() => setHlOrderMode('market')}>MARKET</span>
-                <span className={`tt-tab ${hlOrderMode === 'limit' ? 'active' : ''}`} onClick={() => setHlOrderMode('limit')}>LIMIT</span>
+                <span className="tt-tab active" style={{ cursor: 'default' }}>TRADE</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -597,15 +632,31 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
             {/* Margin Slider */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <label style={{ fontSize: 9, fontWeight: 800, color: 'var(--t3)', letterSpacing: '0.5px' }}>MARGIN</label>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                  <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--t1)' }}>${tradeSize.toLocaleString()}</span>
-                  {maxSize > 0 && <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600 }}>({sizePercent}%)</span>}
+                <label style={{ fontSize: 9, fontWeight: 800, color: 'var(--t3)', letterSpacing: '0.5px' }}>MARGIN <span style={{ color: 'var(--t3)', fontWeight: 500, fontSize: 8 }}>(Min $10 total size)</span></label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ 
+                    display: 'flex', alignItems: 'center', 
+                    background: 'rgba(255,255,255,0.05)', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '8px', 
+                    padding: '4px 8px',
+                    transition: 'all 0.2s'
+                  }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t3)' }}>$</span>
+                    <input
+                      type="number"
+                      className="no-spin"
+                      value={tradeSize}
+                      onChange={e => setTradeSize(e.target.value === '' ? '' : Number(e.target.value))}
+                      style={{ fontSize: 16, fontWeight: 800, color: 'var(--t1)', background: 'transparent', border: 'none', width: '50px', outline: 'none', textAlign: 'right', paddingLeft: '4px' }}
+                    />
+                  </div>
+                  {maxSize > 0 && <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600, minWidth: '35px' }}>({sizePercent}%)</span>}
                 </div>
               </div>
               <div style={{ position: 'relative', height: 36, display: 'flex', alignItems: 'center' }}>
                 <input
-                  type="range" min={0} max={maxSize > 0 ? maxSize : 100} step={maxSize > 100 ? Math.max(1, Math.floor(maxSize / 200)) : 1}
+                  type="range" min={0} max={maxSize > 0 ? maxSize : 100} step={maxSize > 100 ? Math.max(1, Math.floor(maxSize / 200)) : 0.1}
                   value={tradeSize}
                   onChange={e => setTradeSize(Number(e.target.value))}
                   disabled={maxSize === 0}
@@ -681,24 +732,103 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
             <div className="tt-btns">
               <button className="tt-btn buy" onClick={() => handleTrade('LONG')} disabled={tradeLoading}>{tradeLoading ? '...' : 'LONG'}</button>
               <button className="tt-btn sell" onClick={() => handleTrade('SHORT')} disabled={tradeLoading}>{tradeLoading ? '...' : 'SHORT'}</button>
-              <button className="tt-btn reverse" style={{ background: '#6c5ce7', color: '#fff' }} onClick={() => handleTrade('REVERSE')} disabled={tradeLoading}>{tradeLoading ? '...' : 'REVERSE'}</button>
-              <button className="tt-btn close" style={{ background: 'var(--t3)', color: '#fff' }} onClick={() => handleTrade('CLOSE')} disabled={tradeLoading}>{tradeLoading ? '...' : 'CLOSE'}</button>
+              <button className="tt-btn close" style={{ background: 'var(--t3)', color: '#fff', gridColumn: 'span 2' }} onClick={() => handleTrade('CLOSE')} disabled={tradeLoading}>{tradeLoading ? '...' : 'CLOSE'}</button>
             </div>
           </div>
         </section>
 
+        <section className="rp-section">
+          <div className="rp-hdr"><h3>OPEN POSITIONS ({positions.length})</h3></div>
+          <div className="positions-list">
+            {!positions.length 
+              ? <div className="pos-empty">
+                  <div className="empty-icon">📁</div>
+                  <span>NO ACTIVE POSITIONS</span>
+                  <p>Open trades will appear here automatically.</p>
+                </div>
+              : positions.map((p, i) => {
+                  const pnlUsd = p.pnl_usd !== undefined ? p.pnl_usd : (p.unrealized_pnl || 0);
+                  const pnlPct = p.pnl_pct !== undefined ? p.pnl_pct : (p.unrealized_pnl_pct || 0);
+                  return (
+                  <div key={i} className="pos-item" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: 'var(--shadow)', transition: 'all 0.2s ease', cursor: 'pointer' }}
+                    onClick={() => setPosModal(true)}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = p.side?.toUpperCase() === 'LONG' ? 'var(--green)' : 'var(--red)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: p.side?.toUpperCase() === 'LONG' ? 'rgba(24, 184, 122, 0.1)' : 'rgba(233, 69, 96, 0.1)', color: p.side?.toUpperCase() === 'LONG' ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '900' }}>
+                          {p.coin?.slice(0, 2)}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '16px', fontWeight: '900', color: 'var(--t1)', lineHeight: '1.2' }}>{p.coin}</span>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: p.side?.toUpperCase() === 'LONG' ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {p.side?.toUpperCase() === 'LONG' ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>}
+                            {p.side?.toUpperCase()} {p.leverage}x
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: '16px', fontWeight: '900', color: pnlUsd >= 0 ? 'var(--green)' : 'var(--red)', letterSpacing: '-0.5px' }}>
+                          {pnlUsd >= 0 ? '+' : '-'}${Math.abs(pnlUsd).toFixed(2)}
+                        </span>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: pnlUsd >= 0 ? 'var(--green)' : 'var(--red)', background: pnlUsd >= 0 ? 'rgba(24, 184, 122, 0.1)' : 'rgba(233, 69, 96, 0.1)', padding: '2px 8px', borderRadius: '6px', marginTop: '4px' }}>
+                          {pnlUsd >= 0 ? '+' : ''}{(Number(pnlPct) || 0).toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--border)', paddingTop: '12px', marginTop: '2px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Margin</span>
+                        <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--t1)' }}>${(Number(p.size_usd) || 0).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Entry</span>
+                        <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--t1)' }}>${Number(p.entry_price || 0).toFixed(4)}</span>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleClose(p.coin); }}
+                      disabled={closingCoin === p.coin}
+                      style={{ 
+                        marginTop: 8, 
+                        width: '100%',
+                        background: 'rgba(233, 69, 96, 0.15)', 
+                        color: 'var(--red)', 
+                        border: 'none', 
+                        padding: '8px 12px', 
+                        borderRadius: '8px', 
+                        fontSize: 11, 
+                        fontWeight: 800, 
+                        cursor: 'pointer', 
+                        transition: 'background 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {closingCoin === p.coin ? 'CLOSING...' : 'CLOSE POSITION'}
+                    </button>
+                  </div>
+                  );
+                })}
+          </div>
+        </section>
 
         {/* ALGO AI BOT SECTION */}
         <section className="rp-section">
           <div className="rp-hdr">
             <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              ALGO AI BOT 
-              <span style={{ fontSize: 9, color: '#ff9f43', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.5px', textTransform: 'none' }}>(Max 2 positions)</span>
+              Synap.surf AI 
+              <span className="limit-tooltip" data-tooltip="Free accounts are limited to 2 concurrent positions. Upgrade to Premium to manage up to 5 positions simultaneously." style={{ fontSize: 9, color: '#ff9f43', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.5px', textTransform: 'none', cursor: 'help' }}>ⓘ Limit</span>
             </h3>
           </div>
           <div className="bot-config">
             {Object.entries(botParams).map(([key, val]) => {
-              const isAutoCapable = key === 'TARGET_ROE_PCT' || key === 'STOP_LOSS_PCT' || key === 'ASSET';
+              const isAutoCapable = key === 'LEVERAGE' || key === 'TARGET_ROE_PCT' || key === 'STOP_LOSS_PCT' || key === 'ASSET';
               const isAuto = val === 'AUTO';
               return (
                 <div key={key} className="bc-field" style={{ alignItems: isAutoCapable ? 'flex-start' : 'center' }}>
@@ -709,7 +839,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                         <input 
                           type="checkbox" 
                           checked={isAuto} 
-                          onChange={(e) => handleBotChange(key, e.target.checked ? 'AUTO' : (key === 'ASSET' ? 'BTC' : '10'))}
+                          onChange={(e) => handleBotChange(key, e.target.checked ? 'AUTO' : (key === 'ASSET' ? 'BTC' : (key === 'MARGIN' ? '10' : '10')))}
                         />
                         AI AUTO
                       </label>
@@ -726,7 +856,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                       </button>
                       {botAssetDropOpen && (
                         <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1e1e24', border: '1px solid var(--border)', borderRadius: 12, padding: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', width: 160 }}>
-                          {coins.map(c => (
+                          {activeCoins.map(c => (
                             <button key={c} onClick={() => { handleBotChange(key, c); setBotAssetDropOpen(false); }}
                               style={{ background: val === c ? 'rgba(0, 210, 211, 0.1)' : 'transparent', color: val === c ? 'var(--accent)' : 'var(--t2)', border: 'none', borderRadius: 6, padding: '6px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}
                               onMouseEnter={e => { if (val !== c) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
@@ -764,8 +894,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 <span className="m-tgl grok-tooltip" data-tooltip="Right now Grok is unavailable" style={{ fontSize: 8, padding: '4px 10px', opacity: 0.5, cursor: 'not-allowed' }}>GROK</span>
               </div>
             </div>
-            <button className="bc-save-btn" onClick={saveBotParameters}>SAVE PARAMETERS</button>
-            <button className="bc-save-btn" onClick={() => setPosModal(true)} style={{ marginTop: 8, background: 'rgba(255,255,255,0.05)', color: 'var(--t1)' }}>VIEW OPEN POSITIONS</button>
+            <button className="bc-save-btn" onClick={saveBotParameters}>EXECUTE</button>
           </div>
         </section>
       </aside>
@@ -785,7 +914,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       </button>
       <aside className="right-panel" style={isPanelOpen ? { width: panelWidth } : {}}>
       {modal && <SignalModal item={modal} onClose={() => setModal(null)} />}
-      {posModal && <PositionsModal positions={positions} onClose={() => setPosModal(false)} />}
+      {posModal && <PositionsModal positions={positions} onClose={() => setPosModal(false)} handleClose={handleClose} closingCoin={closingCoin} />}
       <section className="rp-section">
         <div className="rp-hdr">
           <h3>
@@ -864,6 +993,29 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                       <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--t1)' }}>${Number(p.entry_price || 0).toFixed(4)}</span>
                     </div>
                   </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleClose(p.coin); }}
+                    disabled={closingCoin === p.coin}
+                    style={{ 
+                      marginTop: 8, 
+                      width: '100%',
+                      background: 'rgba(233, 69, 96, 0.15)', 
+                      color: 'var(--red)', 
+                      border: 'none', 
+                      padding: '8px 12px', 
+                      borderRadius: '8px', 
+                      fontSize: 11, 
+                      fontWeight: 800, 
+                      cursor: 'pointer', 
+                      transition: 'background 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
+                  >
+                    {closingCoin === p.coin ? 'CLOSING...' : 'CLOSE POSITION'}
+                  </button>
                 </div>
                 );
               })}
@@ -873,9 +1025,22 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       <section className="rp-section" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div className="rp-hdr"><h3>AI SIGNALS</h3></div>
         <div className="signals-list">
-          {(Array.isArray(decisions) ? decisions : []).slice(0, 10).map((d, i) => (
-            <SignalCard key={i} item={d} onClick={() => setModal(d)} />
-          ))}
+          {(!decisions || !Array.isArray(decisions) || decisions.length === 0) ? (
+            <div className="pos-empty" style={{ flex: 1, minHeight: 200, margin: 0 }}>
+              <div className="empty-icon">🤖</div>
+              <span>NO AI SIGNALS YET</span>
+              <p>AI trading signals will appear here automatically.</p>
+            </div>
+          ) : (
+            decisions
+              .filter(d => {
+                const reasoning = d?.data?.reasoning || d?.reasoning || '';
+                return !reasoning.includes('Manual UI');
+              })
+              .slice(0, 10).map((d, i) => (
+              <SignalCard key={i} item={d} onClick={() => setModal(d)} />
+            ))
+          )}
         </div>
       </section>
     </aside>

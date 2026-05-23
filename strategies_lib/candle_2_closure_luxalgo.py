@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class Candle2ClosureStrategy:
-    """Candle 2 Closure [LuxAlgo] — all 5 bugs fixed."""
+    """Candle 2 Closure [LuxAlgo]"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  use_filter=False, filter_length=20, wick_threshold_pct=40,

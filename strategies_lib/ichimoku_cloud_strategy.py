@@ -6,7 +6,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class IchimokuCloudStrategy:
-    """Ichimoku Cloud trend-following — all 5 bugs fixed."""
+    """Ichimoku Cloud trend-following"""
 
     def __init__(self, tenkan_period=9, kijun_period=26, senkou_b_period=52,
                  initial_capital=1000.0, position_size_pct=1.0,

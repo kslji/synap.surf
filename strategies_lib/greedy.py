@@ -6,7 +6,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class GreedyStrategy:
-    """Gap-based Greedy strategy — all 5 bugs fixed."""
+    """Gap-based Greedy strategy"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  tp_ticks=10, sl_ticks=10, tick_size=0.01,

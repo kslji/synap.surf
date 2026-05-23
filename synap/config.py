@@ -54,7 +54,7 @@ POSITION_MONITOR_INTERVAL_SECONDS = int(
     os.getenv("BRAIN_POSITION_INTERVAL", "60")
 )  # Check every 1 min (positions open — SL/TP monitoring only)
 TELEGRAM_REPORT_INTERVAL_SECONDS = 1 * 3600  # Report every 1 hours
-NANSEN_CACHE_TTL_SECONDS = int(2.5 * 3600)  # Cache Nansen data for 2.5 hours
+NANSEN_CACHE_TTL_SECONDS = int(4 * 3600)  # Cache Nansen data for 4 hours
 NEWS_CACHE_TTL_SECONDS = 40 * 60  # Cache news data for 40 min
 COINGECKO_CACHE_TTL_SECONDS = 10 * 60  # CoinGecko trending updates every 10 min
 

@@ -22,23 +22,44 @@ export default function Settings() {
   const [hlKey, setHlKey] = useState('');
   const [keyStatus, setKeyStatus] = useState(() => localStorage.getItem('hl_key_status') || null);
 
+  useEffect(() => {
+    if (userProfile?.private_key) {
+      setHlKey(userProfile.private_key);
+      setKeyStatus('saved');
+    } else {
+      setHlKey('');
+      setKeyStatus(null);
+    }
+  }, [userProfile?.private_key]);
+
   const handleSaveKey = async () => {
-    if (!hlKey) return;
+    if (!walletAddress) {
+      toast({ type: 'error', title: 'Wallet Required', message: 'Please connect your wallet first.', duration: 5000 });
+      return;
+    }
     setKeyStatus('saving');
     try {
       const res = await fetch('/api/settings/keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hl_private_key: hlKey }),
+        body: JSON.stringify({ hl_private_key: hlKey, hl_wallet: walletAddress }),
       });
       const text = await res.text();
       if (!res.ok) {
         const d = (() => { try { return JSON.parse(text); } catch { return {}; } })();
         throw new Error(d.detail || text);
       }
-      setKeyStatus('saved');
-      localStorage.setItem('hl_key_status', 'saved');
-      toast({ type: 'success', title: 'Private Key Saved', message: 'Your Hyperliquid key has been saved and is ready for trading.', duration: 5000 });
+      
+      if (!hlKey) {
+        setKeyStatus(null);
+        localStorage.removeItem('hl_key_status');
+        toast({ type: 'success', title: 'Private Key Removed', message: 'Your Hyperliquid key has been removed.', duration: 5000 });
+      } else {
+        setKeyStatus('saved');
+        localStorage.setItem('hl_key_status', 'saved');
+        toast({ type: 'success', title: 'Private Key Saved', message: 'Your Hyperliquid key has been saved and is ready for trading.', duration: 5000 });
+      }
+      await fetchUserProfile(walletAddress); // Refresh profile to get updated key
     } catch (err) {
       setKeyStatus('error');
       localStorage.removeItem('hl_key_status');
@@ -191,24 +212,20 @@ export default function Settings() {
                   </div>
                 ) : (
                   <p style={{ fontSize: 13, color: 'var(--t3)', marginBottom: 0, fontWeight: 500 }}>
-                    Connect your MetaMask or EVM wallet. The address will be used as your HL_WALLET for trading.
-                  </p>
-                )}
-
-                <button
-                  onClick={handleConnectWallet}
-                  disabled={walletStatus === 'connecting'}
-                  style={{
-                    marginTop: 14, width: '100%', padding: '13px', borderRadius: 12, fontSize: 13,
-                    fontWeight: 800,
+                    <button onClick={() => window.dispatchEvent(new Event('trigger_wallet_connect'))} 
+                    disabled={walletStatus === 'connecting'}
+                    style={{ 
+                    padding: '16px 24px', fontSize: 15, fontWeight: 800, borderRadius: 16, border: 'none',
                     background: walletStatus === 'connected' ? 'rgba(24,184,122,0.15)' : 'linear-gradient(135deg, #6c5ce7, #00d2d3)',
                     color: walletStatus === 'connected' ? 'var(--green)' : '#fff',
                     border: walletStatus === 'connected' ? '1px solid rgba(24,184,122,0.4)' : 'none',
                     transition: 'all 0.2s', cursor: walletStatus === 'connecting' ? 'wait' : 'pointer',
-                  }}
-                >
-                  {walletStatus === 'connecting' ? 'Connecting...' : walletStatus === 'connected' ? 'Wallet Connected ✓' : '🔗 Connect EVM Wallet (MetaMask)'}
-                </button>
+                    boxShadow: walletStatus === 'connected' ? 'none' : '0 8px 24px rgba(108,92,231,0.4)'
+                  }}>
+                    {walletStatus === 'connecting' ? 'Connecting...' : walletStatus === 'connected' ? 'Wallet Connected ✓' : '🔗 Connect Wallet'}
+                  </button>
+                  </p>
+                )}
               </div>
 
             </div>

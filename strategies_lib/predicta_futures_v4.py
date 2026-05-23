@@ -8,7 +8,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class PredictaFuturesStrategy:
-    """Predicta Futures V4 confluence strategy — all 5 bugs fixed."""
+    """Predicta Futures V4 confluence strategy"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  atr_len=14, st_factor=3.0, st_period=10,

@@ -7,7 +7,7 @@ from utils.base_strategy import build_results, resolve_exit, close_trade
 from utils.backtest_ohlc import get_win_loss_by_period
 
 class PriceChannelStrategy:
-    """Donchian Channel breakout — all 5 bugs fixed."""
+    """Donchian Channel breakout"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  channel_length=20, tick_offset=0.01,

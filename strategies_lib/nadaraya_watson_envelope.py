@@ -8,7 +8,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class NadarayaWatsonEnvelopeStrategy:
-    """Nadaraya-Watson Envelope mean-reversion — all 5 bugs fixed."""
+    """Nadaraya-Watson Envelope mean-reversion"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  window_size=500, bandwidth=8.0, multiplier=3.0,

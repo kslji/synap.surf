@@ -108,8 +108,8 @@ export default function StrategyTerminal() {
     fetch(`/api/strategies?coin=${coin}`)
       .then(r => r.json())
       .then(data => {
-        setStrategies(data);
-        if (data.length > 0) setSelected(data[0]);
+        setStrategies(data || []);
+        if (data && data.length > 0) setSelected(data[0]);
       })
       .catch(console.error);
       
@@ -188,8 +188,15 @@ export default function StrategyTerminal() {
   const handleBacktest = async () => {
     setIsBacktesting(true);
     try {
-      const res = await fetch(`/api/strategies/${selected.id}/backtest?timeframe=${timeframe}&coin=${coin}`, {
-        method: 'POST'
+      const res = await fetch(`/api/strategies/${selected.id}/backtest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timeframe,
+          coin,
+          capital: parseFloat(capital) || 1000.0,
+          leverage: parseInt(leverage) || 1
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to run backtest');
@@ -363,11 +370,13 @@ export default function StrategyTerminal() {
             </div>
             <div className="perf-card">
               <span className="label">EST. PROFIT</span>
-              <span className="value pos">+${metrics.totalPnl}</span>
+              <span className={`value ${metrics.totalPnl >= 0 ? 'pos' : 'neg'}`}>
+                {metrics.totalPnl >= 0 ? '+' : '-'}${Math.abs(metrics.totalPnl).toFixed(2)}
+              </span>
             </div>
             <div className="perf-card">
               <span className="label">MAX DRAWDOWN</span>
-              <span className="value neg">-{metrics.drawdown}%</span>
+              <span className="value neg">-{Math.abs(metrics.drawdown).toFixed(2)}%</span>
             </div>
             <div className="perf-card">
               <span className="label">TOTAL TRADES</span>

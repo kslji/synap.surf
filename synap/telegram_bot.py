@@ -25,20 +25,29 @@ import requests
 from hyperliquid.info import Info
 from hyperliquid.utils import constants
 
-from synap.config import (
-    TELEGRAM_BOT_TOKEN,
-)
+from synap.config import TELEGRAM_BOT_TOKEN as CONFIG_TG_TOKEN
 HL_WALLET = None
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from backend.db import get_db
-
+from backend.database import get_sync_db as get_db
 logger = logging.getLogger(__name__)
 
 SUBSCRIBERS_FILE = Path(__file__).parent.parent / "dashboard" / "users.json"
 LOGS_DIR = Path(__file__).parent / "logs"
-API_BASE = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+
+def get_tg_token():
+    try:
+        db = get_db()
+        doc = db.market_data.find_one({"key": "telegram_settings"})
+        if doc and doc.get("telegram_bot_token"):
+            return doc["telegram_bot_token"]
+    except Exception:
+        pass
+    # Fallback to config if not set in UI
+    if CONFIG_TG_TOKEN and CONFIG_TG_TOKEN != "your_token_here":
+        return CONFIG_TG_TOKEN
+    return None
 
 # Ensure directories exist on startup
 SUBSCRIBERS_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -167,11 +176,13 @@ def _save_data(data: dict) -> None:
 
 def _tg_post(method: str, payload: dict) -> dict:
     """Low-level POST to Telegram API."""
-    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_token_here":
+    token = get_tg_token()
+    if not token:
         return {}
     try:
         # Increased timeout to 45s to allow for Telegram Long Polling (30s)
-        r = requests.post(f"{API_BASE}/{method}", json=payload, timeout=45)
+        api_base = f"https://api.telegram.org/bot{token}"
+        r = requests.post(f"{api_base}/{method}", json=payload, timeout=45)
         return r.json()
     except Exception as e:
         logger.warning(f"Telegram API error ({method}): {e}")
@@ -197,9 +208,10 @@ class TelegramNotifier:
     """
 
     def __init__(self):
-        if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_token_here":
+        token = get_tg_token()
+        if not token:
             logger.warning(
-                "TELEGRAM_BOT_TOKEN not set — Telegram notifications disabled."
+                "Telegram Bot Token not set — Telegram notifications disabled."
             )
             self.enabled = False
         else:
@@ -310,14 +322,14 @@ class TelegramNotifier:
             wins = 0
             losses = 0
             try:
-                with get_db() as db:
-                    row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (HL_WALLET,)).fetchone()
-                    if row:
-                        rpnl = row["realized_pnl"]
-                        trades = row["total_trades"]
-                        wins = row["winning_trades"]
-                        losses = row["losing_trades"]
-                        wr = round((wins / max(trades, 1)) * 100, 1)
+                db = get_db()
+                row = db.portfolios.find_one({"user_id": HL_WALLET, "portfolio_type": 'LIVE'})
+                if row:
+                    rpnl = row.get("realized_pnl", 0)
+                    trades = row.get("total_trades", 0)
+                    wins = row.get("winning_trades", 0)
+                    losses = row.get("losing_trades", 0)
+                    wr = round((wins / max(trades, 1)) * 100, 1)
             except Exception:
                 pass
             sign = "+" if rpnl >= 0 else ""
@@ -440,14 +452,14 @@ def _handle_status(chat_id: int) -> None:
                 wins = 0
                 losses = 0
                 try:
-                    with get_db() as db:
-                        row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (HL_WALLET,)).fetchone()
-                        if row:
-                            rpnl = row["realized_pnl"]
-                            trades = row["total_trades"]
-                            wins = row["winning_trades"]
-                            losses = row["losing_trades"]
-                            wr = round((wins / max(trades, 1)) * 100, 1)
+                    db = get_db()
+                    row = db.portfolios.find_one({"user_id": HL_WALLET, "portfolio_type": 'LIVE'})
+                    if row:
+                        rpnl = row.get("realized_pnl", 0)
+                        trades = row.get("total_trades", 0)
+                        wins = row.get("winning_trades", 0)
+                        losses = row.get("losing_trades", 0)
+                        wr = round((wins / max(trades, 1)) * 100, 1)
                 except Exception:
                     pass
                 sign = "+" if rpnl >= 0 else ""
@@ -486,58 +498,19 @@ def _handle_status(chat_id: int) -> None:
                 )
             return
 
-        # Fallback to Paper Trading State ONLY if HL_WALLET is not configured
-        try:
-            with get_db() as db:
-                row = db.execute("SELECT * FROM portfolios WHERE user_id = 'PAPER_USER' AND portfolio_type = 'PAPER'").fetchone()
-                if not row:
-                    _send(chat_id, "⚠️ Bot has not started yet. No portfolio data.")
-                    return
-                cash = row["cash"]
-                rpnl = row["realized_pnl"]
-                trades = row["total_trades"]
-                wins = row["winning_trades"]
-                losses = row["losing_trades"]
-                wr = round((wins / max(trades, 1)) * 100, 1)
-                
-                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'paper_positions'").fetchone()
-                positions = json.loads(kv_row["value_json"]) if kv_row else []
-        except Exception as e:
-            _send(chat_id, f"⚠️ Error fetching status: {e}")
             return
-        pos_str = ""
-        for p in positions:
-            side_icon = "📈" if p["side"] == "LONG" else "📉"
-            roe = p.get("unrealized_pnl_pct", 0)
-            pos_str += f"\n  • {side_icon} <b>{p['coin']}</b>: {roe:+.2f}% ROE"
-
-        if not pos_str:
-            pos_str = "\n  <i>No open positions.</i>"
-
-        _send(
-            chat_id,
-            (
-                f"📊 <b>AlgoBrain Status (Paper)</b>\n"
-                f"━━━━━━━━━━━━━━━━\n"
-                f"💵 Equity:     <b>${cash:,.2f}</b>\n"
-                f"📈 Realized:   <b>{sign}${abs(rpnl):.2f}</b>\n"
-                f"🎯 Win Rate:   <b>{wr}%</b>\n"
-                f"📊 Trades:     {wins}W / {losses}L ({trades} total)\n"
-                f"\n📂 <b>Open Positions:</b>{pos_str}"
-            ),
-        )
     except Exception as e:
         _send(chat_id, f"⚠️ Error fetching status: {e}")
 
 
 def _handle_watchlist(chat_id: int) -> None:
     try:
-        with get_db() as db:
-            row = db.execute("SELECT value_json FROM market_data WHERE key = 'watchlist'").fetchone()
-            if not row:
-                _send(chat_id, "⚠️ No watchlist data yet. Start the bot first.")
-                return
-            data = json.loads(row["value_json"])
+        db = get_db()
+        row = db.market_data.find_one({"key": "watchlist"})
+        if not row:
+            _send(chat_id, "⚠️ No watchlist data yet. Start the bot first.")
+            return
+        data = json.loads(row.get("value_json", "{}"))
         coins = data.get("coins", [])
         _send(
             chat_id,
@@ -552,18 +525,6 @@ def _handle_watchlist(chat_id: int) -> None:
         _send(chat_id, f"⚠️ Error: {e}")
 
 
-def _handle_papertrade(chat_id: int) -> None:
-    _send(
-        chat_id,
-        (
-            "📋 <b>Paper Trading</b>\n\n"
-            "Visit the dashboard to enable paper trading:\n"
-            "<code>http://localhost:8000</code>\n\n"
-            "Your trades will mirror the bot's decisions with $1,000 virtual capital."
-        ),
-    )
-
-
 def _handle_help(chat_id: int) -> None:
     _send(
         chat_id,
@@ -574,7 +535,6 @@ def _handle_help(chat_id: int) -> None:
             "/stop       — Unsubscribe\n"
             "/status     — Portfolio performance\n"
             "/watchlist  — Current focus coins\n"
-            "/papertrade — Paper trading info\n"
             "/help       — Show this menu"
         ),
     )
@@ -586,8 +546,9 @@ def run_bot() -> None:
     Start the Telegram bot in a background thread.
     Polls for updates and handles commands.
     """
-    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_token_here":
-        logger.warning("TELEGRAM_BOT_TOKEN not set — bot polling disabled.")
+    token = get_tg_token()
+    if not token:
+        logger.warning("Telegram Bot Token not set — bot polling disabled.")
         return
 
     logger.info("🤖 Starting Telegram bot polling...")
@@ -624,8 +585,6 @@ def run_bot() -> None:
                     _handle_status(chat_id)
                 elif cmd == "/watchlist":
                     _handle_watchlist(chat_id)
-                elif cmd == "/papertrade":
-                    _handle_papertrade(chat_id)
                 else:
                     _handle_help(chat_id)
 

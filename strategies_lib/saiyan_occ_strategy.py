@@ -9,7 +9,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class SaiyanOCCStrategy:
-    """Saiyan OCC close/open MA crossover — all 5 bugs fixed."""
+    """Saiyan OCC close/open MA crossover"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  basis_len=2, ma_type="ALMA", use_higher_tf=True, higher_mult=8,

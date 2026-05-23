@@ -6,7 +6,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
  
  
 class RsiReversalStrategy:
-    """RSI Reversal — all 5 bugs fixed."""
+    """RSI Reversal"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  rsi_length=14, rsi_oversold=30.0, rsi_overbought=70.0,

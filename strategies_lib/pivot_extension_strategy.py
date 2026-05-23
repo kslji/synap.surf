@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
  
  
 class PivotReversalStrategy:
-    """Pivot Extension reversal — all 5 bugs fixed."""
+    """Pivot Extension reversal"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  left_bars=4, right_bars=2, max_intraday_loss_pct=1.0,

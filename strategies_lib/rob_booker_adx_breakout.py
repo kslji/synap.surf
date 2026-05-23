@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class AdxBreakoutStrategy:
-    """Rob Booker ADX Breakout — all 5 bugs fixed."""
+    """Rob Booker ADX Breakout"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  adx_period=14, adx_smooth=14, adx_lower_level=18.0,

@@ -8,7 +8,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
  
  
 class TramaStrategy:
-    """TRAMA adaptive moving average — all 5 bugs fixed."""
+    """TRAMA adaptive moving average"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  length=99, take_profit_pct=2.0, sl_pct=1.0):

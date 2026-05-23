@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class DeltaReactionZonesStrategy:
-    """Delta Reaction Zones [BOSWaves] — all 5 bugs fixed."""
+    """Delta Reaction Zones [BOSWaves]"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  pivot_length=12, delta_smooth=3, atr_length=14, atr_mult=0.35,

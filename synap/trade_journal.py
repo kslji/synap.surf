@@ -19,7 +19,7 @@ from typing import Optional
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from backend.db import get_db
+from backend.database import get_sync_db
 
 from synap.config import LOGS_DIR
 
@@ -74,17 +74,21 @@ def log_trade_open(
 ):
     """Log a new trade entry."""
     try:
-        with get_db() as db:
-            db.execute('''
-                INSERT INTO trade_logs (
-                    event, coin, side, entry_price, position_size_usd, leverage, 
-                    stop_loss, take_profit_1, take_profit_2, conviction, reasoning
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                "TRADE_OPEN", coin, side, round(entry_price, 6), round(position_size_usd, 2), 
-                leverage, round(stop_loss, 6), round(take_profit_1, 6), round(take_profit_2, 6), 
-                round(conviction, 2), reasoning
-            ))
+        db = get_sync_db()
+        db.trade_logs.insert_one({
+            "event": "TRADE_OPEN",
+            "coin": coin,
+            "side": side,
+            "entry_price": round(entry_price, 6),
+            "position_size_usd": round(position_size_usd, 2),
+            "leverage": leverage,
+            "stop_loss": round(stop_loss, 6),
+            "take_profit_1": round(take_profit_1, 6),
+            "take_profit_2": round(take_profit_2, 6),
+            "conviction": round(conviction, 2),
+            "reasoning": reasoning,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
     except Exception as e:
         logger.error(f"DB Error log_trade_open: {e}")
 
@@ -116,17 +120,21 @@ def log_trade_close(
 ):
     """Log a trade exit."""
     try:
-        with get_db() as db:
-            db.execute('''
-                INSERT INTO trade_logs (
-                    event, coin, side, entry_price, exit_price, position_size_usd, leverage, 
-                    pnl_usd, pnl_pct, hold_duration_hours, reasoning
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                "TRADE_CLOSE", coin, side, round(entry_price, 6), round(exit_price, 6), 
-                round(position_size_usd, 2), leverage, round(pnl_usd, 2), round(pnl_pct, 2), 
-                round(hold_duration_hours, 1), reason
-            ))
+        db = get_sync_db()
+        db.trade_logs.insert_one({
+            "event": "TRADE_CLOSE",
+            "coin": coin,
+            "side": side,
+            "entry_price": round(entry_price, 6),
+            "exit_price": round(exit_price, 6),
+            "position_size_usd": round(position_size_usd, 2),
+            "leverage": leverage,
+            "pnl_usd": round(pnl_usd, 2),
+            "pnl_pct": round(pnl_pct, 2),
+            "hold_duration_hours": round(hold_duration_hours, 1),
+            "reasoning": reason,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
     except Exception as e:
         logger.error(f"DB Error log_trade_close: {e}")
 
@@ -149,11 +157,14 @@ def log_trade_update(
 ):
     """Log a position update (move SL, partial close, etc.)."""
     try:
-        with get_db() as db:
-            db.execute('''
-                INSERT INTO trade_logs (event, coin, action, details)
-                VALUES (?, ?, ?, ?)
-            ''', ("TRADE_UPDATE", coin, action, details))
+        db = get_sync_db()
+        db.trade_logs.insert_one({
+            "event": "TRADE_UPDATE",
+            "coin": coin,
+            "action": action,
+            "details": details,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
     except Exception as e:
         logger.error(f"DB Error log_trade_update: {e}")
     logger.info(f"  🔄 {coin}: {action} — {details}")
@@ -167,11 +178,14 @@ def log_trade_update(
 def log_ai_decision(decision: dict, raw_prompt_size: int = 0, raw_response_size: int = 0, user_id: str = None):
     """Log the full AI decision for review and debugging."""
     try:
-        with get_db() as db:
-            db.execute('''
-                INSERT INTO decision_logs (user_id, prompt_chars, response_chars, decision_json)
-                VALUES (?, ?, ?, ?)
-            ''', (user_id, raw_prompt_size, raw_response_size, json.dumps(decision, default=str)))
+        db = get_sync_db()
+        db.decision_logs.insert_one({
+            "user_id": user_id,
+            "prompt_chars": raw_prompt_size,
+            "response_chars": raw_response_size,
+            "decision_json": json.dumps(decision, default=str),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
     except Exception as e:
         logger.error(f"DB Error log_ai_decision: {e}")
 
@@ -264,12 +278,15 @@ def update_daily_summary(portfolio: dict):
             for old_key in sorted_keys[:-90]:
                 del existing[old_key]
 
-        with get_db() as db:
-            db.execute('''
-                INSERT INTO market_data (key, value_json)
-                VALUES (?, ?)
-                ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
-            ''', ("daily_summary", json.dumps(existing, default=str)))
+        db = get_sync_db()
+        db.market_data.update_one(
+            {"key": "daily_summary"},
+            {"$set": {
+                "value_json": json.dumps(existing, default=str),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
             
     except Exception as e:
         logger.error(f"Failed to update daily summary: {e}")
@@ -311,12 +328,15 @@ def update_market_intel(sentiment: dict, decision: dict):
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
 
-        with get_db() as db:
-            db.execute('''
-                INSERT INTO market_data (key, value_json)
-                VALUES (?, ?)
-                ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
-            ''', ("market_intelligence", json.dumps(intel_data, default=str)))
+        db = get_sync_db()
+        db.market_data.update_one(
+            {"key": "market_intelligence"},
+            {"$set": {
+                "value_json": json.dumps(intel_data, default=str),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
             
         logger.info("  📊 Market Intelligence updated for dashboard")
 
@@ -336,9 +356,14 @@ def export_trades_csv(output_path: Optional[Path] = None):
 
     all_trades = []
     try:
-        with get_db() as db:
-            rows = db.execute("SELECT * FROM trade_logs ORDER BY timestamp ASC").fetchall()
-            all_trades = [dict(r) for r in rows]
+        db = get_sync_db()
+        # Fetch all trade logs, sorted by timestamp
+        rows = list(db.trade_logs.find().sort("timestamp", 1))
+        # Remove MongoDB _id before exporting to CSV
+        for r in rows:
+            if "_id" in r:
+                del r["_id"]
+        all_trades = rows
     except Exception as e:
         logger.error(f"Failed to export trades to CSV: {e}")
         return

@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class ImpulseTrendLevelsStrategy:
-    """Impulse Trend Levels (BOSWaves) — all 5 bugs fixed."""
+    """Impulse Trend Levels (BOSWaves)"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  trend_len=19, impulse_len=5, decay_rate=0.99,

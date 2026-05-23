@@ -309,13 +309,18 @@ def get_all_headlines() -> list[dict]:
         return cached
 
     all_articles = []
+    seen_titles = set()
     for feed_url in RSS_FEEDS:
         articles = _parse_rss_feed(feed_url)
-        all_articles.extend(articles)
+        for art in articles:
+            title_clean = art["title"].lower().strip()
+            if title_clean and title_clean not in seen_titles:
+                seen_titles.add(title_clean)
+                all_articles.append(art)
         time.sleep(0.5)  # Be polite to RSS servers
 
     logger.info(
-        f"📰 Fetched {len(all_articles)} headlines from {len(RSS_FEEDS)} RSS feeds"
+        f"📰 Fetched {len(all_articles)} unique headlines from {len(RSS_FEEDS)} RSS feeds"
     )
     _cache.set("rss_headlines", all_articles)
     return all_articles
@@ -402,15 +407,22 @@ def build_sentiment_data(coins: list[str]) -> dict:
         "market_headlines": [],
     }
 
-    # Get coin-specific headlines
-    for coin in coins[:10]:  # Cap at 10 to keep prompt size reasonable
-        headlines = get_coin_headlines(coin)
-        if headlines:
-            result["coin_headlines"][coin] = headlines
-
     # Get general market headlines (last 10)
     all_headlines = get_all_headlines()
     result["market_headlines"] = all_headlines[:10]
+    market_titles = {h["title"] for h in result["market_headlines"]}
+
+    # Get coin-specific headlines
+    seen_in_coins = set()
+    for coin in coins[:10]:  # Cap at 10 to keep prompt size reasonable
+        headlines = get_coin_headlines(coin)
+        filtered = []
+        for h in headlines:
+            if h["title"] not in market_titles and h["title"] not in seen_in_coins:
+                filtered.append(h)
+                seen_in_coins.add(h["title"])
+        if filtered:
+            result["coin_headlines"][coin] = filtered
 
     logger.info(
         f"📊 Sentiment data built: F&G={result['fear_greed'].get('value', '?')}, "

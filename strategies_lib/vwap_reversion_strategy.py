@@ -8,7 +8,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class VwapReversionStrategy:
-    """Rolling VWAP mean reversion — all 5 bugs fixed."""
+    """Rolling VWAP mean reversion"""
  
     def __init__(self, rolling_period=48, std_multiplier=2.5,
                  initial_capital=1000.0, position_size_pct=1.0,

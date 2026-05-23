@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class GoldOrderBlockStrategy:
-    """Gold Order Block Finder — all 5 bugs fixed."""
+    """Gold Order Block Finder"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  swing_length=7, lookback=20, displacement_mult=1.3,

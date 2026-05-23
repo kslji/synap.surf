@@ -12,14 +12,14 @@ const StrategyTerminal   = lazy(() => import('./components/strategies/StrategyTe
 const ProposalPage       = lazy(() => import('./components/proposals/ProposalPage.jsx'));
 const Settings           = lazy(() => import('./components/Settings.jsx'));
 const AIPage             = lazy(() => import('./components/AIPage.jsx'));
-import WalletConnectModal from './components/WalletConnectModal.jsx';
+import { useAuth } from './context/AuthContext.jsx';
 
 export default function App() {
+  const { connectWallet } = useAuth();
   const [view, setView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('view') || localStorage.getItem('app_view') || 'dashboard';
   });
-  const [showWalletPrompt, setShowWalletPrompt] = useState(false);
   
   const changeView = (newView) => {
     setView(newView);
@@ -32,16 +32,19 @@ export default function App() {
     localStorage.setItem('app_view', view);
   }, [view]);
 
-  const handleWalletConnect = (address) => {
-    setShowWalletPrompt(false);
-    window.location.reload(); // Quick refresh to load user specific data
-  };
-
   useEffect(() => {
-    const handleTrigger = () => setShowWalletPrompt(true);
+    const handleTrigger = async () => {
+      try {
+        const address = await connectWallet('metamask');
+        if (address && fetchAll) fetchAll();
+      } catch (e) {
+        console.error("Wallet connect failed:", e);
+      }
+    };
     window.addEventListener('trigger_wallet_connect', handleTrigger);
+    
     return () => window.removeEventListener('trigger_wallet_connect', handleTrigger);
-  }, []);
+  }, [connectWallet]);
 
   // Handle browser Back/Forward buttons
   useEffect(() => {
@@ -135,12 +138,6 @@ export default function App() {
             decisions={safeDecisions}
             tradingMode={tradingMode}
             setTradingMode={handleSetTradingMode}
-          />
-        )}
-        {showWalletPrompt && (
-          <WalletConnectModal 
-            onConnect={handleWalletConnect}
-            onClose={() => setShowWalletPrompt(false)}
           />
         )}
       </div>

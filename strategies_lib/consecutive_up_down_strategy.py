@@ -6,7 +6,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class ConsecutiveStreakStrategy:
-    """Consecutive Up/Down reversal — all 5 bugs fixed."""
+    """Consecutive Up/Down reversal"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  consecutive_up=3, consecutive_down=3,

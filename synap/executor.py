@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from synap.hyperliquid_trader import HyperliquidTrader
 from synap.trade_journal import log_ai_decision
-from backend.db import get_db
+from backend.database import get_sync_db as get_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | Executor | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -31,13 +31,12 @@ def execute_pool(payload_path: str):
             logger.warning("No wallets provided to executor.")
             return
 
-        with get_db() as db:
-            # Safely query users
-            placeholders = ",".join(["?"] * len(wallets))
-            users = db.execute(f"SELECT wallet_address, private_key FROM users WHERE wallet_address IN ({placeholders})", wallets).fetchall()
-            
-            # Pre-fetch all active subscriptions for these wallets
-            subs = db.execute(f"SELECT wallet_address, asset_name FROM subscriptions WHERE status = 'ACTIVE' AND wallet_address IN ({placeholders})", wallets).fetchall()
+        db = get_db()
+        # Safely query users
+        users = list(db.users.find({"wallet_address": {"$in": wallets}}, {"wallet_address": 1, "private_key": 1, "_id": 0}))
+        
+        # Pre-fetch all active synap_surf_ai for these wallets
+        subs = list(db.synap_surf_ai.find({"status": "ACTIVE", "wallet_address": {"$in": wallets}}, {"wallet_address": 1, "asset_name": 1, "_id": 0}))
             
         # Group subscriptions by wallet
         wallet_subs = {w: [] for w in wallets}

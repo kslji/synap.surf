@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class FutureSwingBigBelugaStrategy:
-    """Future Swing [BigBeluga] — all 5 bugs fixed."""
+    """Future Swing [BigBeluga]"""
 
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  swing_len=30, hist_samples=5, calc_type="Average",

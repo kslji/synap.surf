@@ -5,7 +5,7 @@ from utils.base_strategy import build_results, resolve_exit, close_trade
 from utils.backtest_ohlc import get_win_loss_by_period
 
 class SmaConfirmStrategy:
-    """SMA + Consecutive Bars Confirmation — all 5 bugs fixed."""
+    """SMA + Consecutive Bars Confirmation"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  ma_length=9, confirm_bars=1, max_intraday_loss_pct=1.0,

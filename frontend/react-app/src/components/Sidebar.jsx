@@ -5,17 +5,16 @@ export default function Sidebar({ view, setView, theme, toggleTheme }) {
   return (
     <aside className="sidebar">
       <div className="sb-logo" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
-        <svg width="46" height="46" viewBox="0 0 100 100" fill="none">
-          <defs>
-            <linearGradient id="logoAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="var(--accent)" />
-              <stop offset="100%" stopColor="#fff" />
-            </linearGradient>
-          </defs>
-          {/* Synap 'S' Shape */}
-          <path d="M80 25H40L30 50h40l-10 25H20" stroke="url(#logoAccent)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-          <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
-        </svg>
+        <img 
+          src="/synap.png" 
+          alt="Synap Logo" 
+          style={{ 
+            width: '48px', 
+            height: '48px', 
+            objectFit: 'contain', 
+            filter: 'brightness(1.5)',
+          }} 
+        />
       </div>
       <nav className="sb-nav">
         <a className={`sb-item${view === 'dashboard' ? ' active' : ''}`} href="#" title="Dashboard"

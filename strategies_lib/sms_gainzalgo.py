@@ -8,7 +8,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class SmartMoneyStructureStrategy:
-    """GainzAlgo Smart Money Structure momentum signals — all 5 bugs fixed."""
+    """GainzAlgo Smart Money Structure momentum signals"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  momentum_threshold_pct=0.8, min_bars_between_signals=8,

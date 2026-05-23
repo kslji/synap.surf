@@ -7,7 +7,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class FibonacciSequenceGridStrategy:
-    """Fibonacci Sequence Grid [BigBeluga] — all 5 bugs fixed."""
+    """Fibonacci Sequence Grid [BigBeluga]"""
 
     FIB = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233]
 

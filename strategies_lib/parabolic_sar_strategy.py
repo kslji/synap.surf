@@ -8,7 +8,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class ParabolicSarStrategy:
-    """Parabolic SAR reversal — all 5 bugs fixed."""
+    """Parabolic SAR reversal"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  start=0.02, increment=0.02, maximum=0.2,

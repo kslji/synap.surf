@@ -6,7 +6,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
 
 
 class StochSlowReversalStrategy:
-    """Stochastic Slow crossover with level filter — all 5 bugs fixed."""
+    """Stochastic Slow crossover with level filter"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  stoch_length=14, smooth_k=3, smooth_d=3,

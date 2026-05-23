@@ -33,7 +33,7 @@ from synap import trade_journal
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from backend.db import get_db
+from backend.database import get_sync_db
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +70,13 @@ class HyperliquidTrader:
         self.current_prices = {}
 
         try:
-            with get_db() as db:
-                row = db.execute("SELECT * FROM portfolios WHERE user_id = ? AND portfolio_type = 'LIVE'", (self.user_address,)).fetchone()
-                if row:
-                    self.realized_pnl = row["realized_pnl"]
-                    self.total_trades = row["total_trades"]
-                    self.winning_trades = row["winning_trades"]
-                    self.losing_trades = row["losing_trades"]
+            db = get_sync_db()
+            row = db.portfolios.find_one({"user_id": self.user_address, "portfolio_type": "LIVE"})
+            if row:
+                self.realized_pnl = row.get("realized_pnl", 0.0)
+                self.total_trades = row.get("total_trades", 0)
+                self.winning_trades = row.get("winning_trades", 0)
+                self.losing_trades = row.get("losing_trades", 0)
         except Exception as e:
             logger.error(f"Error loading live cumulative stats: {e}")
 
@@ -89,10 +89,10 @@ class HyperliquidTrader:
     def _load_local_state(self) -> List[Dict]:
         """Load open positions metadata from db."""
         try:
-            with get_db() as db:
-                kv_row = db.execute("SELECT value_json FROM market_data WHERE key = 'live_positions'").fetchone()
-                if kv_row:
-                    return json.loads(kv_row["value_json"])
+            db = get_sync_db()
+            kv_row = db.market_data.find_one({"key": "live_positions"})
+            if kv_row and "value_json" in kv_row:
+                return json.loads(kv_row["value_json"])
         except Exception as e:
             logger.error(f"Error loading live portfolio state: {e}")
         return []
@@ -100,34 +100,31 @@ class HyperliquidTrader:
     def _save_local_state(self, positions: List[Dict]):
         """Save open positions and cumulative metrics to db."""
         try:
-            with get_db() as db:
-                db.execute('''
-                    INSERT INTO portfolios (user_id, portfolio_type, cash, total_equity, unrealized_pnl, realized_pnl, total_trades, winning_trades, losing_trades)
-                    VALUES (?, 'LIVE', ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(user_id, portfolio_type) DO UPDATE SET
-                        cash=excluded.cash,
-                        total_equity=excluded.total_equity,
-                        unrealized_pnl=excluded.unrealized_pnl,
-                        realized_pnl=excluded.realized_pnl,
-                        total_trades=excluded.total_trades,
-                        winning_trades=excluded.winning_trades,
-                        losing_trades=excluded.losing_trades,
-                        updated_at=CURRENT_TIMESTAMP
-                ''', (
-                    self.user_address,
-                    round(self.cash, 2),
-                    round(self.total_equity, 2),
-                    round(sum(p.get("unrealized_pnl", 0) for p in positions), 2),
-                    round(self.realized_pnl, 2),
-                    self.total_trades,
-                    self.winning_trades,
-                    self.losing_trades
-                ))
-                
-                db.execute('''
-                    INSERT INTO market_data (key, value_json) VALUES ('live_positions', ?)
-                    ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_at=CURRENT_TIMESTAMP
-                ''', (json.dumps(positions, default=str),))
+            db = get_sync_db()
+            
+            db.portfolios.update_one(
+                {"user_id": self.user_address, "portfolio_type": "LIVE"},
+                {"$set": {
+                    "cash": round(self.cash, 2),
+                    "total_equity": round(self.total_equity, 2),
+                    "unrealized_pnl": round(sum(p.get("unrealized_pnl", 0) for p in positions), 2),
+                    "realized_pnl": round(self.realized_pnl, 2),
+                    "total_trades": self.total_trades,
+                    "winning_trades": self.winning_trades,
+                    "losing_trades": self.losing_trades,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }},
+                upsert=True
+            )
+            
+            db.market_data.update_one(
+                {"key": "live_positions"},
+                {"$set": {
+                    "value_json": json.dumps(positions, default=str),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }},
+                upsert=True
+            )
         except Exception as e:
             logger.error(f"Error saving live portfolio state: {e}")
 
@@ -310,6 +307,17 @@ class HyperliquidTrader:
         rounded_size = float(f"{size:.{decimals}f}")
         return rounded_size
 
+    def _get_max_leverage(self, coin: str) -> int:
+        """Fetch max allowed leverage from the asset meta."""
+        try:
+            meta = self.info.meta()
+            for asset in meta.get("universe", []):
+                if asset["name"] == coin.upper():
+                    return int(asset.get("maxLeverage", 50))
+        except Exception as e:
+            logger.error(f"Error fetching maxLeverage for {coin}: {e}")
+        return 50  # Fallback
+
     def open_position(
         self,
         coin: str,
@@ -341,10 +349,16 @@ class HyperliquidTrader:
             )
             return False
 
+        # Enforce leverage limit for the asset
+        max_asset_lev = self._get_max_leverage(coin)
+        actual_leverage = min(leverage, max_asset_lev)
+        if actual_leverage < leverage:
+            logger.info(f"⚠️ Capping requested leverage {leverage}x to {actual_leverage}x (Max allowed for {coin})")
+
         # Set Leverage
         try:
-            logger.info(f"Setting leverage for {coin} to {leverage}x...")
-            self.exchange.update_leverage(leverage, coin, True)
+            logger.info(f"Setting leverage for {coin} to {actual_leverage}x...")
+            self.exchange.update_leverage(actual_leverage, coin, True)
         except Exception as e:
             logger.error(f"Failed to set leverage for {coin}: {e}")
             return False

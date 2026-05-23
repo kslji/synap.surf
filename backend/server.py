@@ -13,13 +13,14 @@ import os
 import glob
 import json
 import uuid
-import sqlite3
+import re
+
 import sys
 from pathlib import Path
 
 # Ensure backend directory is in path for db import
 sys.path.append(str(Path(__file__).parent.parent))
-from backend.db import get_db
+from backend.database import get_async_db
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -137,7 +138,7 @@ def _load_users() -> dict:
     if USERS_FILE.exists():
         with open(USERS_FILE) as f:
             return json.load(f)
-    return {"subscribers": [], "paper_traders": {}}
+    return {"subscribers": []}
 
 
 def _save_users(data: dict) -> None:
@@ -146,32 +147,40 @@ def _save_users(data: dict) -> None:
 
 
 # ── Helper: Load all JSONL trades ─────────────────────────────────────────────
-def _load_all_trades(wallet: str = None) -> list[dict]:
+async def _load_all_trades(wallet: str = None) -> list[dict]:
     try:
         if not wallet or wallet in ('null', 'undefined', ''):
             return []
             
-        with get_db() as db:
-            rows = db.execute("SELECT * FROM trade_logs WHERE user_id = ? ORDER BY timestamp ASC", (wallet,)).fetchall()
-            return [dict(r) for r in rows]
+        wallet = wallet.strip()
+            
+        db = get_async_db()
+        rows = await db.trade_logs.find({"user_id": wallet}).sort("timestamp", 1).to_list(length=None)
+        for r in rows:
+            if "_id" in r:
+                r["_id"] = str(r["_id"])
+        return rows
     except Exception:
         return []
 
-def _load_all_decisions(wallet: str = None) -> list[dict]:
+async def _load_all_decisions(wallet: str = None) -> list[dict]:
     try:
         if not wallet or wallet in ('null', 'undefined', ''):
             return []
             
-        with get_db() as db:
-            rows = db.execute("SELECT * FROM decision_logs WHERE user_id = ? ORDER BY timestamp DESC", (wallet,)).fetchall()
-            return [dict(r) for r in rows]
+        db = get_async_db()
+        rows = await db.decision_logs.find({"user_id": wallet}).sort("timestamp", -1).to_list(length=None)
+        for r in rows:
+            if "_id" in r:
+                r["_id"] = str(r["_id"])
+        return rows
     except Exception:
         return []
 
 
 # ── API: Portfolio Stats ───────────────────────────────────────────────────────
 @app.get("/api/stats")
-def get_stats(wallet: str = None):
+async def get_stats(wallet: str = None):
     try:
         empty_stats = {
             "equity": 0.0,
@@ -191,6 +200,8 @@ def get_stats(wallet: str = None):
         
         if not wallet or wallet in ('null', 'undefined', ''):
             return empty_stats
+            
+        wallet = wallet.strip()
 
         # Fetch real-time equity from Hyperliquid
         try:
@@ -201,48 +212,65 @@ def get_stats(wallet: str = None):
             margin_summary = state.get("marginSummary", {})
             equity = float(margin_summary.get("accountValue", 0.0))
             
+            try:
+                spot_state = info.spot_user_state(wallet)
+                for bal in spot_state.get("balances", []):
+                    if bal.get("coin") == "USDC":
+                        equity += float(bal.get("total", 0))
+            except Exception as e:
+                pass
+
             positions = []
             for entry in state.get("assetPositions", []):
                 pos = entry.get("position", {})
                 if pos and float(pos.get("szi", 0)) != 0:
                     szi = float(pos["szi"])
                     entry_px = float(pos["entryPx"])
+                    leverage_val = pos.get("leverage", {}).get("value", 1) if isinstance(pos.get("leverage"), dict) else pos.get("leverage", 1)
+                    leverage_type = pos.get("leverage", {}).get("type", "cross") if isinstance(pos.get("leverage"), dict) else "cross"
+                    
                     positions.append({
                         "coin": pos["coin"],
                         "side": "LONG" if szi > 0 else "SHORT",
                         "size": abs(szi),
                         "entry_price": entry_px,
-                        "unrealized_pnl": float(pos["unrealizedPnl"])
+                        "unrealized_pnl": float(pos["unrealizedPnl"]),
+                        "size_usd": float(pos.get("positionValue", abs(szi) * entry_px)),
+                        "liquidation_price": float(pos.get("liquidationPx", 0.0)),
+                        "margin_used": float(pos.get("marginUsed", 0.0)),
+                        "leverage": leverage_val,
+                        "leverage_type": leverage_type,
+                        "unrealized_pnl_pct": float(pos.get("returnOnEquity", 0.0)) * 100
                     })
         except Exception as e:
             print(f"Error fetching Hyperliquid state for {wallet}: {e}")
             equity = 0.0
             positions = []
 
-        with get_db() as db:
-            # Query their trades for stats
-            trades = db.execute("SELECT * FROM trade_logs WHERE LOWER(user_id) = ?", (wallet.lower(),)).fetchall()
-            trades_list = [dict(t) for t in trades]
-            
-            total_trades = len(trades_list)
-            winning = sum(1 for t in trades_list if t.get("pnl_usd") and t.get("pnl_usd") > 0)
-            losing = sum(1 for t in trades_list if t.get("pnl_usd") is not None and t.get("pnl_usd") <= 0 and t.get("event") == "TRADE_CLOSE")
-            win_rate = (winning / total_trades * 100) if total_trades > 0 else 0.0
-            
-            return {
-                "equity": equity,
-                "cash": equity,
-                "realized_pnl": sum(t.get("pnl_usd") or 0.0 for t in trades_list),
-                "unrealized_pnl": sum(p["unrealized_pnl"] for p in positions),
-                "total_trades": total_trades,
-                "winning_trades": winning,
-                "losing_trades": losing,
-                "win_rate": win_rate,
-                "fees_paid": 0.0,
-                "eth_price": empty_stats["eth_price"],
-                "positions": positions,
-                "last_updated": datetime.utcnow().isoformat(),
-            }
+        db = get_async_db()
+        # Query their trades for stats
+        # Case insensitive match for user_id
+        trades_list = await db.trade_logs.find({"user_id": re.compile(f"^{wallet}$", re.IGNORECASE)}).to_list(length=None)
+        
+        total_trades = len(trades_list)
+        winning = sum(1 for t in trades_list if t.get("pnl_usd") and t.get("pnl_usd") > 0)
+        losing = sum(1 for t in trades_list if t.get("pnl_usd") is not None and t.get("pnl_usd") <= 0 and t.get("event") == "TRADE_CLOSE")
+        win_rate = (winning / total_trades * 100) if total_trades > 0 else 0.0
+        
+        return {
+            "equity": equity,
+            "cash": equity,
+            "realized_pnl": sum(t.get("pnl_usd") or 0.0 for t in trades_list),
+            "unrealized_pnl": sum(p["unrealized_pnl"] for p in positions),
+            "total_trades": total_trades,
+            "winning_trades": winning,
+            "losing_trades": losing,
+            "win_rate": win_rate,
+            "fees_paid": 0.0,
+            "eth_price": empty_stats["eth_price"],
+            "positions": positions,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -250,7 +278,7 @@ def get_stats(wallet: str = None):
 # ── API: Recent Trades ─────────────────────────────────────────────────────────
 @app.get("/api/trades")
 async def get_trades(wallet: str = None):
-    trades = _load_all_trades(wallet)
+    trades = await _load_all_trades(wallet)
     return list(reversed(trades))[:20]
 
 
@@ -280,43 +308,51 @@ async def subscribe_strategy(request: Request):
     data = await request.json()
     wallet_address = data.get("wallet_address")
     strategy_id = data.get("strategy_id")
-    capital = data.get("capital", 100)
-    leverage = data.get("leverage", 10)
-    timeframe = data.get("timeframe", "1h")
+    
+    raw_capital = data.get("capital", "AUTO")
+    capital = "AUTO" if raw_capital == "AUTO" else float(raw_capital)
+    
+    raw_lev = data.get("leverage", "AUTO")
+    leverage = "AUTO" if raw_lev == "AUTO" else int(raw_lev)
+    
+    if capital != "AUTO" and capital < 10:
+        raise HTTPException(status_code=400, detail="Minimum margin of $10 is required")
     
     target_pct = data.get("target_pct") # None means AUTO
     stop_loss_pct = data.get("stop_loss_pct") # None means AUTO
     asset_name = data.get("asset_name", "AUTO")
     ai_engine = data.get("ai_engine", "CLAUDE")
+    auto_risk = data.get("auto_risk", True)
     
     if not strategy_id or not wallet_address:
         raise HTTPException(status_code=400, detail="strategy_id and wallet_address required")
         
     try:
-        with get_db() as db:
-            # Check strategy state
-            strat_state = db.execute("SELECT status FROM strategy_state WHERE strategy_id = ?", (strategy_id,)).fetchone()
-            status = 'ACTIVE'
-            alert_msg = None
-            
-            if strat_state and strat_state["status"] == 'IN_TRADE':
-                status = 'WAITING'
-                alert_msg = f"Alert: Strategy '{strategy_id}' is currently IN_TRADE. You have been placed in the waiting room and will be joined automatically when the current cycle finishes."
-            
-            # Upsert subscription
-            db.execute('''
-                INSERT INTO subscriptions (wallet_address, strategy_id, status, capital, leverage, timeframe, target_pct, stop_loss_pct, asset_name, ai_engine)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(wallet_address, strategy_id) DO UPDATE SET
-                    status=excluded.status,
-                    capital=excluded.capital,
-                    leverage=excluded.leverage,
-                    timeframe=excluded.timeframe,
-                    target_pct=excluded.target_pct,
-                    stop_loss_pct=excluded.stop_loss_pct,
-                    asset_name=excluded.asset_name,
-                    ai_engine=excluded.ai_engine
-            ''', (wallet_address, strategy_id, status, capital, leverage, timeframe, target_pct, stop_loss_pct, asset_name, ai_engine))
+        db = get_async_db()
+        # Check strategy state
+        strat_state = await db.strategy_state.find_one({"strategy_id": strategy_id})
+        status = 'ACTIVE'
+        alert_msg = None
+        
+        if strat_state and strat_state.get("status") == 'IN_TRADE':
+            status = 'WAITING'
+            alert_msg = f"Alert: Strategy '{strategy_id}' is currently IN_TRADE. You have been placed in the waiting room and will be joined automatically when the current cycle finishes."
+        
+        # Upsert subscription
+        await db.synap_surf_ai.update_one(
+            {"wallet_address": wallet_address, "strategy_id": strategy_id},
+            {"$set": {
+                "status": status,
+                "auto_risk": auto_risk,
+                "capital": capital,
+                "leverage": leverage,
+                "target_pct": target_pct,
+                "stop_loss_pct": stop_loss_pct,
+                "asset_name": asset_name,
+                "ai_engine": ai_engine
+            }},
+            upsert=True
+        )
             
         return {"status": "ok", "subscription_status": status, "alert": alert_msg}
     except Exception as e:
@@ -325,23 +361,19 @@ async def subscribe_strategy(request: Request):
 # ── API: AI Signals (Clean Feed) ──────────────────────────────────────────────
 @app.get("/api/decisions")
 async def get_decisions(wallet: str = None):
-    trades = _load_all_trades(wallet)
-    decisions_raw = _load_all_decisions(wallet)
+    decisions_raw = await _load_all_decisions(wallet)
     
     feed = []
-    for t in trades:
-        # Hide raw manual FILL events from the AI Signals feed
-        if t.get("event") == "FILL":
-            continue
-        feed.append({"type": "trade_event", "timestamp": t.get("timestamp"), "data": t})
-        
     for d_row in decisions_raw:
         ts = d_row.get("timestamp")
         dj = d_row.get("decision_json")
         if dj:
             try:
                 dec_obj = json.loads(dj)
-                for rec_trade in dec_obj.get("trades", []):
+                trades = dec_obj.get("trades", [])
+                
+                # Add actionable trades
+                for rec_trade in trades:
                     signal_data = {
                         "coin": rec_trade.get("coin"),
                         "reasoning": rec_trade.get("reasoning", "").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"),
@@ -350,6 +382,17 @@ async def get_decisions(wallet: str = None):
                         "leverage": rec_trade.get("leverage"),
                         "entry_price": rec_trade.get("entry_price"),
                         "position_size_pct": rec_trade.get("position_size_pct"),
+                        "event": "SIGNAL"
+                    }
+                    feed.append({"type": "signal", "timestamp": ts, "data": signal_data})
+                
+                # If there were no trades but a skip reason was provided, emit a SKIP signal
+                if not trades and dec_obj.get("skip_reason"):
+                    signal_data = {
+                        "coin": "MARKET",
+                        "reasoning": dec_obj.get("skip_reason").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"),
+                        "conviction": 0,
+                        "side": "SKIP",
                         "event": "SIGNAL"
                     }
                     feed.append({"type": "signal", "timestamp": ts, "data": signal_data})
@@ -365,15 +408,25 @@ async def get_decisions(wallet: str = None):
 @app.get("/api/watchlist")
 async def get_watchlist():
     try:
-        with get_db() as db:
-            row = db.execute("SELECT value_json FROM market_data WHERE key = 'watchlist'").fetchone()
-            if row:
-                return json.loads(row["value_json"])
+        db = get_async_db()
+        row = await db.market_data.find_one({"key": "active_watchlist"})
+        if row and "value_json" in row:
+            return {"watchlist": json.loads(row["value_json"])}
     except Exception:
         pass
-    return {"watchlist": ["BTC", "ETH", "SOL"], "updated_at": ""}
+    return {"watchlist": ["BTC", "ETH", "SOL"]}
 
 
+@app.get("/api/market/ticker")
+async def get_market_ticker():
+    try:
+        db = get_async_db()
+        row = await db.market_data.find_one({"key": "volatility_ticker_top_20"})
+        if row and "value_json" in row:
+            return json.loads(row["value_json"])
+    except Exception:
+        pass
+    return {"timestamp": "", "data": []}
 @app.get("/api/market_intel")
 async def get_market_intel():
     intel = {
@@ -385,31 +438,35 @@ async def get_market_intel():
         "top_coins": []
     }
     try:
-        with get_db() as db:
-            row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence'").fetchone()
-            if row:
-                intel_json = row["value_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder")
-                db_intel = json.loads(intel_json)
-                intel.update(db_intel)
-                
-                # Extract from nested sentiment dict if present
-                sentiment = db_intel.get("sentiment", {})
-                if "fear_greed" in sentiment:
-                    intel["fear_greed"] = sentiment["fear_greed"]
-                if "trending_coins" in sentiment:
-                    intel["trending_coins"] = [c.get("symbol", c.get("name", "")) for c in sentiment["trending_coins"]]
-                if "trending_categories" in sentiment:
-                    intel["trending_narratives"] = [c.get("name", "") for c in sentiment["trending_categories"]]
+        db = get_async_db()
+        row = await db.market_data.find_one({"key": "market_intelligence"})
+        if row and "value_json" in row:
+            intel_json = row["value_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder")
+            db_intel = json.loads(intel_json)
+            intel.update(db_intel)
             
-            # Instead of picking a random user's decision_log, use the global AI master decision
-            global_row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence_global'").fetchone()
-            if global_row and global_row["value_json"]:
-                dj = json.loads(global_row["value_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"))
-                if dj.get("market_assessment"):
-                    intel["market_view"] = dj.get("market_assessment")
-                if dj.get("scan_result"):
-                    intel["scan_reasoning"] = dj.get("scan_result", {}).get("reasoning", "")
-                    intel["top_coins"] = dj.get("scan_result", {}).get("top_coins", [])
+            # Extract from nested sentiment dict if present
+            sentiment = db_intel.get("sentiment", {})
+            if "fear_greed" in sentiment:
+                intel["fear_greed"] = sentiment["fear_greed"]
+            if "trending_coins" in sentiment:
+                intel["trending_coins"] = [c.get("symbol", c.get("name", "")) for c in sentiment["trending_coins"]]
+            if "trending_categories" in sentiment:
+                intel["trending_narratives"] = [c.get("name", "") for c in sentiment["trending_categories"]]
+            if "market_headlines" in sentiment:
+                intel["market_headlines"] = sentiment["market_headlines"]
+            if "coin_headlines" in sentiment:
+                intel["coin_headlines"] = sentiment["coin_headlines"]
+        
+        # Instead of picking a random user's decision_log, use the global AI master decision
+        global_row = await db.market_data.find_one({"key": "market_intelligence_global"})
+        if global_row and "value_json" in global_row:
+            dj = json.loads(global_row["value_json"].replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"))
+            if dj.get("market_assessment"):
+                intel["market_view"] = dj.get("market_assessment")
+            if dj.get("scan_result"):
+                intel["scan_reasoning"] = dj.get("scan_result", {}).get("reasoning", "")
+                intel["top_coins"] = dj.get("scan_result", {}).get("top_coins", [])
     except Exception:
         pass
     return intel
@@ -417,14 +474,14 @@ async def get_market_intel():
 
 # ── API: Hyperliquid Proxy ──────────────────────────────────────────────────
 @app.get("/api/hl_top_perps")
-def get_hl_top_perps():
+async def get_hl_top_perps():
     """Read top perps from the SQLite DB updated by the background service."""
     try:
-        with get_db() as db:
-            row = db.execute("SELECT value_json FROM market_data WHERE key = 'top_perps'").fetchone()
-            if row:
-                cached_data = json.loads(row["value_json"])
-                return cached_data.get("data", {})
+        db = get_async_db()
+        row = await db.market_data.find_one({"key": "top_perps"})
+        if row and "value_json" in row:
+            cached_data = json.loads(row["value_json"])
+            return cached_data.get("data", {})
                 
         # Fallback
         data = get_top_3_perps_with_details()
@@ -447,7 +504,7 @@ async def get_equity_curve(wallet: str = None):
 
     curve = [{"time": now_ts - 86400, "value": initial}]
 
-    all_trades = sorted(_load_all_trades(wallet), key=lambda x: x.get("timestamp", ""))
+    all_trades = sorted(await _load_all_trades(wallet), key=lambda x: x.get("timestamp", ""))
 
     for trade in all_trades:
         ts_str = trade.get("timestamp", "")
@@ -467,10 +524,10 @@ async def get_equity_curve(wallet: str = None):
             curve.append({"time": unix_ts, "value": round(equity, 2)})
 
     try:
-        with get_db() as db:
-            row = db.execute("SELECT cash, total_equity FROM portfolios WHERE user_id = ?", (wallet,)).fetchone()
-            if row:
-                equity = float(row["cash"]) # fallback, real equity might need unrealized
+        db = get_async_db()
+        row = await db.portfolios.find_one({"user_id": wallet})
+        if row and "cash" in row:
+            equity = float(row["cash"]) # fallback, real equity might need unrealized
     except Exception:
         pass
 
@@ -501,56 +558,95 @@ class TradeCoinReq(BaseModel):
     coin: str
     wallet_address: str
 
-def get_hl_client(wallet_address: str):
-    from backend.db import get_db
-    with get_db() as db:
-        user = db.execute("SELECT private_key FROM users WHERE LOWER(wallet_address) = ?", (wallet_address.lower(),)).fetchone()
-        if not user or not user["private_key"]:
-            raise ValueError("No private key configured for this wallet")
-        
-        from synap.hyperliquid_trader import HyperliquidTrader
-        return HyperliquidTrader(private_key=user["private_key"], wallet_address=wallet_address)
+async def get_hl_client(wallet_address: str):
+    db = get_async_db()
+    user = await db.users.find_one({"wallet_address": re.compile(f"^{wallet_address}$", re.IGNORECASE)})
+    if not user or not user.get("private_key"):
+        raise ValueError("No private key configured for this wallet")
+    
+    from synap.hyperliquid_trader import HyperliquidTrader
+    return HyperliquidTrader(private_key=user["private_key"], wallet_address=wallet_address)
 
 @app.post("/api/trade/open")
-def manual_trade_open(req: TradeOpenReq):
+async def manual_trade_open(req: TradeOpenReq):
     try:
-        client = get_hl_client(req.wallet_address)
+        client = await get_hl_client(req.wallet_address)
+        
+        entry_px = req.limit_price or 0.0
+        if entry_px == 0.0:
+            prices = get_mid_prices()
+            entry_px = prices.get(req.coin.upper(), 0.0)
+            
+        if entry_px == 0.0:
+            raise ValueError(f"Could not determine market price for {req.coin}")
+            
+        tp = req.tp_price or 0.0
+        sl = req.sl_price or 0.0
+        if req.side.upper() == "LONG":
+            if tp > 0 and tp <= entry_px:
+                raise ValueError(f"For LONG trades, Take Profit must be higher than entry price (${entry_px})")
+            if sl > 0 and sl >= entry_px:
+                raise ValueError(f"For LONG trades, Stop Loss must be lower than entry price (${entry_px})")
+        elif req.side.upper() == "SHORT":
+            if tp > 0 and tp >= entry_px:
+                raise ValueError(f"For SHORT trades, Take Profit must be lower than entry price (${entry_px})")
+            if sl > 0 and sl <= entry_px:
+                raise ValueError(f"For SHORT trades, Stop Loss must be higher than entry price (${entry_px})")
         
         # HyperliquidTrader uses slightly different args than HyperliquidManualClient
         res = client.open_position(
             coin=req.coin, 
             side=req.side, 
-            entry_price=req.limit_price or 0.0,
+            entry_price=entry_px,
             size_usd=req.size_usd, 
             leverage=req.leverage,
             stop_loss=req.sl_price or 0.0,
-            tp1=req.tp_price or 0.0
+            tp1=req.tp_price or 0.0,
+            tp2=0.0
         )
         if not res:
             raise HTTPException(status_code=400, detail=res.get("message"))
+            
+        db = get_async_db()
+        await db.trade_logs.insert_one({
+            "user_id": req.wallet_address,
+            "event": "TRADE_OPEN",
+            "coin": req.coin,
+            "side": req.side,
+            "entry_price": entry_px,
+            "position_size_usd": req.size_usd,
+            "leverage": req.leverage,
+            "stop_loss": req.sl_price or 0.0,
+            "take_profit_1": req.tp_price or 0.0,
+            "take_profit_2": 0.0,
+            "conviction": 1.0,
+            "reasoning": "Manual UI Trade",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/trade/close")
-def manual_trade_close(req: TradeCoinReq):
+async def manual_trade_close(req: TradeCoinReq):
     try:
-        client = get_hl_client(req.wallet_address)
+        client = await get_hl_client(req.wallet_address)
         res = client.close_position(req.coin, 0.0)
         if not res:
             raise HTTPException(status_code=400, detail=res.get("message"))
-        return res
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/trade/reverse")
-def manual_trade_reverse(req: TradeCoinReq):
-    try:
-        client = get_hl_client(req.wallet_address)
-        # Assuming HyperliquidTrader has reverse_position, or we can just close and open opposite
-        res = client.close_position(req.coin, 0.0)
-        if not res:
-            raise HTTPException(status_code=400, detail=res.get("message"))
+            
+        prices = get_mid_prices()
+        exit_px = prices.get(req.coin.upper(), 0.0)
+            
+        db = get_async_db()
+        await db.trade_logs.insert_one({
+            "user_id": req.wallet_address,
+            "event": "TRADE_CLOSE",
+            "coin": req.coin,
+            "exit_price": exit_px,
+            "reasoning": "Manual UI Close",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -569,6 +665,17 @@ def get_wallet_balance(wallet: Optional[str] = None):
         margin = state.get("marginSummary", {})
         account_value = float(margin.get("accountValue", 0))
         available = float(state.get("withdrawable", account_value))
+
+        try:
+            spot_state = info.spot_user_state(addr)
+            for bal in spot_state.get("balances", []):
+                if bal.get("coin") == "USDC":
+                    spot_val = float(bal.get("total", 0))
+                    account_value += spot_val
+                    available += spot_val
+        except Exception:
+            pass
+
         return {"balance": round(account_value, 2), "available": round(available, 2), "configured": True}
     except Exception as e:
         return {"balance": 0, "available": 0, "configured": False, "error": str(e)}
@@ -629,28 +736,30 @@ class AuthLoginReq(BaseModel):
 @app.post("/api/auth/login")
 async def auth_login(req: AuthLoginReq):
     wallet = req.wallet_address.lower()
-    with get_db() as db:
-        user = db.execute("SELECT * FROM users WHERE LOWER(wallet_address) = ?", (wallet,)).fetchone()
-        if not user:
-            db.execute("INSERT INTO users (wallet_address) VALUES (?)", (req.wallet_address,))
+    db = get_async_db()
+    user = await db.users.find_one({"wallet_address": re.compile(f"^{wallet}$", re.IGNORECASE)})
+    if not user:
+        await db.users.insert_one({"wallet_address": req.wallet_address})
     return {"status": "success"}
 
 @app.get("/api/auth/me")
 async def auth_me(wallet: str):
-    w = wallet.lower()
-    with get_db() as db:
-        user = db.execute("SELECT wallet_address, email FROM users WHERE LOWER(wallet_address) = ?", (w,)).fetchone()
-        if not user:
-            # Return empty structure if not found, since frontend might check connection blindly
-            return {"wallet_address": wallet, "email": "", "subscriptions": []}
-            
-        subs = db.execute("SELECT * FROM subscriptions WHERE LOWER(wallet_address) = ? AND status = 'ACTIVE'", (w,)).fetchall()
+    w = wallet.strip().lower()
+    db = get_async_db()
+    user = await db.users.find_one({"wallet_address": re.compile(f"^{w}$", re.IGNORECASE)})
+    if not user:
+        # Return empty structure if not found, since frontend might check connection blindly
+        return {"wallet_address": wallet, "email": "", "subscriptions": []}
         
-        return {
-            "wallet_address": user["wallet_address"],
-            "email": user["email"],
-            "subscriptions": [dict(s) for s in subs]
-        }
+    subs = await db.synap_surf_ai.find({"wallet_address": re.compile(f"^{w}$", re.IGNORECASE), "status": "ACTIVE"}).to_list(length=None)
+    
+    # Motor returns dicts
+    return {
+        "wallet_address": user.get("wallet_address", wallet),
+        "email": user.get("email", ""),
+        "private_key": user.get("private_key", ""),
+        "subscriptions": [s for s in subs]
+    }
 
 
 
@@ -658,33 +767,59 @@ class KeysReq(BaseModel):
     hl_private_key: Optional[str] = None
     hl_wallet: Optional[str] = None
     email: Optional[str] = None
+    telegram_bot_token: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+
+@app.get("/api/settings/keys")
+async def get_keys():
+    db = get_async_db()
+    tg_doc = await db.market_data.find_one({"key": "telegram_settings"})
+    if tg_doc:
+        return {
+            "telegram_bot_token": tg_doc.get("telegram_bot_token", ""),
+            "telegram_chat_id": tg_doc.get("telegram_chat_id", "")
+        }
+    return {}
 
 @app.post("/api/settings/keys")
 async def save_hl_keys(req: KeysReq):
     try:
         wallet_addr = req.hl_wallet
-        if not wallet_addr:
-            raise ValueError("wallet address is required")
-
-        updates = []
-        params = []
+        update_doc = {}
         
-        if req.hl_private_key:
-            # Validate private key is a valid Ethereum key
-            from eth_account import Account as _Account
-            account = _Account.from_key(req.hl_private_key)  # raises if invalid
-            updates.append("private_key = ?")
-            params.append(req.hl_private_key)
+        if req.hl_private_key is not None:
+            if req.hl_private_key.strip() == "":
+                update_doc["private_key"] = ""
+            else:
+                # Validate private key is a valid Ethereum key
+                from eth_account import Account as _Account
+                account = _Account.from_key(req.hl_private_key)  # raises if invalid
+                update_doc["private_key"] = req.hl_private_key
             
         if req.email:
-            updates.append("email = ?")
-            params.append(req.email)
+            update_doc["email"] = req.email
             
-        if updates:
-            params.append(wallet_addr.lower())
-            query = f"UPDATE users SET {', '.join(updates)} WHERE LOWER(wallet_address) = ?"
-            with get_db() as db:
-                db.execute(query, params)
+        db = get_async_db()
+        
+        if wallet_addr and update_doc:
+            await db.users.update_one(
+                {"wallet_address": re.compile(f"^{wallet_addr}$", re.IGNORECASE)},
+                {"$set": update_doc}
+            )
+
+        # Handle global Telegram settings
+        if req.telegram_bot_token is not None or req.telegram_chat_id is not None:
+            tg_doc = {}
+            if req.telegram_bot_token is not None:
+                tg_doc["telegram_bot_token"] = req.telegram_bot_token
+            if req.telegram_chat_id is not None:
+                tg_doc["telegram_chat_id"] = req.telegram_chat_id
+            
+            await db.market_data.update_one(
+                {"key": "telegram_settings"},
+                {"$set": tg_doc},
+                upsert=True
+            )
 
         return {"status": "success"}
     except Exception as e:
@@ -701,30 +836,41 @@ class SubscribeRequest(BaseModel):
 @app.get("/api/strategies")
 async def list_strategies(coin: str = "BTC"):
     try:
-        with get_db() as db:
-            rows = db.execute("SELECT * FROM strategies").fetchall()
-            strats = []
-            for r in rows:
-                strat = dict(r)
-                try:
-                    strat["tags"] = json.loads(strat["tags"])
-                except:
-                    strat["tags"] = []
+        import json
+        
+        db = get_async_db()
+        
+        strats = []
+        metadata_docs = await db.strategies_metadata.find({}).to_list(length=None)
+        
+        for doc in metadata_docs:
+            strats.append({
+                "id": doc.get("strategy_id"),
+                "name": doc.get("name"),
+                "description": doc.get("description"),
+                "tags": doc.get("tags", []),
+                "metrics": {
+                    "winRate": 0.0,
+                    "totalPnl": 0.0,
+                    "drawdown": 0.0,
+                    "trades": 0
+                }
+            })
+        # Fetch cached backtest metrics for each strategy
+        for strat in strats:
+            cache_row = await db.backtest_cache.find_one({"strategy_id": strat.get("id"), "timeframe": "1h", "coin": coin})
+            if cache_row and "metrics_json" in cache_row:
+                strat["metrics"] = json.loads(cache_row["metrics_json"])
+            else:
+                # Default mock metrics until backtester runs
+                strat["metrics"] = {
+                    "winRate": 65.5,
+                    "totalPnl": 850.2,
+                    "drawdown": 4.5,
+                    "trades": 120
+                }
                 
-                # Fetch cached backtest metrics for this coin
-                cache_row = db.execute("SELECT metrics_json FROM backtest_cache WHERE strategy_id = ? AND timeframe = ? AND coin = ?", (strat["id"], "1h", coin)).fetchone()
-                if cache_row:
-                    strat["metrics"] = json.loads(cache_row["metrics_json"])
-                else:
-                    # Default mock metrics until backtester runs
-                    strat["metrics"] = {
-                        "winRate": 65.5,
-                        "totalPnl": 850.2,
-                        "drawdown": 4.5,
-                        "trades": 120
-                    }
-                strats.append(strat)
-            return strats
+        return strats
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -732,8 +878,19 @@ async def list_strategies(coin: str = "BTC"):
 
 # Duplicate endpoint removed
 
+class BacktestReq(BaseModel):
+    timeframe: str = "1h"
+    coin: str = "BTC"
+    capital: float = 1000.0
+    leverage: int = 1
+
 @app.post("/api/strategies/{strategy_id}/backtest")
-async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC"):
+async def run_backtest(strategy_id: str, req: BacktestReq):
+    timeframe = req.timeframe
+    coin = req.coin
+    capital = req.capital
+    leverage = req.leverage
+    
     import time
     
     # Initialize default metrics
@@ -757,25 +914,89 @@ async def run_backtest(strategy_id: str, timeframe: str = "1h", coin: str = "BTC
         df = fetch_candles(coin, interval=timeframe, n=target_n)
         
         if not df.empty:
-            # Run the real backtest simulation
-            results = run_simulation(df, strategy_id=strategy_id, initial_capital=1000.0, leverage=1)
-            metrics = results["metrics"]
-            trades = results["trades"]
+            import importlib.util
+            import inspect
+            from pathlib import Path
             
+            lib_path = Path(__file__).resolve().parent.parent / "strategies_lib"
+            if not lib_path.exists():
+                lib_path = Path("strategies_lib")
+                
+            strategy_file = lib_path / f"{strategy_id}.py"
+            
+            if strategy_file.exists():
+                import sys
+                if str(lib_path) not in sys.path:
+                    sys.path.insert(0, str(lib_path))
+                    
+                # Dynamically load the requested strategy file
+                spec = importlib.util.spec_from_file_location("dynamic_strategy", str(strategy_file))
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                # Find the Strategy class defined in that file
+                StrategyClass = None
+                for name, obj in inspect.getmembers(module, inspect.isclass):
+                    if hasattr(obj, "run") and obj.__module__ == "dynamic_strategy":
+                        StrategyClass = obj
+                        break
+                        
+                if StrategyClass:
+                    strategy_instance = StrategyClass(initial_capital=capital, position_size_pct=float(leverage))
+                    raw_results = strategy_instance.run(df)
+                    
+                    if "error" not in raw_results:
+                        metrics = raw_results.get("metrics", metrics)
+                        frontend_trades = []
+                        for t in raw_results.get("trade_log", []):
+                            try:
+                                entry_ts = int(t["entry_time"].timestamp())
+                                exit_ts = int(t["exit_time"].timestamp())
+                            except:
+                                entry_ts = t["entry_time"]
+                                exit_ts = t["exit_time"]
+                                
+                            # Map the trade sequence to charting markers
+                            frontend_trades.append({
+                                "time": entry_ts,
+                                "price": t["entry_price"],
+                                "side": "buy" if t["position"] == 1 else "sell",
+                                "text": "Long" if t["position"] == 1 else "Short"
+                            })
+                            frontend_trades.append({
+                                "time": exit_ts,
+                                "price": t["exit_price"],
+                                "side": "sell" if t["position"] == 1 else "buy",
+                                "text": f"Exit ({t.get('reason', '')})"
+                            })
+                            
+                        trades = sorted(frontend_trades, key=lambda x: x["time"])
+                else:
+                    # Fallback to standard simulation
+                    results = run_simulation(df, strategy_id=strategy_id, initial_capital=capital, leverage=leverage)
+                    metrics = results["metrics"]
+                    trades = results["trades"]
+            else:
+                # Fallback to standard simulation
+                results = run_simulation(df, strategy_id=strategy_id, initial_capital=capital, leverage=leverage)
+                metrics = results["metrics"]
+                trades = results["trades"]
+                
     except Exception as e:
         import traceback
         print(f"Error running backtest: {e}")
         traceback.print_exc()
 
-    with get_db() as db:
-        metrics_json = json.dumps(metrics)
-        db.execute('''
-            INSERT INTO backtest_cache (strategy_id, timeframe, coin, metrics_json, updated_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(strategy_id, timeframe, coin) DO UPDATE SET 
-            metrics_json = excluded.metrics_json,
-            updated_at = CURRENT_TIMESTAMP
-        ''', (strategy_id, timeframe, coin, metrics_json))
+    db = get_async_db()
+    metrics_json = json.dumps(metrics)
+    await db.backtest_cache.update_one(
+        {"strategy_id": strategy_id, "timeframe": timeframe, "coin": coin},
+        {"$set": {
+            "metrics_json": metrics_json,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
         
     return {"status": "success", "metrics": metrics, "trades": trades}
 
@@ -785,13 +1006,13 @@ class ChatRequest(BaseModel):
     context_type: str = "general"
     wallet: Optional[str] = None
 
-def _build_context(db, context_type: str, wallet: str = None) -> str:
+async def _build_context(db, context_type: str, wallet: str = None) -> str:
     """Build a concise, deduplicated context string for Claude."""
     parts = []
 
     if context_type in ("market_analysis", "general"):
-        row = db.execute("SELECT value_json FROM market_data WHERE key = 'market_intelligence'").fetchone()
-        if row:
+        row = await db.market_data.find_one({"key": "market_intelligence"})
+        if row and "value_json" in row:
             try:
                 intel = json.loads(row["value_json"])
                 fg = intel.get("fear_greed", {})
@@ -809,29 +1030,30 @@ def _build_context(db, context_type: str, wallet: str = None) -> str:
                 pass
 
     if context_type in ("strategy_generation", "general"):
-        strats = db.execute("SELECT name, tags FROM strategies").fetchall()
+        strats = await db.strategies.find({}).to_list(length=None)
         if strats:
-            strat_lines = [f"{s['name']} ({s['tags']})" for s in strats]
+            strat_lines = [f"{s.get('name', '')} ({s.get('tags', '')})" for s in strats]
             parts.append(f"AVAILABLE STRATEGIES ({len(strats)} total):\n" + "\n".join(strat_lines))
 
     if context_type in ("smart_money_holder", "general"):
-        rows = db.execute("SELECT endpoint, response_json FROM nansen_cache ORDER BY timestamp DESC LIMIT 3").fetchall()
+        rows = await db.nansen_cache.find({}).sort("timestamp", -1).limit(3).to_list(length=3)
         if rows:
             sm_parts = ["SMART MONEY HOLDER DATA:"]
             for r in rows:
-                sm_parts.append(f"[{r['endpoint']}]\n{r['response_json'][:1500]}")
+                sm_parts.append(f"[{r.get('endpoint', '')}]\n{r.get('response_json', '')[:1500]}")
             parts.append("\n".join(sm_parts))
 
     if context_type in ("risk_management", "general"):
         if wallet:
-            trades = db.execute(
-                "SELECT coin, side, entry_price, exit_price, pnl_usd, action, timestamp FROM trade_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT 8",
-                (wallet,)
-            ).fetchall()
+            trades = await db.trade_logs.find({"user_id": wallet}).sort("timestamp", -1).limit(8).to_list(length=8)
         else:
             trades = []
         if trades:
-            trade_lines = [f"- {dict(t)}" for t in trades]
+            trade_lines = []
+            for t in trades:
+                t_copy = t.copy()
+                if "_id" in t_copy: del t_copy["_id"]
+                trade_lines.append(f"- {t_copy}")
             parts.append("USER RECENT TRADES:\n" + "\n".join(trade_lines))
 
     # Scrub 'nansen' from the context before giving it to Claude
@@ -867,30 +1089,28 @@ async def chat_endpoint(req: ChatRequest):
     # ── Tier 1: Exact hash match (free, instant) ──────────────────────────────
     cached_response = None
     matched_key = None
-    with get_db() as db:
-        row = db.execute(
-            "SELECT response FROM chat_cache WHERE cache_key = ? AND expires_at > CURRENT_TIMESTAMP",
-            (cache_key,)
-        ).fetchone()
-        if row:
-            cached_response = row["response"]
-            matched_key = cache_key
+    db = get_async_db()
+    row = await db.chat_cache.find_one({
+        "cache_key": cache_key,
+        "expires_at": {"$gt": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")}
+    })
+    if row:
+        cached_response = row.get("response")
+        matched_key = cache_key
 
     # ── Tier 2: Semantic similarity search (handles synonyms) ─────────────────
     if cached_response is None:
         prompt_embedding = await asyncio.to_thread(_embed, req.prompt.strip().lower())
         if prompt_embedding is not None:
-            with get_db() as db:
-                candidates = db.execute(
-                    """SELECT cache_key, response, embedding_json FROM chat_cache
-                       WHERE context_type = ? AND expires_at > CURRENT_TIMESTAMP
-                       AND embedding_json IS NOT NULL""",
-                    (req.context_type,)
-                ).fetchall()
+            candidates = await db.chat_cache.find({
+                "context_type": req.context_type,
+                "expires_at": {"$gt": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")},
+                "embedding_json": {"$ne": None}
+            }).to_list(length=None)
             best_score = 0.0
             for c in candidates:
                 try:
-                    cached_emb = json.loads(c["embedding_json"])
+                    cached_emb = json.loads(c["embedding_json"]) if isinstance(c["embedding_json"], str) else c["embedding_json"]
                     score = _cosine_similarity(prompt_embedding, cached_emb)
                     if score > best_score:
                         best_score = score
@@ -904,20 +1124,22 @@ async def chat_endpoint(req: ChatRequest):
 
     # ── Serve from cache if found ─────────────────────────────────────────────
     if cached_response is not None:
-        with get_db() as db:
-            db.execute(
-                "UPDATE chat_cache SET hit_count = hit_count + 1, tokens_saved = tokens_saved + 300 WHERE cache_key = ?",
-                (matched_key,)
-            )
-            # Also store the exact-match alias for instant future lookup
-            if matched_key != cache_key:
-                db.execute(
-                    """INSERT OR IGNORE INTO chat_cache 
-                       (cache_key, context_type, prompt, response, embedding_json, hit_count, tokens_saved, expires_at)
-                       SELECT ?, context_type, ?, response, embedding_json, 0, 0, expires_at
-                       FROM chat_cache WHERE cache_key = ?""",
-                    (cache_key, req.prompt, matched_key)
-                )
+        await db.chat_cache.update_one(
+            {"cache_key": matched_key},
+            {"$inc": {"hit_count": 1, "tokens_saved": 300}}
+        )
+        if matched_key != cache_key:
+            existing = await db.chat_cache.find_one({"cache_key": cache_key})
+            if not existing:
+                matched_doc = await db.chat_cache.find_one({"cache_key": matched_key})
+                if matched_doc:
+                    new_doc = matched_doc.copy()
+                    if "_id" in new_doc: del new_doc["_id"]
+                    new_doc["cache_key"] = cache_key
+                    new_doc["prompt"] = req.prompt
+                    new_doc["hit_count"] = 0
+                    new_doc["tokens_saved"] = 0
+                    await db.chat_cache.insert_one(new_doc)
         _cr = cached_response
         async def stream_from_cache():
             for word in _cr.split(" "):
@@ -928,8 +1150,7 @@ async def chat_endpoint(req: ChatRequest):
     # ── Cache MISS — call Claude ──────────────────────────────────────────────
     client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
-    with get_db() as db:
-        context_str = _build_context(db, req.context_type, req.wallet)
+    context_str = await _build_context(db, req.context_type, req.wallet)
 
     system_prompt = f"""You are AlgoBrain, an elite AI crypto trading assistant integrated directly into this platform.
 
@@ -969,16 +1190,20 @@ CONTEXT:
 
         # Save full response + embedding to cache
         try:
-            with get_db() as db:
-                db.execute(
-                    """INSERT INTO chat_cache (cache_key, context_type, prompt, response, embedding_json, hit_count, tokens_saved, expires_at)
-                       VALUES (?, ?, ?, ?, ?, 0, 0, ?)
-                       ON CONFLICT(cache_key) DO UPDATE SET
-                         response = excluded.response,
-                         embedding_json = excluded.embedding_json,
-                         expires_at = excluded.expires_at""",
-                    (cache_key, req.context_type, req.prompt, "".join(full_response), emb_json, expires_at)
-                )
+            await db.chat_cache.update_one(
+                {"cache_key": cache_key},
+                {"$set": {
+                    "context_type": req.context_type,
+                    "prompt": req.prompt,
+                    "response": "".join(full_response),
+                    "embedding_json": emb_json,
+                    "expires_at": expires_at
+                }, "$setOnInsert": {
+                    "hit_count": 0,
+                    "tokens_saved": 0
+                }},
+                upsert=True
+            )
         except Exception:
             pass
 
@@ -988,23 +1213,36 @@ CONTEXT:
 @app.get("/api/chat/cache-stats")
 async def chat_cache_stats():
     """Returns cache hit statistics and estimated token savings."""
-    with get_db() as db:
-        rows = db.execute(
-            """SELECT context_type, COUNT(*) as entries,
-               SUM(hit_count) as total_hits,
-               SUM(tokens_saved) as total_tokens_saved
-               FROM chat_cache
-               WHERE expires_at > CURRENT_TIMESTAMP
-               GROUP BY context_type"""
-        ).fetchall()
-        total = db.execute(
-            "SELECT COUNT(*) as c, SUM(hit_count) as h, SUM(tokens_saved) as t FROM chat_cache"
-        ).fetchone()
+    db = get_async_db()
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    
+    pipeline = [
+        {"$match": {"expires_at": {"$gt": now_str}}},
+        {"$group": {
+            "_id": "$context_type",
+            "entries": {"$sum": 1},
+            "total_hits": {"$sum": "$hit_count"},
+            "total_tokens_saved": {"$sum": "$tokens_saved"}
+        }}
+    ]
+    rows = await db.chat_cache.aggregate(pipeline).to_list(length=None)
+    
+    total_pipeline = [
+        {"$group": {
+            "_id": None,
+            "c": {"$sum": 1},
+            "h": {"$sum": "$hit_count"},
+            "t": {"$sum": "$tokens_saved"}
+        }}
+    ]
+    total_res = await db.chat_cache.aggregate(total_pipeline).to_list(length=1)
+    total = total_res[0] if total_res else {"c": 0, "h": 0, "t": 0}
+    
     return {
-        "by_context": [dict(r) for r in rows],
-        "total_cached_prompts": total["c"] or 0,
-        "total_cache_hits": total["h"] or 0,
-        "total_tokens_saved": total["t"] or 0,
+        "by_context": [{"context_type": r["_id"], "entries": r["entries"], "total_hits": r["total_hits"], "total_tokens_saved": r["total_tokens_saved"]} for r in rows],
+        "total_cached_prompts": total.get("c", 0),
+        "total_cache_hits": total.get("h", 0),
+        "total_tokens_saved": total.get("t", 0),
     }
 
 class FeedbackRequest(BaseModel):
@@ -1016,25 +1254,21 @@ class FeedbackRequest(BaseModel):
 async def ai_feedback(req: FeedbackRequest):
     """Stores user thumbs up/down feedback on AI responses, toggling if already set."""
     try:
-        with get_db() as db:
-            # First, clear any existing feedback for this message index in this session
-            db.execute("DELETE FROM ai_feedback WHERE message_index = ?", (req.message_index,))
-            
-            # If the feedback is not 'none', insert the new state
-            if req.feedback != 'none':
-                db.execute(
-                    "INSERT INTO ai_feedback (message_index, feedback, text) VALUES (?, ?, ?)",
-                    (req.message_index, req.feedback, req.text)
-                )
+        db = get_async_db()
+        await db.ai_feedback.delete_many({"message_index": req.message_index})
+        if req.feedback != 'none':
+            await db.ai_feedback.insert_one({
+                "message_index": req.message_index,
+                "feedback": req.feedback,
+                "text": req.text
+            })
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
-    # Make sure DB is initialized
-    from backend.db import init_db
-    init_db()
+
     
     port = int(os.environ.get("PORT", 8000))
     print(f"Starting server on port {port}...")

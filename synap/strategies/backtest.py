@@ -58,6 +58,13 @@ def run_simulation(df: pd.DataFrame, strategy_id: str, initial_capital: float = 
     elif strategy_id == "channel_breakout":
         highest_high = pd.Series(high_prices).rolling(20).max().shift(1)
         lowest_low = pd.Series(low_prices).rolling(20).min().shift(1)
+        
+    elif strategy_id == "macd":
+        ema_fast = pd.Series(close_prices).ewm(span=12, adjust=False).mean()
+        ema_slow = pd.Series(close_prices).ewm(span=26, adjust=False).mean()
+        macd_line = ema_fast - ema_slow
+        signal_line = macd_line.ewm(span=9, adjust=False).mean()
+        macd_hist = macd_line - signal_line
 
     for i in range(20, n):
         # We need at least 20 periods for indicators to stabilize
@@ -127,12 +134,15 @@ def run_simulation(df: pd.DataFrame, strategy_id: str, initial_capital: float = 
                 signal = -1
                 text = "RSI>70"
                 
-        else:
-            # Fallback random for unknown strategies just in case
-            import random
-            if random.random() > 0.95:
-                signal = 1 if position == 0 else -1
-                text = "Buy" if signal == 1 else "Sell"
+        elif strategy_id == "macd":
+            hist_current = macd_hist.iloc[i]
+            hist_prev = macd_hist.iloc[i-1]
+            if hist_prev <= 0 and hist_current > 0:
+                signal = 1
+                text = "MACD Cross Up"
+            elif hist_prev >= 0 and hist_current < 0:
+                signal = -1
+                text = "MACD Cross Dn"
 
         # Trade Execution Simulation
         if signal == 1 and position == 0:

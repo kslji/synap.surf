@@ -6,7 +6,7 @@ from utils.backtest_ohlc import get_win_loss_by_period
  
  
 class SmaCrossoverStrategy:
-    """9/18 SMA Crossover — all 5 bugs fixed."""
+    """9/18 SMA Crossover"""
  
     def __init__(self, initial_capital=1000.0, position_size_pct=1.0,
                  fast_length=9, slow_length=18, max_intraday_loss_pct=1.0,
