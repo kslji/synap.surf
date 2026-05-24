@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "/Users/arjunsingh/Desktop/algorithmic/venv/bin/python3.12",
+      "args": [
+        "-m",
+        "code_review_graph",
+        "serve"
+      ],
+      "cwd": "/Users/arjunsingh/Desktop/algo_brain",
+      "type": "stdio"
+    }
+  }
+}

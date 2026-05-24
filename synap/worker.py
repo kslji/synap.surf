@@ -136,16 +136,19 @@ async def execute_trade_for_user(user, signal):
             db.trade_logs.insert_one({
                 "user_id": wallet,
                 "wallet_address": wallet,
+                "event": "TRADE_OPEN",
                 "strategy_id": user.get("strategy_id", "ALGO AI BOT"),
                 "coin": signal['coin'],
                 "side": side,
                 "entry_price": entry_price,
+                "position_size_usd": nominal_size,
                 "size_usd": nominal_size,
                 "leverage": user_leverage,
                 "signal_id": str(signal["_id"]),
                 "decision_id": signal.get("decision_id"),
                 "timestamp": datetime.utcnow().isoformat(),
-                "status": "EXECUTED"
+                "status": "EXECUTED",
+                "action": "BOT",
             })
         else:
             logger.error(f"❌ Trade execution failed for {wallet}")

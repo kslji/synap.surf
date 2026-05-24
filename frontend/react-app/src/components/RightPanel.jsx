@@ -238,6 +238,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   const [aiEngine, setAiEngine] = useState('claude');
   const [hlOrderMode, setHlOrderMode] = useState('market');
   const [astOrderMode, setAstOrderMode] = useState('market');
+  const [marginMode, setMarginMode] = useState('cross');
   const [showTPSL, setShowTPSL] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [panelWidth, setPanelWidth] = useState(380);
@@ -280,6 +281,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
 
   const [tradeCoin, setTradeCoin] = useState('HYPE');
   const [coinDropOpen, setCoinDropOpen] = useState(false);
+  const [coinSearch, setCoinSearch] = useState('');
   const [tradeSize, setTradeSize] = useState(0);
   const [tradeLev, setTradeLev] = useState(1);
   const [tradeLimitPrice, setTradeLimitPrice] = useState('');
@@ -333,7 +335,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   useEffect(() => {
     if (!coinDropOpen) return;
     const handler = (e) => {
-      if (!e.target.closest('[data-coin-drop]')) setCoinDropOpen(false);
+      if (!e.target.closest('[data-coin-drop]')) { setCoinDropOpen(false); setCoinSearch(''); }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -350,14 +352,20 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     return () => document.removeEventListener('mousedown', handler);
   }, [botAssetDropOpen]);
 
-  // Per-coin max leverage from Hyperliquid
-  const [maxLeverage, setMaxLeverage] = useState(20);
+  // All-coin leverage map fetched once from Hyperliquid
+  const [coinLeverages, setCoinLeverages] = useState({});
   useEffect(() => {
-    fetch(`/api/coin/leverage/${tradeCoin}`)
+    fetch('/api/coins/leverages')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.max_leverage) { setMaxLeverage(d.max_leverage); setTradeLev(1); } })
+      .then(d => { if (d?.leverages) setCoinLeverages(d.leverages); })
       .catch(() => {});
-  }, [tradeCoin]);
+  }, []);
+
+  // Derive max leverage for selected coin; reset lever when coin changes
+  const maxLeverage = coinLeverages[tradeCoin] ?? 20;
+  useEffect(() => {
+    setTradeLev(prev => Math.min(prev, coinLeverages[tradeCoin] ?? 20));
+  }, [tradeCoin, coinLeverages]);
 
   const [botParams, setBotParams] = useState({
     MARGIN: '10',
@@ -428,8 +436,20 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     LINK: { emoji: '⬡', color: '#375bd2' },
     AVAX: { emoji: '🔺', color: '#e84142' },
     ARB:  { emoji: '◉', color: '#12aaff' },
+    WIF:  { emoji: '🐕', color: '#9945ff' },
+    PEPE: { emoji: '🐸', color: '#00c853' },
+    TIA:  { emoji: '☀️', color: '#7b61ff' },
+    INJ:  { emoji: '🌀', color: '#00d2d3' },
+    JUP:  { emoji: '⚡', color: '#ff9f43' },
+    OP:   { emoji: '🔴', color: '#ff0420' },
+    MATIC:{ emoji: '🔷', color: '#8247e5' },
+    APT:  { emoji: '◆', color: '#00ccbb' },
   };
-  const coins = Object.keys(COIN_META);
+  const getCoinMeta = (c) => COIN_META[c] ?? { emoji: '●', color: '#8a8a8a' };
+  // All tradeable HL perps from the leverage map; fall back to activeCoins while loading
+  const allHlCoins = Object.keys(coinLeverages).length > 0
+    ? Object.keys(coinLeverages).sort()
+    : (activeCoins.length > 0 ? activeCoins : Object.keys(COIN_META));
   const positions = (stats && Array.isArray(stats.positions)) ? stats.positions : [];
   const rpnl = Number(stats?.realized_pnl) || 0;
   const unpnl = stats?.unrealized_pnl !== undefined ? Number(stats.unrealized_pnl) : positions.reduce((acc, p) => acc + (Number(p?.pnl_usd !== undefined ? p.pnl_usd : p?.unrealized_pnl) || 0), 0);
@@ -458,6 +478,10 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
         return;
       }
 
+      // Immediate visual feedback — user knows the order is being processed
+      const actionLabel = action === 'CLOSE' ? `Closing ${tradeCoin}` : `${action} ${tradeCoin}`;
+      toast({ type: 'info', title: 'Placing Order', message: `${actionLabel} — waiting for Hyperliquid confirmation...`, duration: 10000 });
+
       let endpoint = '/api/trade/open';
       let payload = { coin: tradeCoin, wallet_address: w };
       
@@ -470,6 +494,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
           size_usd: (tradeSize || 0) * (tradeLev || 1),
           leverage: tradeLev || 1,
           is_limit: hlOrderMode === 'limit',
+          margin_mode: marginMode,
         };
         if (hlOrderMode === 'limit' && tradeLimitPrice) payload.limit_price = parseFloat(tradeLimitPrice);
         if (showTPSL && tpPrice) payload.tp_price = parseFloat(tpPrice);
@@ -490,7 +515,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
         const detail = data.detail || text || `HTTP ${res.status}`;
         throw new Error(detail);
       }
-      toast({ type: 'success', title: 'Trade Submitted', message: `${action} on ${tradeCoin} executed successfully.`, duration: 5000 });
+      toast({ type: 'success', title: 'Order Confirmed', message: `${action} ${tradeCoin} filled on Hyperliquid.`, duration: 5000 });
       
       // Reset inputs and slider to default values
       setTradeSize(0);
@@ -548,16 +573,32 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 <span className="tt-tab active" style={{ cursor: 'default' }}>TRADE</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  NOTIFS
-                </label>
+                <label style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>NOTIFS</label>
                 <label className="switch mini" style={{ margin: 0 }}>
                   <input type="checkbox" defaultChecked />
                   <span className="slider round" />
                 </label>
               </div>
             </div>
-            
+
+            {/* Market / Limit + Cross / Isolated row */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, border: '1px solid rgba(255,255,255,0.07)' }}>
+                {['market', 'limit'].map(m => (
+                  <button key={m} onClick={() => setHlOrderMode(m)} style={{ flex: 1, padding: '5px 0', fontSize: 10, fontWeight: 800, border: 'none', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s', background: hlOrderMode === m ? 'var(--accent)' : 'transparent', color: hlOrderMode === m ? '#fff' : 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, border: '1px solid rgba(255,255,255,0.07)' }}>
+                {['cross', 'isolated'].map(m => (
+                  <button key={m} onClick={() => setMarginMode(m)} style={{ flex: 1, padding: '5px 0', fontSize: 10, fontWeight: 800, border: 'none', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s', background: marginMode === m ? (m === 'isolated' ? 'rgba(255,159,67,0.8)' : 'var(--accent)') : 'transparent', color: marginMode === m ? '#fff' : 'var(--t3)', textTransform: 'capitalize', letterSpacing: '0.3px' }}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Wallet Balance */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 4 }}>
               <div>
@@ -582,6 +623,28 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               </button>
             </div>
 
+            {/* Perps Overview */}
+            {walletBalance?.configured && (
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--t3)', letterSpacing: '1px', marginBottom: 10 }}>PERPS OVERVIEW</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
+                  {[
+                    { label: 'PERPS BALANCE', value: `$${(walletBalance.balance || 0).toFixed(2)}` },
+                    { label: 'UNREALIZED PNL', value: `${(walletBalance.unrealized_pnl || 0) >= 0 ? '+' : ''}$${(walletBalance.unrealized_pnl || 0).toFixed(2)}`, color: (walletBalance.unrealized_pnl || 0) >= 0 ? 'var(--green)' : 'var(--red)' },
+                    { label: 'MARGIN RATIO', value: `${(walletBalance.cross_margin_ratio || 0).toFixed(1)}%`, color: (walletBalance.cross_margin_ratio || 0) > 80 ? 'var(--red)' : (walletBalance.cross_margin_ratio || 0) > 50 ? '#f5b301' : 'var(--t1)' },
+                    { label: 'MAINT. MARGIN', value: `$${(walletBalance.maintenance_margin || 0).toFixed(2)}` },
+                    { label: 'ACCOUNT LEV', value: `${(walletBalance.cross_account_leverage || 0).toFixed(2)}x`, color: (walletBalance.cross_account_leverage || 0) > 10 ? 'var(--red)' : (walletBalance.cross_account_leverage || 0) > 5 ? '#f5b301' : 'var(--t1)' },
+                    { label: 'AVAILABLE', value: `$${(walletBalance.available || 0).toFixed(2)}`, color: 'var(--green)' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: color || 'var(--t1)' }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Custom Coin Picker */}
             <div style={{ position: 'relative' }} data-coin-drop>
               <button
@@ -592,9 +655,9 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                   borderRadius: 12, padding: '10px 14px', cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{COIN_META[tradeCoin]?.emoji}</span>
+                <span style={{ fontSize: 18, lineHeight: 1 }}>{getCoinMeta(tradeCoin).emoji}</span>
                 <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--t1)', flex: 1, textAlign: 'left', letterSpacing: '0.5px' }}>{tradeCoin}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, color: COIN_META[tradeCoin]?.color, background: `${COIN_META[tradeCoin]?.color}22`, padding: '2px 8px', borderRadius: 6 }}>PERP</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: getCoinMeta(tradeCoin).color, background: `${getCoinMeta(tradeCoin).color}22`, padding: '2px 8px', borderRadius: 6 }}>PERP</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2.5" style={{ transform: coinDropOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}><polyline points="6 9 12 15 18 9"/></svg>
               </button>
 
@@ -605,26 +668,44 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                   border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14,
                   boxShadow: '0 16px 48px rgba(0,0,0,0.6)', overflow: 'hidden',
                   animation: 'toastIn 0.18s ease',
+                  display: 'flex', flexDirection: 'column',
                 }}>
-                  {coins.map(c => {
-                    const m = COIN_META[c];
-                    const active = c === tradeCoin;
-                    return (
-                      <button key={c} onClick={() => { setTradeCoin(c); setCoinDropOpen(false); }} style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 14px', background: active ? `${m.color}18` : 'transparent',
-                        border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)',
-                        cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left',
-                      }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <span style={{ fontSize: 16, width: 22, textAlign: 'center', lineHeight: 1 }}>{m.emoji}</span>
-                        <span style={{ flex: 1, fontWeight: 800, fontSize: 13, color: active ? m.color : 'var(--t1)', letterSpacing: '0.3px' }}>{c}</span>
-                        {active && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={m.color} strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                      </button>
-                    );
-                  })}
+                  {/* Search box */}
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'sticky', top: 0, background: 'rgba(14,18,26,0.99)', zIndex: 1 }}>
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search coin..."
+                      value={coinSearch}
+                      onChange={e => setCoinSearch(e.target.value.toUpperCase())}
+                      onClick={e => e.stopPropagation()}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 10px', color: 'var(--t1)', fontSize: 12, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  {/* Coin list */}
+                  <div style={{ maxHeight: 280, overflowY: 'auto' }}>
+                    {allHlCoins.filter(c => !coinSearch || c.includes(coinSearch)).map(c => {
+                      const m = getCoinMeta(c);
+                      const active = c === tradeCoin;
+                      const lev = coinLeverages[c];
+                      return (
+                        <button key={c} onClick={() => { setTradeCoin(c); setCoinDropOpen(false); setCoinSearch(''); setTradeLev(1); }} style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '9px 14px', background: active ? `${m.color}18` : 'transparent',
+                          border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                          cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left',
+                        }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <span style={{ fontSize: 15, width: 22, textAlign: 'center', lineHeight: 1 }}>{m.emoji}</span>
+                          <span style={{ flex: 1, fontWeight: 800, fontSize: 13, color: active ? m.color : 'var(--t1)', letterSpacing: '0.3px' }}>{c}</span>
+                          {lev && <span style={{ fontSize: 9, fontWeight: 700, color: lev <= 5 ? '#ff9f43' : 'var(--t3)' }}>{lev}x</span>}
+                          {active && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={m.color} strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

@@ -25,7 +25,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Response
+import asyncio
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import anthropic
@@ -90,6 +91,33 @@ async def lifespan(app: FastAPI):
     task4.cancel()
 
 app = FastAPI(title="AlgoBrain Dashboard", lifespan=lifespan)
+
+# ─── WebSocket connection manager for real-time trade history ───────────────
+class _TradeConnMgr:
+    def __init__(self):
+        self._conns: dict[str, list[WebSocket]] = {}
+
+    async def connect(self, wallet: str, ws: WebSocket):
+        await ws.accept()
+        self._conns.setdefault(wallet.lower(), []).append(ws)
+
+    def disconnect(self, wallet: str, ws: WebSocket):
+        conns = self._conns.get(wallet.lower(), [])
+        if ws in conns:
+            conns.remove(ws)
+
+    async def push(self, wallet: str, payload: dict):
+        dead = []
+        for ws in self._conns.get(wallet.lower(), []):
+            try:
+                await ws.send_json(payload)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self._conns[wallet.lower()].remove(ws)
+
+_trade_mgr = _TradeConnMgr()
+# ────────────────────────────────────────────────────────────────────────────
 
 app.add_middleware(
     CORSMiddleware,
@@ -157,11 +185,15 @@ async def _load_all_trades(wallet: str = None) -> list[dict]:
         wallet = wallet.strip()
             
         db = get_async_db()
-        rows = await db.trade_logs.find({"user_id": wallet}).sort("timestamp", 1).to_list(length=None)
+        q = {"$or": [
+            {"user_id": re.compile(f"^{re.escape(wallet)}$", re.IGNORECASE)},
+            {"wallet_address": re.compile(f"^{re.escape(wallet)}$", re.IGNORECASE)},
+        ]}
+        rows = await db.trade_logs.find(q).sort("timestamp", -1).limit(20).to_list(20)
         for r in rows:
             if "_id" in r:
                 r["_id"] = str(r["_id"])
-        return rows
+        return list(reversed(rows))
     except Exception:
         return []
 
@@ -311,8 +343,7 @@ async def get_stats(wallet: str = None):
 # ── API: Recent Trades ─────────────────────────────────────────────────────────
 @app.get("/api/trades")
 async def get_trades(wallet: str = None):
-    trades = await _load_all_trades(wallet)
-    return list(reversed(trades))[:20]
+    return await _load_all_trades(wallet)
 
 
 # ── API: User Settings (Paper vs Subscribers) ──────────────────────────────────
@@ -662,6 +693,7 @@ class TradeOpenReq(BaseModel):
     sl_price: Optional[float] = None
     tp_price: Optional[float] = None
     wallet_address: str
+    margin_mode: str = "cross"
 
 class TradeCoinReq(BaseModel):
     coin: str
@@ -704,21 +736,23 @@ async def manual_trade_open(req: TradeOpenReq):
         
         # HyperliquidTrader uses slightly different args than HyperliquidManualClient
         res = client.open_position(
-            coin=req.coin, 
-            side=req.side, 
+            coin=req.coin,
+            side=req.side,
             entry_price=entry_px,
-            size_usd=req.size_usd, 
+            size_usd=req.size_usd,
             leverage=req.leverage,
             stop_loss=req.sl_price or 0.0,
             tp1=req.tp_price or 0.0,
-            tp2=0.0
+            tp2=0.0,
+            margin_mode=req.margin_mode,
         )
         if not res:
             raise HTTPException(status_code=400, detail=res.get("message"))
             
         db = get_async_db()
-        await db.trade_logs.insert_one({
+        trade_doc = {
             "user_id": req.wallet_address,
+            "wallet_address": req.wallet_address,
             "event": "TRADE_OPEN",
             "coin": req.coin,
             "side": req.side,
@@ -731,7 +765,10 @@ async def manual_trade_open(req: TradeOpenReq):
             "conviction": 1.0,
             "reasoning": "Manual UI Trade",
             "timestamp": datetime.now(timezone.utc).isoformat()
-        })
+        }
+        result = await db.trade_logs.insert_one(trade_doc)
+        trade_doc["_id"] = str(result.inserted_id)
+        asyncio.create_task(_trade_mgr.push(req.wallet_address, {"type": "new_trades", "trades": [trade_doc]}))
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -760,6 +797,38 @@ async def manual_trade_close(req: TradeCoinReq):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.websocket("/ws/trades/{wallet}")
+async def ws_trades(websocket: WebSocket, wallet: str):
+    await _trade_mgr.connect(wallet, websocket)
+    try:
+        db = get_async_db()
+        q = {"$or": [
+            {"user_id": re.compile(f"^{wallet}$", re.IGNORECASE)},
+            {"wallet_address": re.compile(f"^{wallet}$", re.IGNORECASE)},
+        ]}
+        recent = await db.trade_logs.find(q).sort("timestamp", -1).limit(20).to_list(20)
+        for t in recent:
+            t["_id"] = str(t["_id"])
+        await websocket.send_json({"type": "history", "trades": list(reversed(recent))})
+        last_ts = recent[0]["timestamp"] if recent else ""
+
+        # Poll every 2 s for new trades from any source (worker bot, etc.)
+        while True:
+            await asyncio.sleep(2)
+            extra = {"timestamp": {"$gt": last_ts}} if last_ts else {}
+            new = await db.trade_logs.find({**q, **extra}).sort("timestamp", -1).limit(10).to_list(10)
+            if new:
+                for t in new:
+                    t["_id"] = str(t["_id"])
+                last_ts = new[0]["timestamp"]
+                await websocket.send_json({"type": "new_trades", "trades": list(reversed(new))})
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        logger.error(f"WS /ws/trades/{wallet}: {e}")
+    finally:
+        _trade_mgr.disconnect(wallet, websocket)
+
 @app.get("/api/wallet/balance")
 def get_wallet_balance(wallet: Optional[str] = None):
     try:
@@ -785,7 +854,24 @@ def get_wallet_balance(wallet: Optional[str] = None):
         except Exception:
             pass
 
-        return {"balance": round(account_value, 2), "available": round(available, 2), "configured": True}
+        cross = state.get("crossMarginSummary", {})
+        cross_account_value = float(cross.get("accountValue", account_value))
+        unrealized_pnl = float(cross.get("totalPnl", 0))
+        total_margin_used = float(cross.get("totalMarginUsed", 0))
+        total_ntl_pos = float(cross.get("totalNtlPos", 0))
+        maintenance_margin = float(state.get("crossMaintenanceMarginUsed", 0))
+        cross_margin_ratio = (total_margin_used / cross_account_value * 100) if cross_account_value > 0 else 0
+        cross_account_leverage = (total_ntl_pos / cross_account_value) if cross_account_value > 0 else 0
+
+        return {
+            "balance": round(account_value, 2),
+            "available": round(available, 2),
+            "configured": True,
+            "unrealized_pnl": round(unrealized_pnl, 2),
+            "cross_margin_ratio": round(cross_margin_ratio, 2),
+            "maintenance_margin": round(maintenance_margin, 2),
+            "cross_account_leverage": round(cross_account_leverage, 2),
+        }
     except Exception as e:
         return {"balance": 0, "available": 0, "configured": False, "error": str(e)}
 
@@ -814,6 +900,23 @@ def get_all_coins():
         return {"coins": sorted(coins)}
     except Exception as e:
         return {"coins": ["BTC", "ETH", "SOL", "AVAX", "DOGE"], "error": str(e)}
+
+@app.get("/api/coins/leverages")
+def get_all_coin_leverages():
+    """Returns max leverage for every tradeable perp in one batch call."""
+    try:
+        from hyperliquid.info import Info
+        from hyperliquid.utils import constants
+        info = Info(base_url=constants.MAINNET_API_URL, skip_ws=True)
+        meta = info.meta()
+        result = {}
+        for asset in meta.get("universe", []):
+            name = asset.get("name", "").upper()
+            if name:
+                result[name] = int(asset.get("maxLeverage", 20))
+        return {"leverages": result}
+    except Exception as e:
+        return {"leverages": {}, "error": str(e)}
 
 @app.get("/api/candles")
 def get_candles_data(coin: str, timeframe: str = "1h", lookback: int = 500):

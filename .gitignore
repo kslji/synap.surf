@@ -50,3 +50,5 @@ dist-ssr/
 
 # Project specific
 backend/algo_brain.db
+# Added by code-review-graph
+.code-review-graph/

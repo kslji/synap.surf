@@ -33,6 +33,10 @@ from synap import trade_journal
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+# Module-level cache: (wallet_lower, coin, leverage, is_cross) → True
+# Avoids redundant update_leverage round-trips to Hyperliquid (~200-500 ms each)
+_leverage_cache: dict[tuple, bool] = {}
 from backend.database import get_sync_db
 
 logger = logging.getLogger(__name__)
@@ -330,6 +334,7 @@ class HyperliquidTrader:
         tp2: float,
         conviction: float = 0.5,
         reasoning: str = "",
+        margin_mode: str = "cross",
     ) -> bool:
         """Open a new live position on Hyperliquid mainnet."""
         coin = coin.upper()
@@ -355,10 +360,16 @@ class HyperliquidTrader:
         if actual_leverage < leverage:
             logger.info(f"⚠️ Capping requested leverage {leverage}x to {actual_leverage}x (Max allowed for {coin})")
 
-        # Set Leverage
+        # Set Leverage (skip if already set for this wallet/coin/leverage/mode combo)
+        is_cross = margin_mode == "cross"
+        lev_key = (self.user_address.lower(), coin, actual_leverage, is_cross)
         try:
-            logger.info(f"Setting leverage for {coin} to {actual_leverage}x...")
-            self.exchange.update_leverage(actual_leverage, coin, True)
+            if lev_key not in _leverage_cache:
+                logger.info(f"Setting leverage for {coin} to {actual_leverage}x ({margin_mode})...")
+                self.exchange.update_leverage(actual_leverage, coin, is_cross)
+                _leverage_cache[lev_key] = True
+            else:
+                logger.info(f"Skipping update_leverage for {coin} — already {actual_leverage}x ({margin_mode})")
         except Exception as e:
             logger.error(f"Failed to set leverage for {coin}: {e}")
             return False
