@@ -1,13 +1,55 @@
 import { useState } from 'react';
+import { useToast } from '../Toast';
 
 export default function ProposalPage() {
   const [type, setType] = useState('suggestion');
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    const wallet_address = localStorage.getItem('wallet_address');
+    
+    if (!wallet_address || wallet_address === 'null') {
+      toast({ type: 'error', title: 'Wallet Not Connected', message: 'Please connect your wallet to submit a proposal.', duration: 5000 });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_address,
+          type,
+          subject,
+          description
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.detail || 'Failed to submit proposal');
+      }
+      
+      setSubmitted(true);
+      setSubject('');
+      setDescription('');
+      toast({ type: 'success', title: 'Proposal Sent', message: 'Thank you! Your feedback has been recorded.', duration: 5000 });
+      setTimeout(() => setSubmitted(false), 3000);
+    } catch (err) {
+      toast({ type: 'error', title: 'Submission Failed', message: err.message, duration: 6000 });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -145,6 +187,8 @@ export default function ProposalPage() {
               <input 
                 placeholder={type === 'bug' ? "What went wrong?" : "What's your big idea?"}
                 required 
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
                 style={{ fontSize: 15 }}
               />
             </div>
@@ -175,6 +219,8 @@ export default function ProposalPage() {
                 }} 
                 placeholder={type === 'bug' ? "Steps to reproduce, expected behavior, and actual results..." : "Describe the feature, technical reasoning, and potential impact..."}
                 required
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
           </div>
@@ -195,6 +241,8 @@ export default function ProposalPage() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
                 PROPOSAL SUBMITTED
               </div>
+            ) : isSubmitting ? (
+              'SENDING...'
             ) : (
               'SEND PROPOSAL'
             )}

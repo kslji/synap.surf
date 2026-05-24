@@ -20,6 +20,7 @@ Claude returns a structured JSON decision with:
 import json
 import logging
 from typing import Optional
+from datetime import datetime, timedelta, timezone
 
 import anthropic
 
@@ -39,6 +40,105 @@ from synap.config import (
 
 logger = logging.getLogger(__name__)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PERFORMANCE MEMORY — Feed Claude its own track record
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _load_performance_memory() -> str:
+    """
+    Fetches recent closed trades + skipped decisions from MongoDB and builds
+    a compact feedback block for Claude's context.
+    Returns an empty string on any error so it never breaks the main loop.
+    """
+    try:
+        from backend.database import get_sync_db
+        db = get_sync_db()
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=72)).isoformat()
+
+        # ── Recent closed trades (wins + losses) ─────────────────────────────
+        closed = list(db.trade_logs.find(
+            {"event": "TRADE_CLOSE", "timestamp": {"$gte": cutoff}},
+            {"coin": 1, "side": 1, "entry_price": 1, "exit_price": 1,
+             "pnl_usd": 1, "pnl_pct": 1, "close_reason": 1, "timestamp": 1}
+        ).sort("timestamp", -1).limit(20))
+
+        # ── Recent AI decisions that were SKIPPED (skip_reason present) ───────
+        skipped = list(db.decision_logs.find(
+            {"timestamp": {"$gte": cutoff}, "skip_reason": {"$exists": True, "$ne": ""}},
+            {"skip_reason": 1, "market_assessment": 1, "timestamp": 1}
+        ).sort("timestamp", -1).limit(5))
+
+        # ── Recent signals that were generated but never filled (sat in queue) ─
+        stale_signals = list(db.signals_queue.find(
+            {"status": "PROCESSED", "timestamp": {"$gte": cutoff}},
+            {"coin": 1, "action": 1, "conviction": 1, "reasoning": 1,
+             "stop_loss": 1, "take_profit_1": 1, "timestamp": 1}
+        ).sort("timestamp", -1).limit(10))
+
+        if not closed and not skipped and not stale_signals:
+            return ""
+
+        lines = ["\n## AI PERFORMANCE MEMORY (last 72h — learn from this)"]
+
+        # Closed trades summary
+        if closed:
+            wins   = [t for t in closed if (t.get("pnl_usd") or 0) >= 0]
+            losses = [t for t in closed if (t.get("pnl_usd") or 0) <  0]
+            total_pnl = sum(t.get("pnl_usd", 0) for t in closed)
+            lines.append(
+                f"\n### Closed Trades: {len(closed)} total | "
+                f"{len(wins)}W / {len(losses)}L | Net P&L: ${total_pnl:+.2f}"
+            )
+            for t in closed[:15]:
+                outcome = "✅ WIN" if (t.get("pnl_usd") or 0) >= 0 else "❌ LOSS"
+                reason  = t.get("close_reason", "—")
+                lines.append(
+                    f"  {outcome} | {t.get('coin')} {t.get('side')} | "
+                    f"entry=${t.get('entry_price', 0):.4f} exit=${t.get('exit_price', 0):.4f} | "
+                    f"P&L=${t.get('pnl_usd', 0):+.2f} ({t.get('pnl_pct', 0):+.1f}%) | "
+                    f"reason={reason}"
+                )
+            # Pattern analysis hint for losses
+            loss_coins = [t.get("coin") for t in losses]
+            if loss_coins:
+                from collections import Counter
+                repeated = [c for c, n in Counter(loss_coins).items() if n >= 2]
+                if repeated:
+                    lines.append(
+                        f"  ⚠️ REPEATED LOSSES on: {', '.join(repeated)} — "
+                        f"review your thesis for these coins before re-entering."
+                    )
+
+        # Skipped cycles
+        if skipped:
+            lines.append("\n### Recent Skip Decisions:")
+            for s in skipped:
+                lines.append(f"  [{s.get('timestamp', '')[:16]}] {s.get('skip_reason', '')}")
+
+        # Past signals context
+        if stale_signals:
+            lines.append("\n### Recent Trade Signals Generated:")
+            for s in stale_signals:
+                lines.append(
+                    f"  {s.get('coin')} {s.get('action')} | conviction={s.get('conviction', 0):.2f} | "
+                    f"SL={s.get('stop_loss', 0):.4f} TP1={s.get('take_profit_1', 0):.4f} | "
+                    f"{s.get('reasoning', '')[:120]}"
+                )
+
+        lines.append(
+            "\nUSE THIS DATA: Avoid repeating losing setups. "
+            "If a coin has multiple recent losses, require higher conviction before re-entry. "
+            "If you skipped previous cycles for valid reasons, check if those reasons still apply."
+        )
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.warning(f"_load_performance_memory failed (non-fatal): {e}")
+        return ""
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SYSTEM PROMPT — The "Soul" of the Trading AI
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -49,7 +149,9 @@ SYSTEM_PROMPT = f"""You are Elite Crypto PM, an elite cryptocurrency portfolio m
 You analyze multiple data sources — smart money on-chain flows, news sentiment, technical chart indicators, and market structure — to make high-conviction trading decisions.
 
 ## TRADING UNIVERSE
-You ONLY trade perpetual futures (perps) listed on Hyperliquid. All coins in the data packet are valid Hyperliquid perps.
+You ONLY trade from the EXACT list of coins provided in the data packet.
+These are the TOP 10 most volatile Hyperliquid perps by 24h absolute % move — refreshed every 30 minutes.
+Do NOT suggest trades on any coin outside this list. No exceptions.
 
 ## RISK MANAGEMENT RULES (ABSOLUTE — NEVER VIOLATE)
 1. Maximum {MAX_OPEN_POSITIONS} concurrent positions
@@ -145,6 +247,15 @@ If only 1 factor is present, DO NOT trade. Wait for confluence.
   "market_assessment": "2-3 sentence overall market view",
   "skip_reason": "If no trades: explain why you're sitting this cycle out"
 }}
+
+## LEARNING FROM PAST PERFORMANCE (MANDATORY):
+The data packet includes an "AI PERFORMANCE MEMORY" section with your recent trade outcomes, losses, and skipped cycles.
+You MUST actively use this:
+- If a coin had 2+ recent losses → require conviction ≥ 0.90 before re-entry, note why in reasoning
+- If you lost on a direction (e.g. LONG BTC) → do not repeat same direction without fresh, strong confluence
+- If recent skip reasons still apply → skip again and say so
+- Reference specific past trades in your reasoning when relevant (e.g. "Previous HYPE long stopped out at -2% — now waiting for stronger structure")
+- Never ignore this section. Learning from mistakes is the difference between a good PM and a blown account.
 
 IMPORTANT:
 - Return ONLY valid JSON. No markdown code blocks, no explanatory text.
@@ -297,6 +408,11 @@ def build_data_packet(
         }
         if relevant_funding:
             sections.append(json.dumps(relevant_funding, separators=(',', ':')))
+
+    # ── Section 7: Performance Memory — Claude's own track record ────────
+    memory = _load_performance_memory()
+    if memory:
+        sections.append(memory)
 
     return "\n".join(sections)
 
@@ -469,10 +585,11 @@ def validate_decision(decision: dict) -> dict:
             "reasoning": trade.get("reasoning", ""),
         }
 
-        # Basic sanity checks
-        ep = validated_trade["entry_price"]
-        sl = validated_trade["stop_loss"]
+        # Basic sanity checks on Claude's raw values
+        ep  = validated_trade["entry_price"]
+        sl  = validated_trade["stop_loss"]
         tp1 = validated_trade["take_profit_1"]
+        tp2 = validated_trade["take_profit_2"]
 
         if ep <= 0 or sl <= 0 or tp1 <= 0:
             logger.warning(
@@ -487,6 +604,30 @@ def validate_decision(decision: dict) -> dict:
         if action == "OPEN_SHORT" and sl <= ep:
             logger.warning(f"Skipping SHORT {coin}: SL ({sl}) <= entry ({ep})")
             continue
+
+        # ── Apply AUTO scaling: TP = 50% of Claude's suggestion, SL = 30% ──
+        # Claude gives the full projected move. We take a more conservative
+        # slice so positions are closed sooner at a realistic, high-probability target.
+        if action == "OPEN_LONG":
+            tp1_dist  = tp1 - ep
+            sl_dist   = ep - sl
+            tp2_dist  = (tp2 - ep) if tp2 > ep else tp1_dist * 2
+            validated_trade["take_profit_1"] = round(ep + tp1_dist * 0.50, 6)
+            validated_trade["take_profit_2"] = round(ep + tp2_dist * 0.50, 6)
+            validated_trade["stop_loss"]     = round(ep - sl_dist  * 0.30, 6)
+        else:  # OPEN_SHORT
+            tp1_dist  = ep - tp1
+            sl_dist   = sl - ep
+            tp2_dist  = (ep - tp2) if tp2 < ep else tp1_dist * 2
+            validated_trade["take_profit_1"] = round(ep - tp1_dist * 0.50, 6)
+            validated_trade["take_profit_2"] = round(ep - tp2_dist * 0.50, 6)
+            validated_trade["stop_loss"]     = round(ep + sl_dist  * 0.30, 6)
+
+        logger.info(
+            f"  📐 AUTO scale {coin} {action}: "
+            f"TP1 {tp1:.4f}→{validated_trade['take_profit_1']:.4f} (50%), "
+            f"SL  {sl:.4f}→{validated_trade['stop_loss']:.4f} (30%)"
+        )
 
         validated["trades"].append(validated_trade)
 

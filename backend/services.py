@@ -99,35 +99,42 @@ async def trade_history_sync_service():
         await asyncio.sleep(300)
 
 
+PROTECTED_EVENTS = {"TRADE_OPEN", "TRADE_CLOSE"}
+FILL_KEEP_LIMIT = 50
+
 async def trade_cleanup_service():
-    """Keeps only the 20 most recent trade logs for each user and system-wide, runs every 5 minutes."""
+    """
+    Keeps trade_logs manageable per user:
+    - TRADE_OPEN / TRADE_CLOSE (BOT events) are never deleted — they are the source
+      of truth for AI signals, positions, and P&L history.
+    - FILL events (exchange sync) are capped at FILL_KEEP_LIMIT most recent.
+    Runs every 5 minutes.
+    """
     while True:
         try:
             db = get_async_db()
-            
-            # Get distinct user_ids
             users = await db.trade_logs.distinct("user_id")
-            
-            # Ensure we also check for None or empty string user_ids (for global/system logs)
             if None not in users:
                 users.append(None)
-                
+
             for user in users:
                 if user:
-                    query = {"user_id": user}
+                    base_query = {"user_id": user}
                 else:
-                    query = {"user_id": {"$in": [None, ""]}}
-                    
-                # Find all trade logs for this user/system, sorted by timestamp descending
-                trades = await db.trade_logs.find(query).sort("timestamp", -1).to_list(length=None)
-                
-                if len(trades) > 20:
-                    old_ids = [t["_id"] for t in trades[20:]]
+                    base_query = {"user_id": {"$in": [None, ""]}}
+
+                # Only clean up FILL/FILLED events — never touch BOT trade records
+                fill_query = {**base_query, "event": {"$nin": list(PROTECTED_EVENTS)}}
+                fills = await db.trade_logs.find(fill_query).sort("timestamp", -1).to_list(length=None)
+
+                if len(fills) > FILL_KEEP_LIMIT:
+                    old_ids = [t["_id"] for t in fills[FILL_KEEP_LIMIT:]]
                     res = await db.trade_logs.delete_many({"_id": {"$in": old_ids}})
-                    logger.info(f"🗑️ trade_cleanup_service: Cleaned up {res.deleted_count} old trade logs for user/system {user or 'SYSTEM'}")
-                    
+                    if res.deleted_count:
+                        logger.info(f"🗑️ trade_cleanup: removed {res.deleted_count} old FILLs for {str(user or 'SYSTEM')[:10]}")
+
         except Exception as e:
             logger.error(f"Error in trade_cleanup_service: {e}")
-            
-        await asyncio.sleep(300) # 5 minutes
+
+        await asyncio.sleep(300)
 

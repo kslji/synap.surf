@@ -130,7 +130,7 @@ export default function AIPage() {
                 <p style={{ fontSize: 18, color: 'var(--t3)', fontWeight: 500 }}>
                   Select a prompt below or type your own question.<br/>
                   <span style={{ fontSize: 14, color: 'var(--accent)', marginTop: 8, display: 'inline-block', fontWeight: 600 }}>
-                    (in free trial only 5 credits / prompts are available)
+                    (in free trial only 5 prompts are available)
                   </span>
                 </p>
               </div>

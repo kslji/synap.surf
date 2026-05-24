@@ -389,10 +389,40 @@ class HyperliquidTrader:
             logger.warning(f"Already have an open live position in {coin} — skipping")
             return False
 
-        # Enforce open slots risk limit
-        if self._count_exchange_positions() >= MAX_OPEN_POSITIONS:
+        # Check local state to categorize open positions
+        local_positions = self._load_local_state()
+        exchange_count = self._count_exchange_positions()
+
+        ai_count = 0
+        strat_count = 0
+        for p in local_positions:
+            r_lower = p.get("reasoning", "").lower()
+            if "manual ui trade" in r_lower:
+                continue
+            elif "[algo ai bot]" in r_lower or "[synap.surf ai]" in r_lower or "ai signal" in r_lower:
+                ai_count += 1
+            else:
+                strat_count += 1
+
+        r_lower_req = reasoning.lower()
+        is_manual_request = "manual ui trade" in r_lower_req
+        is_ai_request = "[algo ai bot]" in r_lower_req or "[synap.surf ai]" in r_lower_req or "ai signal" in r_lower_req
+
+        if is_manual_request:
+            pass # No limits for manual trades
+        elif is_ai_request:
+            if ai_count >= 1:
+                logger.warning(f"Max AI live positions (1) reached — skipping open for {coin}")
+                return False
+        else:
+            if strat_count >= 1:
+                logger.warning(f"Max Strategy live positions (1) reached — skipping open for {coin}")
+                return False
+
+        # Enforce open slots risk limit hard cap for automated bots (fallback safety)
+        if not is_manual_request and exchange_count >= 20:
             logger.warning(
-                f"Max live positions ({MAX_OPEN_POSITIONS}) reached — skipping open"
+                f"Absolute max live positions (20) reached on exchange — skipping automated open"
             )
             return False
 
@@ -665,16 +695,17 @@ class HyperliquidTrader:
 
                 # Log trade close in journal
                 trade_journal.log_trade_close(
-                    coin,
-                    side,
-                    entry_price,
-                    filled_exit_px,
-                    close_size_usd,
-                    leverage,
-                    pnl_usd,
-                    pnl_pct,
-                    reason,
-                    hold_hours,
+                    coin=coin,
+                    side=side,
+                    entry_price=entry_price,
+                    exit_price=filled_exit_px,
+                    position_size_usd=close_size_usd,
+                    leverage=leverage,
+                    pnl_usd=pnl_usd,
+                    pnl_pct=pnl_pct,
+                    reason=reason,
+                    hold_duration_hours=hold_hours,
+                    wallet_address=self.user_address,
                 )
 
                 # Update local positioning list

@@ -2,128 +2,113 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createChart, CrosshairMode } from 'lightweight-charts';
 
 export default function BacktestChart({ symbol, interval, trades }) {
-  const chartContainerRef = useRef();
+  const containerRef = useRef();
+  const chartRef = useRef(null);
+  const seriesRef = useRef(null);
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     let isMounted = true;
-    const fetchCandles = async () => {
-      setLoading(true);
-      try {
-        // Calculate 1-month lookback
-        const tfCandles = {'1m': 43200, '5m': 8640, '15m': 2880, '1h': 720, '4h': 180, '1d': 30};
-        const lookback = Math.min(2000, Math.max(50, tfCandles[interval] || 720));
-        
-        const res = await fetch(`/api/candles?coin=${symbol}&timeframe=${interval}&lookback=${lookback}`);
-        const data = await res.json();
-        
-        // Remove duplicates and sort by time
-        const uniqueData = Array.from(new Map(data.map(item => [item.time, item])).values())
-                                .sort((a, b) => a.time - b.time);
-                                
-        if (isMounted) setChartData(uniqueData);
-      } catch (err) {
-        console.error("Failed to fetch candles", err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    fetchCandles();
+    setLoading(true);
+    const tfCandles = { '1m': 129600, '5m': 25920, '15m': 8640, '1h': 2160, '4h': 540, '1d': 90 };
+    const lookback = Math.min(3000, Math.max(50, tfCandles[interval] || 2160));
+    fetch(`/api/candles?coin=${symbol}&timeframe=${interval}&lookback=${lookback}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!isMounted) return;
+        const unique = Array.from(new Map(data.map(d => [d.time, d])).values()).sort((a, b) => a.time - b.time);
+        setChartData(unique);
+      })
+      .catch(() => {})
+      .finally(() => { if (isMounted) setLoading(false); });
     return () => { isMounted = false; };
   }, [symbol, interval]);
 
+  // Create chart once container is ready
   useEffect(() => {
-    if (!chartContainerRef.current || chartData.length === 0) return;
-    
-    const containerWidth = chartContainerRef.current.clientWidth;
-    if (containerWidth === 0) return; // Wait for layout
+    if (!containerRef.current || chartData.length === 0) return;
 
-    const chart = createChart(chartContainerRef.current, {
-      width: containerWidth,
-      height: 400,
+    const el = containerRef.current;
+    const w = el.clientWidth || 600;
+    const h = el.clientHeight || 360;
+
+    const chart = createChart(el, {
+      width: w,
+      height: h,
       layout: {
-        background: { type: 'solid', color: 'rgba(26, 30, 35, 1)' },
+        background: { type: 'solid', color: 'rgba(26,30,35,1)' },
         textColor: '#D9D9D9',
       },
       grid: {
-        vertLines: { color: 'rgba(255, 255, 255, 0.06)' },
-        horzLines: { color: 'rgba(255, 255, 255, 0.06)' },
+        vertLines: { color: 'rgba(255,255,255,0.06)' },
+        horzLines: { color: 'rgba(255,255,255,0.06)' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: {
-          width: 1,
-          color: 'rgba(255, 159, 67, 0.5)',
-          style: 3, // dashed
-          labelBackgroundColor: '#ff9f43',
-        },
-        horzLine: {
-          width: 1,
-          color: 'rgba(255, 159, 67, 0.5)',
-          style: 3, // dashed
-          labelBackgroundColor: '#ff9f43',
-        },
+        vertLine: { width: 1, color: 'rgba(255,159,67,0.5)', style: 3, labelBackgroundColor: '#ff9f43' },
+        horzLine: { width: 1, color: 'rgba(255,159,67,0.5)', style: 3, labelBackgroundColor: '#ff9f43' },
       },
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-      },
+      timeScale: { timeVisible: true, secondsVisible: false, borderColor: 'rgba(255,255,255,0.1)' },
+      rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
     });
 
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: '#00e5ff',
-      downColor: '#ff3366',
-      borderDownColor: '#ff3366',
-      borderUpColor: '#00e5ff',
-      wickDownColor: '#ff3366',
-      wickUpColor: '#00e5ff',
+    const series = chart.addCandlestickSeries({
+      upColor: '#00e5ff', downColor: '#ff3366',
+      borderDownColor: '#ff3366', borderUpColor: '#00e5ff',
+      wickDownColor: '#ff3366', wickUpColor: '#00e5ff',
     });
+    series.setData(chartData);
+    chartRef.current = chart;
+    seriesRef.current = series;
 
-    candleSeries.setData(chartData);
-
-    if (trades && trades.length > 0) {
-      const validTimes = new Set(chartData.map(d => d.time));
-      
-      const markers = trades
-        .filter(trade => validTimes.has(trade.time))
-        .map(trade => ({
-          time: trade.time,
-          position: trade.side === 'buy' ? 'belowBar' : 'aboveBar',
-          color: trade.side === 'buy' ? '#00e5ff' : '#ff3366',
-          shape: trade.side === 'buy' ? 'arrowUp' : 'arrowDown',
-          text: trade.text || (trade.side === 'buy' ? 'BUY' : 'SELL'),
-        }));
-      
-      // Sort markers by time as required by lightweight-charts
-      markers.sort((a, b) => a.time - b.time);
-      candleSeries.setMarkers(markers);
-    }
-
-    const handleResize = () => {
-      chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-    };
-
-    window.addEventListener('resize', handleResize);
+    // ResizeObserver — reacts to panel collapse/expand and window resize
+    const ro = new ResizeObserver(() => {
+      if (!el || !chartRef.current) return;
+      const nw = el.clientWidth;
+      const nh = el.clientHeight;
+      if (nw > 0 && nh > 0) chartRef.current.resize(nw, nh);
+    });
+    ro.observe(el);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
       chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
     };
-  }, [chartData, trades]);
+  }, [chartData]);
+
+  // Update markers when trades change without recreating the chart
+  useEffect(() => {
+    if (!seriesRef.current || !chartData.length) return;
+    const validTimes = new Set(chartData.map(d => d.time));
+    const markers = (trades || [])
+      .filter(t => validTimes.has(t.time) && (!t.text || !t.text.includes('end_of_data')))
+      .map(t => ({
+        time: t.time,
+        position: t.side === 'buy' ? 'belowBar' : 'aboveBar',
+        color: t.side === 'buy' ? '#00e5ff' : '#ff3366',
+        shape: t.side === 'buy' ? 'arrowUp' : 'arrowDown',
+        text: t.text || (t.side === 'buy' ? 'BUY' : 'SELL'),
+      }))
+      .sort((a, b) => a.time - b.time);
+    seriesRef.current.setMarkers(markers);
+  }, [trades, chartData]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '400px', marginTop: '20px', marginBottom: '20px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)' }}>
       {loading && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, background: 'rgba(26, 30, 35, 0.8)' }}>
-          <div className="spinner-glow" style={{ width: 40, height: 40 }}></div>
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10,
+          background: 'rgba(26,30,35,0.85)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12,
+        }}>
+          <div className="spinner-glow" style={{ width: 36, height: 36 }} />
+          <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.3)', letterSpacing: 2 }}>LOADING CHART</span>
         </div>
       )}
-      <div ref={chartContainerRef} style={{ width: '100%', height: '100%' }} />
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 }

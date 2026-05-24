@@ -117,11 +117,29 @@ def log_trade_close(
     pnl_pct: float,
     reason: str,
     hold_duration_hours: float,
+    wallet_address: str = None,
 ):
     """Log a trade exit."""
     try:
         db = get_sync_db()
-        db.trade_logs.insert_one({
+        
+        # Mark any existing TRADE_OPEN logs for this coin as CLOSED
+        # so UI correctly removes 'POSITION ACTIVE'
+        query = {
+            "coin": coin,
+            "event": "TRADE_OPEN",
+            "status": {"$nin": ["CLOSED", "FAILED"]}
+        }
+        if wallet_address:
+            import re
+            query["wallet_address"] = re.compile(f"^{re.escape(wallet_address)}$", re.IGNORECASE)
+
+        db.trade_logs.update_many(
+            query,
+            {"$set": {"status": "CLOSED"}}
+        )
+
+        trade_doc = {
             "event": "TRADE_CLOSE",
             "coin": coin,
             "side": side,
@@ -134,7 +152,12 @@ def log_trade_close(
             "hold_duration_hours": round(hold_duration_hours, 1),
             "reasoning": reason,
             "timestamp": datetime.now(timezone.utc).isoformat()
-        })
+        }
+        if wallet_address:
+            trade_doc["wallet_address"] = wallet_address
+            trade_doc["user_id"] = wallet_address
+
+        db.trade_logs.insert_one(trade_doc)
     except Exception as e:
         logger.error(f"DB Error log_trade_close: {e}")
 

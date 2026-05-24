@@ -32,6 +32,17 @@ async def execute_trade_for_user(user, signal):
             _info = Info(base_url=constants.MAINNET_API_URL, skip_ws=True)
             _state = _info.user_state(wallet)
             user_real_balance = float(_state.get("marginSummary", {}).get("accountValue", 0))
+
+            # Mirror /api/wallet/balance: add spot USDC (unified account)
+            try:
+                spot_state = _info.spot_user_state(wallet)
+                for bal in spot_state.get("balances", []):
+                    if bal.get("coin") == "USDC":
+                        user_real_balance += float(bal.get("total", 0))
+                        break
+            except Exception:
+                pass
+
             if user_real_balance <= 0:
                 logger.warning(f"Skipping {wallet}: account balance is ${user_real_balance:.2f}")
                 return
@@ -55,40 +66,68 @@ async def execute_trade_for_user(user, signal):
             user_leverage = int(user_leverage_pref)
             logger.info(f"⚙️ MANUAL LEVERAGE for {wallet}: User set {user_leverage}x")
 
-        # Determine Stop Loss (SL) Price
-        user_sl_pref = user.get('stop_loss_pct', 'AUTO')
-        ai_sl_price = signal.get('stop_loss')
         entry_price = signal.get('entry_price', 0)
         side = signal.get('side', 'LONG')
-        
+
+        # Resolve live price early so SL/TP calculations use a valid entry
+        if entry_price == 0:
+            from synap.market_data import get_mid_prices
+            prices = get_mid_prices()
+            entry_price = prices.get(signal['coin'].upper(), 0.0)
+            if entry_price == 0:
+                logger.warning(f"Skipping {wallet}: Could not determine market price for {signal['coin']}.")
+                return
+
+        # ── Stop Loss ─────────────────────────────────────────────────────────
+        user_sl_pref = user.get('stop_loss_pct', 'AUTO')
+        ai_sl_price = float(signal.get('stop_loss') or 0)
+
         if user_sl_pref == 'AUTO' or user_sl_pref is None:
+            # AI must always provide a non-zero SL; fall back to 3% if it didn't
+            if ai_sl_price <= 0:
+                sl_pct = 0.03
+                ai_sl_price = entry_price * (1 - sl_pct) if side == 'LONG' else entry_price * (1 + sl_pct)
+                logger.warning(f"⚠️ AI provided no SL for {wallet} — applying 3% default: ${ai_sl_price:.4f}")
             final_sl_price = ai_sl_price
-            logger.info(f"🤖 AUTO SL for {wallet}: AI chose ${final_sl_price}")
+            logger.info(f"🤖 AUTO SL for {wallet}: AI chose ${final_sl_price:.4f}")
         else:
-            sl_pct = float(user_sl_pref) / 100.0
-            if side == 'LONG':
-                final_sl_price = entry_price * (1 - sl_pct)
-            else:
-                final_sl_price = entry_price * (1 + sl_pct)
-            logger.info(f"⚙️ MANUAL SL for {wallet}: User set {user_sl_pref}% -> ${final_sl_price:.4f}")
+            sl_pct = float(user_sl_pref)
+            if sl_pct <= 0:
+                logger.warning(f"🚫 Skipping {signal['coin']} for {wallet}: Manual SL is 0% — set a valid stop loss.")
+                return
+            sl_dec = sl_pct / 100.0
+            final_sl_price = entry_price * (1 - sl_dec) if side == 'LONG' else entry_price * (1 + sl_dec)
+            logger.info(f"⚙️ MANUAL SL for {wallet}: {sl_pct}% -> ${final_sl_price:.4f}")
 
-        # Determine Take Profit (TP) Price
+        # ── Take Profit ───────────────────────────────────────────────────────
         user_tp_pref = user.get('target_pct', 'AUTO')
-        ai_tp_price = signal.get('take_profit_1')
-        
+        ai_tp_price = float(signal.get('take_profit_1') or 0)
+
         if user_tp_pref == 'AUTO' or user_tp_pref is None:
+            # AI must always provide a non-zero TP; fall back to 2× SL risk if it didn't
+            if ai_tp_price <= 0:
+                sl_risk = abs(entry_price - final_sl_price)
+                ai_tp_price = entry_price + 2 * sl_risk if side == 'LONG' else entry_price - 2 * sl_risk
+                logger.warning(f"⚠️ AI provided no TP for {wallet} — applying 2R default: ${ai_tp_price:.4f}")
             final_tp_price = ai_tp_price
-            logger.info(f"🤖 AUTO TP for {wallet}: AI chose ${final_tp_price}")
+            logger.info(f"🤖 AUTO TP for {wallet}: AI chose ${final_tp_price:.4f}")
         else:
-            tp_pct = float(user_tp_pref) / 100.0
-            if side == 'LONG':
-                final_tp_price = entry_price * (1 + tp_pct)
-            else:
-                final_tp_price = entry_price * (1 - tp_pct)
-            logger.info(f"⚙️ MANUAL TP for {wallet}: User set {user_tp_pref}% -> ${final_tp_price:.4f}")
+            tp_pct = float(user_tp_pref)
+            if tp_pct <= 0:
+                logger.warning(f"🚫 Skipping {signal['coin']} for {wallet}: Manual TP is 0% — set a valid take profit.")
+                return
+            tp_dec = tp_pct / 100.0
+            final_tp_price = entry_price * (1 + tp_dec) if side == 'LONG' else entry_price * (1 - tp_dec)
+            logger.info(f"⚙️ MANUAL TP for {wallet}: {tp_pct}% -> ${final_tp_price:.4f}")
 
+        # ── Final TP/SL sanity check ──────────────────────────────────────────
+        if side == 'LONG' and (final_sl_price >= entry_price or final_tp_price <= entry_price):
+            logger.error(f"🚫 Invalid LONG levels for {wallet}: entry={entry_price}, SL={final_sl_price}, TP={final_tp_price}. Skipping.")
+            return
+        if side == 'SHORT' and (final_sl_price <= entry_price or final_tp_price >= entry_price):
+            logger.error(f"🚫 Invalid SHORT levels for {wallet}: entry={entry_price}, SL={final_sl_price}, TP={final_tp_price}. Skipping.")
+            return
 
-        
         # Don't execute if margin is below $10 (Hyperliquid requirement)
         if user_margin < 10:
             logger.warning(f"Skipping {signal['coin']} for {wallet}: Margin ${user_margin:.2f} is below $10 minimum.")
@@ -105,14 +144,8 @@ async def execute_trade_for_user(user, signal):
             logger.warning(f"Skipping {wallet}: No private key configured in the database.")
             return
 
-        # Fetch current market price if signal entry price is 0
-        if entry_price == 0:
-            from synap.market_data import get_mid_prices
-            prices = get_mid_prices()
-            entry_price = prices.get(signal['coin'].upper(), 0.0)
-            if entry_price == 0:
-                logger.warning(f"Skipping {wallet}: Could not determine market price for {signal['coin']}.")
-                return
+        margin_mode = user.get('margin_mode', 'cross')
+        strategy_id = user.get("strategy_id", "ALGO AI BOT")
 
         # Initialize trader with user credentials and execute
         trader = HyperliquidTrader(private_key=user_doc["private_key"], wallet_address=wallet)
@@ -127,7 +160,8 @@ async def execute_trade_for_user(user, signal):
             tp1=final_tp_price,
             tp2=0.0,
             conviction=signal.get('conviction', 0.5),
-            reasoning=signal.get('reasoning', '')
+            reasoning=f"[{strategy_id}] {signal.get('reasoning', '')}",
+            margin_mode=margin_mode
         )
         
         if res:

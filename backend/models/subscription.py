@@ -24,5 +24,5 @@ class Subscription(BaseModel):
     target_pct: Optional[float] = None
     stop_loss_pct: Optional[float] = None
     asset_name: Optional[str] = None
-    ai_engine: Optional[str] = None
+    ai_engine: Optional[bool] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)

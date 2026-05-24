@@ -199,52 +199,96 @@ async def _load_all_trades(wallet: str = None, *, sync_exchange: bool = True) ->
         ]}
         rows = await db.trade_logs.find(q).sort("timestamp", -1).limit(50).to_list(50)
         serialized = [_serialize_trade_doc(r) for r in rows]
+        # Sort in Python to handle mixed datetime/string timestamps reliably
+        def _ts_key(t):
+            ts = t.get("timestamp", "")
+            if isinstance(ts, datetime):
+                return ts.isoformat()
+            return str(ts) if ts else ""
+        serialized.sort(key=_ts_key, reverse=True)
         return serialized
     except Exception:
         return []
 
 async def _load_all_decisions(wallet: str = None) -> list[dict]:
+    """
+    Returns AI signals for the given wallet.
+    Source of truth: signals_queue (PROCESSED status = executed by the bot).
+    The user must have an active subscription and a configured private key.
+    """
     try:
         if not wallet or wallet in ('null', 'undefined', ''):
             return []
-            
-        w = wallet.strip().lower()
+
+        w = wallet.strip()
         db = get_async_db()
-        
-        # 1. Verify user exists and has a configured private key
-        user = await db.users.find_one({"wallet_address": re.compile(f"^{w}$", re.IGNORECASE)})
+
+        # Require private key to be configured
+        user = await db.users.find_one({"wallet_address": re.compile(f"^{re.escape(w)}$", re.IGNORECASE)})
         if not user or not user.get("private_key"):
-            # If user hasn't attached private key, hide all AI signals
             return []
-            
-        # 2. Get decision_ids of all trades actually executed for this user
-        trades = await db.trade_logs.find({
-            "user_id": re.compile(f"^{w}$", re.IGNORECASE),
-            "decision_id": {"$exists": True, "$ne": None}
-        }).to_list(length=None)
-        
-        decision_ids = {t["decision_id"] for t in trades if t.get("decision_id")}
-        if not decision_ids:
+
+        # Require at least one active subscription
+        sub = await db.synap_surf_ai.find_one({
+            "wallet_address": re.compile(f"^{re.escape(w)}$", re.IGNORECASE),
+            "status": "ACTIVE",
+        })
+        if not sub:
             return []
-            
-        # 3. Query decision_logs for matching ObjectIds
+
+        # Find signals actually executed for this user via trade_logs
         from bson import ObjectId
-        obj_ids = []
-        for d_id in decision_ids:
-            try:
-                obj_ids.append(ObjectId(d_id))
-            except Exception:
-                pass
-                
-        if not obj_ids:
+        bot_trades = await db.trade_logs.find(
+            {
+                "user_id": re.compile(f"^{re.escape(w)}$", re.IGNORECASE),
+                "action": "BOT",
+                "signal_id": {"$exists": True, "$ne": None},
+            },
+            {"signal_id": 1}
+        ).sort("timestamp", -1).limit(50).to_list(50)
+
+        signal_ids = []
+        seen = set()
+        for t in bot_trades:
+            sid = t.get("signal_id")
+            if sid and sid not in seen:
+                seen.add(sid)
+                try:
+                    signal_ids.append(ObjectId(sid))
+                except Exception:
+                    pass
+
+        if not signal_ids:
             return []
-            
-        rows = await db.decision_logs.find({"_id": {"$in": obj_ids}}).sort("timestamp", -1).to_list(length=None)
-        for r in rows:
-            if "_id" in r:
-                r["_id"] = str(r["_id"])
-        return rows
-    except Exception:
+
+        signals = await db.signals_queue.find(
+            {"_id": {"$in": signal_ids}}
+        ).sort("timestamp", -1).to_list(len(signal_ids))
+
+        results = []
+        for sig in signals:
+            sig["_id"] = str(sig["_id"])
+            results.append({
+                "_id": sig["_id"],
+                "timestamp": sig.get("timestamp"),
+                "executed": True,
+                "data": {
+                    "coin": sig.get("coin"),
+                    "side": sig.get("side", "LONG"),
+                    "action": sig.get("action"),
+                    "entry_price": sig.get("entry_price", 0),
+                    "stop_loss": sig.get("stop_loss", 0),
+                    "take_profit_1": sig.get("take_profit_1", 0),
+                    "leverage": sig.get("leverage"),
+                    "conviction": sig.get("conviction"),
+                    "reasoning": sig.get("reasoning", "AI-generated signal"),
+                    "event": "SIGNAL",
+                },
+            })
+
+        return results
+    except Exception as _e:
+        logger.error("_load_all_decisions error: %s", _e, exc_info=True)
         return []
 
 
@@ -279,16 +323,20 @@ async def get_stats(wallet: str = None):
             from hyperliquid.utils import constants
             info = Info(constants.MAINNET_API_URL, skip_ws=True)
             state = info.user_state(wallet)
-            margin_summary = state.get("marginSummary", {})
-            equity = float(margin_summary.get("accountValue", 0.0))
-            
+            # Unified account: spot USDC is the true portfolio value — never add
+            # marginSummary.accountValue + spot_usdc (they represent the same money).
+            spot_usdc = 0.0
             try:
                 spot_state = info.spot_user_state(wallet)
                 for bal in spot_state.get("balances", []):
                     if bal.get("coin") == "USDC":
-                        equity += float(bal.get("total", 0))
-            except Exception as e:
+                        spot_usdc = float(bal.get("total", 0))
+                        break
+            except Exception:
                 pass
+
+            perp_value = float(state.get("marginSummary", {}).get("accountValue", 0.0))
+            equity = spot_usdc if spot_usdc > 0 else perp_value
 
             positions = []
             for entry in state.get("assetPositions", []):
@@ -396,13 +444,21 @@ async def subscribe_strategy(request: Request):
     raw_lev = data.get("leverage", "AUTO")
     leverage = "AUTO" if raw_lev == "AUTO" else int(raw_lev)
     
+    margin_mode = data.get("margin_mode", "cross")
+    
     if capital != "AUTO" and capital < 10:
         raise HTTPException(status_code=400, detail="Minimum margin of $10 is required")
     
     target_pct = data.get("target_pct") # None means AUTO
     stop_loss_pct = data.get("stop_loss_pct") # None means AUTO
     asset_name = data.get("asset_name") or data.get("coin", "AUTO")
-    ai_engine = data.get("ai_engine", "CLAUDE")
+    ai_engine_raw = data.get("ai_engine")
+    if isinstance(ai_engine_raw, str):
+        ai_engine = ai_engine_raw.upper() in ["CLAUDE", "GROK", "TRUE"]
+    elif ai_engine_raw is None:
+        ai_engine = (strategy_id == "ALGO AI BOT")
+    else:
+        ai_engine = bool(ai_engine_raw)
     auto_risk = data.get("auto_risk", True)
     
     is_active = data.get("is_active", True)
@@ -459,6 +515,7 @@ async def subscribe_strategy(request: Request):
                 "auto_risk": auto_risk,
                 "capital": capital,
                 "leverage": leverage,
+                "margin_mode": margin_mode,
                 "target_pct": target_pct,
                 "stop_loss_pct": stop_loss_pct,
                 "asset_name": asset_name,
@@ -472,39 +529,68 @@ async def subscribe_strategy(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/strategy/status")
-async def get_strategy_status(wallet_address: str):
+async def get_strategy_status(wallet_address: str, strategy_id: str = "ALGO AI BOT"):
     if not wallet_address:
-        raise HTTPException(status_code=400, detail="wallet_address required")
+        return {"status": "error", "message": "Wallet address required"}
+    
     db = get_async_db()
     
-    # Get any subscription for this user
-    sub = await db.synap_surf_ai.find_one({"wallet_address": wallet_address, "strategy_id": "ALGO AI BOT"})
-    
-    # Check if there is an active position
+    has_open_position = False
     open_pos = await db.trade_logs.find_one({
         "wallet_address": re.compile(f"^{re.escape(wallet_address)}$", re.IGNORECASE),
-        "status": "OPEN",
-        "strategy_id": "ALGO AI BOT"
+        "event": "TRADE_OPEN",
+        "status": {"$nin": ["CLOSED", "FAILED"]},
+        "strategy_id": strategy_id
     })
-    
-    has_open_position = open_pos is not None
-    
+    if open_pos:
+        has_open_position = True
+
+    # Get the specific subscription for this user
+    sub = await db.synap_surf_ai.find_one({"wallet_address": wallet_address, "strategy_id": strategy_id})
     if sub:
         return {
             "status": "ok", 
             "subscription_status": sub.get("status", "INACTIVE"),
-            "is_active": sub.get("status") in ("ACTIVE", "WAITING"),
+            "is_active": sub.get("status") in ["ACTIVE", "WAITING"],
             "has_open_position": has_open_position,
-            "params": {
-                "capital": sub.get("capital"),
-                "leverage": sub.get("leverage"),
-                "target_pct": sub.get("target_pct"),
-                "stop_loss_pct": sub.get("stop_loss_pct"),
-                "asset_name": sub.get("asset_name"),
-            }
+            "target_pct": sub.get("target_pct"),
+            "stop_loss_pct": sub.get("stop_loss_pct"),
+            "asset_name": sub.get("asset_name"),
+            "capital": sub.get("capital", "AUTO"),
+            "leverage": sub.get("leverage", "AUTO"),
+            "margin_mode": sub.get("margin_mode", "cross"),
         }
     
     return {"status": "ok", "subscription_status": "INACTIVE", "is_active": False, "has_open_position": has_open_position}
+
+@app.get("/api/strategy/active")
+async def get_active_strategy(wallet_address: str):
+    """Returns the currently active strategy subscription for a wallet, or null."""
+    if not wallet_address:
+        raise HTTPException(status_code=400, detail="wallet_address required")
+    db = get_async_db()
+    sub = await db.synap_surf_ai.find_one(
+        {
+            "wallet_address": re.compile(f"^{re.escape(wallet_address)}$", re.IGNORECASE),
+            "status": "ACTIVE",
+            "strategy_id": {"$ne": "ALGO AI BOT"},
+        }
+    )
+    if not sub:
+        return None
+    meta = await db.strategies_metadata.find_one({"strategy_id": sub.get("strategy_id")})
+    return {
+        "strategy_id": sub.get("strategy_id"),
+        "strategy_name": meta.get("name") if meta else sub.get("strategy_id"),
+        "asset_name": sub.get("asset_name", "AUTO"),
+        "status": sub.get("status"),
+        "capital": sub.get("capital"),
+        "leverage": sub.get("leverage"),
+        "margin_mode": sub.get("margin_mode", "cross"),
+        "stop_loss_pct": sub.get("stop_loss_pct"),
+        "target_pct": sub.get("target_pct"),
+        "auto_risk": sub.get("auto_risk", True),
+    }
 
 @app.post("/api/strategy/unsubscribe")
 async def unsubscribe_strategy(request: Request):
@@ -527,6 +613,23 @@ async def get_trade_logs(wallet_address: str, limit: int = 10):
     db = get_async_db()
     cursor = db.trade_logs.find({"wallet_address": wallet_address}).sort("timestamp", -1).limit(limit)
     logs = await cursor.to_list(length=limit)
+    for log in logs:
+        if "_id" in log:
+            log["_id"] = str(log["_id"])
+    return {"status": "ok", "logs": logs}
+
+@app.get("/api/trade/logs/strategy/{strategy_id}")
+async def get_strategy_trade_logs(strategy_id: str, wallet_address: str):
+    if not wallet_address:
+        raise HTTPException(status_code=400, detail="wallet_address required")
+    db = get_async_db()
+    cursor = db.trade_logs.find({
+        "wallet_address": re.compile(f"^{re.escape(wallet_address)}$", re.IGNORECASE),
+        "strategy_id": strategy_id,
+        "action": "BOT"
+    }).sort("timestamp", 1)  # Ascending so it draws left-to-right on the chart
+    
+    logs = await cursor.to_list(length=None)
     for log in logs:
         if "_id" in log:
             log["_id"] = str(log["_id"])
@@ -559,43 +662,26 @@ async def get_decisions(wallet: str = None):
     feed = []
     for d_row in decisions_raw:
         ts_str = d_row.get("timestamp")
-        dj = d_row.get("decision_json")
-        if dj:
-            try:
-                dec_obj = json.loads(dj)
-                trades = dec_obj.get("trades", [])
-                
-                # Add actionable trades
-                for rec_trade in trades:
-                    coin = rec_trade.get("coin", "").upper()
-                    d_id_str = str(d_row["_id"])
-                    
-                    # ONLY show the signal if this specific coin was actually executed for this decision!
-                    if (d_id_str, coin) in executed_pairs:
-                        signal_data = {
-                            "coin": rec_trade.get("coin"),
-                            "reasoning": rec_trade.get("reasoning", "").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"),
-                            "conviction": rec_trade.get("conviction"),
-                            "side": rec_trade.get("action", "LONG").replace("OPEN_", ""),
-                            "leverage": rec_trade.get("leverage"),
-                            "entry_price": rec_trade.get("entry_price"),
-                            "position_size_pct": rec_trade.get("position_size_pct"),
-                            "event": "SIGNAL"
-                        }
-                        feed.append({"type": "signal", "timestamp": ts_str, "data": signal_data})
-                
-                # If there were no trades but a skip reason was provided, emit a SKIP signal
-                if not trades and dec_obj.get("skip_reason"):
-                    signal_data = {
-                        "coin": "MARKET",
-                        "reasoning": dec_obj.get("skip_reason").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"),
-                        "conviction": 0,
-                        "side": "SKIP",
-                        "event": "SIGNAL"
-                    }
-                    feed.append({"type": "signal", "timestamp": ts_str, "data": signal_data})
-            except Exception:
-                pass
+        data = d_row.get("data")
+        if data:
+            # New format from signals_queue: data dict already has all fields
+            reasoning = (data.get("reasoning") or "AI-generated signal").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder")
+            feed.append({
+                "type": "signal",
+                "timestamp": ts_str,
+                "executed": d_row.get("executed", True),
+                "data": {
+                    "coin": data.get("coin"),
+                    "reasoning": reasoning,
+                    "conviction": data.get("conviction"),
+                    "side": (data.get("side") or "LONG").replace("OPEN_", ""),
+                    "leverage": data.get("leverage"),
+                    "entry_price": data.get("entry_price"),
+                    "stop_loss": data.get("stop_loss"),
+                    "take_profit_1": data.get("take_profit_1"),
+                    "event": "SIGNAL",
+                }
+            })
 
     # Sort by timestamp descending
     feed.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
@@ -944,6 +1030,18 @@ async def manual_trade_close(req: TradeCoinReq):
         exit_px = await asyncio.to_thread(get_coin_mid_price, req.coin)
 
         db = get_async_db()
+        
+        # Mark any existing TRADE_OPEN logs for this coin as CLOSED
+        await db.trade_logs.update_many(
+            {
+                "wallet_address": re.compile(f"^{re.escape(req.wallet_address)}$", re.IGNORECASE),
+                "coin": req.coin,
+                "event": "TRADE_OPEN",
+                "status": {"$nin": ["CLOSED", "FAILED"]}
+            },
+            {"$set": {"status": "CLOSED"}}
+        )
+
         trade_doc = {
             "user_id": req.wallet_address,
             "wallet_address": req.wallet_address,
@@ -977,28 +1075,35 @@ def get_wallet_balance(wallet: Optional[str] = None):
         from hyperliquid.utils import constants
         info = Info(base_url=constants.MAINNET_API_URL, skip_ws=True)
         state = info.user_state(addr)
-        margin = state.get("marginSummary", {})
-        account_value = float(margin.get("accountValue", 0))
-        available = float(state.get("withdrawable", account_value))
+        cross = state.get("crossMarginSummary", {})
+        total_margin_used = float(cross.get("totalMarginUsed", 0))
+        total_ntl_pos = float(cross.get("totalNtlPos", 0))
+        unrealized_pnl = float(cross.get("totalPnl", 0))
+        maintenance_margin = float(state.get("crossMaintenanceMarginUsed", 0))
 
+        # Unified account: spot USDC is the true portfolio value.
+        # marginSummary.accountValue reflects only the perp collateral layer and
+        # double-counts spot USDC when added together. Use spot USDC as primary
+        # balance, fall back to marginSummary when no spot balance exists.
+        spot_usdc = 0.0
         try:
             spot_state = info.spot_user_state(addr)
             for bal in spot_state.get("balances", []):
                 if bal.get("coin") == "USDC":
-                    spot_val = float(bal.get("total", 0))
-                    account_value += spot_val
-                    available += spot_val
+                    spot_usdc = float(bal.get("total", 0))
+                    break
         except Exception:
             pass
 
-        cross = state.get("crossMarginSummary", {})
-        cross_account_value = float(cross.get("accountValue", account_value))
-        unrealized_pnl = float(cross.get("totalPnl", 0))
-        total_margin_used = float(cross.get("totalMarginUsed", 0))
-        total_ntl_pos = float(cross.get("totalNtlPos", 0))
-        maintenance_margin = float(state.get("crossMaintenanceMarginUsed", 0))
-        cross_margin_ratio = (total_margin_used / cross_account_value * 100) if cross_account_value > 0 else 0
-        cross_account_leverage = (total_ntl_pos / cross_account_value) if cross_account_value > 0 else 0
+        perp_value = float(state.get("marginSummary", {}).get("accountValue", 0))
+        # True total = spot USDC (which serves as perp collateral in unified mode)
+        # If spot is 0 (pure perp deposit), fall back to marginSummary
+        account_value = spot_usdc if spot_usdc > 0 else perp_value
+        # Available = total not locked as margin
+        available = max(0.0, account_value - total_margin_used)
+
+        cross_margin_ratio = (total_margin_used / account_value * 100) if account_value > 0 else 0
+        cross_account_leverage = (total_ntl_pos / account_value) if account_value > 0 else 0
 
         return {
             "balance": round(account_value, 2),
@@ -1027,16 +1132,19 @@ def get_coin_max_leverage(coin: str):
         return {"coin": coin.upper(), "max_leverage": 20, "error": str(e)}
 
 @app.get("/api/coins")
-def get_all_coins():
+async def get_all_coins():
+    """Returns only the current top-10 volatile assets (same list the AI trades)."""
     try:
-        from hyperliquid.info import Info
-        from hyperliquid.utils import constants
-        info = Info(base_url=constants.MAINNET_API_URL, skip_ws=True)
-        meta = info.meta()
-        coins = [asset["name"].upper() for asset in meta.get("universe", [])]
-        return {"coins": sorted(coins)}
-    except Exception as e:
-        return {"coins": ["BTC", "ETH", "SOL", "AVAX", "DOGE"], "error": str(e)}
+        db = get_async_db()
+        row = await db.market_data.find_one({"key": "active_watchlist"})
+        if row and row.get("value_json"):
+            coins = json.loads(row["value_json"])
+            if coins:
+                return {"coins": coins, "source": "volatile_watchlist"}
+    except Exception:
+        pass
+    # Fallback if maintainer hasn't run yet
+    return {"coins": ["BTC", "ETH", "SOL"], "source": "fallback"}
 
 @app.get("/api/coins/leverages")
 def get_all_coin_leverages():
@@ -1097,16 +1205,16 @@ async def auth_me(wallet: str):
     db = get_async_db()
     user = await db.users.find_one({"wallet_address": re.compile(f"^{w}$", re.IGNORECASE)})
     if not user:
-        # Return empty structure if not found, since frontend might check connection blindly
-        return {"wallet_address": wallet, "email": "", "subscriptions": []}
+        return {"wallet_address": wallet, "name": "", "subscriptions": []}
         
     subs = await db.synap_surf_ai.find({"wallet_address": re.compile(f"^{w}$", re.IGNORECASE), "status": "ACTIVE"}).to_list(length=None)
     
     # Motor returns dicts
     return {
         "wallet_address": user.get("wallet_address", wallet),
-        "email": user.get("email", ""),
+        "name": user.get("name", ""),
         "has_private_key": bool(user.get("private_key")),
+        "private_key": user.get("private_key", ""),
         "subscriptions": [{**s, "_id": str(s["_id"])} if "_id" in s else s for s in subs]
     }
 
@@ -1115,7 +1223,7 @@ async def auth_me(wallet: str):
 class KeysReq(BaseModel):
     hl_private_key: Optional[str] = None
     hl_wallet: Optional[str] = None
-    email: Optional[str] = None
+    name: Optional[str] = None
     telegram_bot_token: Optional[str] = None
     telegram_chat_id: Optional[str] = None
 
@@ -1145,8 +1253,8 @@ async def save_hl_keys(req: KeysReq):
                 account = _Account.from_key(req.hl_private_key)  # raises if invalid
                 update_doc["private_key"] = req.hl_private_key
             
-        if req.email:
-            update_doc["email"] = req.email
+        if req.name:
+            update_doc["name"] = req.name
             
         db = get_async_db()
         
@@ -1207,11 +1315,14 @@ async def list_strategies(coin: str = "BTC"):
                 "metrics": dict(empty_metrics),
                 "hasBacktest": False,
             })
-        # Fetch cached backtest metrics for each strategy
+        # Fetch all cached backtest metrics in one query
+        strat_ids = [s["id"] for s in strats]
+        cache_rows = await db.backtest_cache.find(
+            {"strategy_id": {"$in": strat_ids}, "timeframe": "1h", "coin": coin}
+        ).to_list(length=None)
+        cache_map = {r["strategy_id"]: r for r in cache_rows}
         for strat in strats:
-            cache_row = await db.backtest_cache.find_one(
-                {"strategy_id": strat.get("id"), "timeframe": "1h", "coin": coin}
-            )
+            cache_row = cache_map.get(strat["id"])
             if cache_row and "metrics_json" in cache_row:
                 strat["metrics"] = json.loads(cache_row["metrics_json"])
                 strat["hasBacktest"] = True
@@ -1252,10 +1363,10 @@ async def run_backtest(strategy_id: str, req: BacktestReq):
         from synap.market_data import fetch_candles
         from synap.strategies.backtest import run_simulation
         
-        # Calculate candles for 30 days (1 month)
-        tf_candles = {'1m': 43200, '5m': 8640, '15m': 2880, '1h': 720, '4h': 180, '1d': 30}
-        # Cap at 2000 for safety to not overload the API or frontend
-        target_n = min(2000, max(50, tf_candles.get(timeframe, 720)))
+        # Calculate candles for 90 days (3 months)
+        tf_candles = {'1m': 129600, '5m': 25920, '15m': 8640, '1h': 2160, '4h': 540, '1d': 90}
+        # Cap at 3000 for safety to not overload the API or frontend
+        target_n = min(3000, max(50, tf_candles.get(timeframe, 2160)))
         
         df = fetch_candles(coin, interval=timeframe, n=target_n)
         
@@ -1288,11 +1399,13 @@ async def run_backtest(strategy_id: str, req: BacktestReq):
                         break
                         
                 if StrategyClass:
-                    strategy_instance = StrategyClass(initial_capital=capital, position_size_pct=float(leverage))
+                    strategy_instance = StrategyClass(initial_capital=capital)
                     raw_results = strategy_instance.run(df)
-                    
+
                     if "error" not in raw_results:
                         metrics = raw_results.get("metrics", metrics)
+                        # Scale PnL by leverage for display (strategy runs 1x, leverage amplifies result)
+                        metrics["totalPnl"] = round(metrics.get("totalPnl", 0) * leverage, 2)
                         frontend_trades = []
                         for t in raw_results.get("trade_log", []):
                             try:
@@ -1301,7 +1414,7 @@ async def run_backtest(strategy_id: str, req: BacktestReq):
                             except:
                                 entry_ts = t["entry_time"]
                                 exit_ts = t["exit_time"]
-                                
+
                             # Map the trade sequence to charting markers
                             frontend_trades.append({
                                 "time": entry_ts,
@@ -1315,7 +1428,7 @@ async def run_backtest(strategy_id: str, req: BacktestReq):
                                 "side": "sell" if t["position"] == 1 else "buy",
                                 "text": f"Exit ({t.get('reason', '')})"
                             })
-                            
+
                         trades = sorted(frontend_trades, key=lambda x: x["time"])
                 else:
                     # Fallback to standard simulation
@@ -1351,6 +1464,7 @@ class ChatRequest(BaseModel):
     prompt: str
     context_type: str = "general"
     wallet: Optional[str] = None
+    session_id: Optional[str] = None
 
 async def _build_context(db, context_type: str, wallet: str = None) -> str:
     """Build a concise, deduplicated context string for Claude."""
@@ -1391,24 +1505,74 @@ async def _build_context(db, context_type: str, wallet: str = None) -> str:
                 sm_parts.append(f"[{r.get('endpoint', '')}]\n{r.get('response_json', '')[:1500]}")
             parts.append("\n".join(sm_parts))
 
-    if context_type in ("risk_management", "general"):
-        if wallet:
-            trades = await db.trade_logs.find({"user_id": wallet}).sort("timestamp", -1).limit(8).to_list(length=8)
-        else:
-            trades = []
-        if trades:
-            trade_lines = []
-            for t in trades:
+    if wallet:
+        import re as _re
+        wallet_ci = _re.compile(f"^{_re.escape(wallet)}$", _re.IGNORECASE)
+        wallet_query = {"$or": [{"user_id": wallet_ci}, {"wallet_address": wallet_ci}]}
+
+        # Current open positions (shown for ALL context types when wallet is known)
+        open_trades = await db.trade_logs.find(
+            {**wallet_query, "status": "OPEN"}
+        ).sort("timestamp", -1).to_list(length=20)
+        if open_trades:
+            open_lines = []
+            for t in open_trades:
                 t_copy = t.copy()
                 if "_id" in t_copy: del t_copy["_id"]
-                trade_lines.append(f"- {t_copy}")
-            parts.append("USER RECENT TRADES:\n" + "\n".join(trade_lines))
+                open_lines.append(f"- {t_copy}")
+            parts.insert(0, "CURRENT OPEN POSITIONS:\n" + "\n".join(open_lines))
+
+        if context_type in ("risk_management", "general"):
+            trades = await db.trade_logs.find(wallet_query).sort("timestamp", -1).limit(8).to_list(length=8)
+            if trades:
+                trade_lines = []
+                for t in trades:
+                    t_copy = t.copy()
+                    if "_id" in t_copy: del t_copy["_id"]
+                    trade_lines.append(f"- {t_copy}")
+                parts.append("USER RECENT TRADES:\n" + "\n".join(trade_lines))
 
     # Scrub 'nansen' from the context before giving it to Claude
     final_context = "\n\n".join(parts)
     final_context = final_context.replace("Nansen", "Smart Money").replace("nansen", "smart money")
     
     return final_context
+
+@app.get("/api/chat/sessions")
+async def list_chat_sessions(wallet: str = None):
+    """List all chat sessions for a user, newest first."""
+    db = get_async_db()
+    query = {}
+    if wallet:
+        import re as _re
+        wallet_ci = _re.compile(f"^{_re.escape(wallet)}$", _re.IGNORECASE)
+        query["wallet_address"] = wallet_ci
+    sessions = await db.chat_history.find(query, {
+        "session_id": 1, "title": 1, "context_type": 1,
+        "created_at": 1, "updated_at": 1, "message_count": 1
+    }).sort("updated_at", -1).limit(50).to_list(length=50)
+    for s in sessions:
+        if "_id" in s: del s["_id"]
+    return sessions
+
+@app.get("/api/chat/sessions/{session_id}")
+async def get_chat_session(session_id: str):
+    """Get full message history for a session."""
+    db = get_async_db()
+    doc = await db.chat_history.find_one({"session_id": session_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if "_id" in doc: del doc["_id"]
+    return doc
+
+@app.delete("/api/chat/sessions/{session_id}")
+async def delete_chat_session(session_id: str):
+    """Delete a chat session."""
+    db = get_async_db()
+    result = await db.chat_history.delete_one({"session_id": session_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"status": "deleted"}
 
 @app.post("/api/chat")
 async def chat_endpoint(req: ChatRequest):
@@ -1505,24 +1669,59 @@ async def chat_endpoint(req: ChatRequest):
 
     context_str = await _build_context(db, req.context_type, req.wallet)
 
-    system_prompt = f"""You are AlgoBrain, an elite AI crypto trading assistant integrated directly into this platform.
+    MODE_INSTRUCTIONS = {
+        "market_analysis": """You are in MARKET ANALYSIS MODE.
+Give a broad macro-level read of the current crypto market. Cover: BTC dominance, altcoin season indicators, key support/resistance levels, momentum, volume trends, funding rates, fear & greed sentiment. Frame it like a morning briefing a hedge fund gives its partners. Do NOT reference the user's personal account unless they ask.""",
 
-RULES (follow strictly):
-- Answer the user's question directly and concisely — no fluff, no repetition.
-- Never repeat a point or sentence you already made.
-- ABSOLUTELY PROHIBITED: You must NEVER use the word 'Nansen', 'nansen', 'NANSEN', or 'nanasen'. If you need to refer to this data, ALWAYS use the exact phrase 'Smart money holders' or 'Smart Money API'. This is a hard constraint.
-- BOUNDARY ENFORCEMENT: You are strictly a trading and market analysis AI. You must REFUSE to generate code, build algorithms, generate images, write music, or answer general knowledge questions outside of crypto and trading. If asked to write code for an algo or do any non-trading tasks, politely decline and state your focus is solely on trading analysis.
-- DO NOT tell the user to 'configure' you or mention your internal configuration. Configuration is handled by the backend system.
-- If asked about how to automate a bot or create an AI bot, DO NOT provide code. Instead, explain that AlgoBrain already provides automated trading through the built-in 'Strategies' tab and highlight how our algorithmic strategies are designed to run automatically.
-- Use the context below to ground your answer with real data.
-- Structure your response with clear headers and bullet points.
-- Max 400 words. Be sharp, professional, and actionable.
+        "strategy_generation": """You are in STRATEGY GENERATION MODE.
+Identify the BEST trading strategy for current market conditions. Cover: trend following, mean reversion, breakout plays, DCA, range trading, momentum strategies. Be opinionated — tell them WHICH strategy is most profitable RIGHT NOW and WHY. Factor in: volatility regime, trend strength, market structure. Give actionable guidance, not generic advice.""",
 
-CONTEXT:
+        "smart_money_holder": """You are in SMART MONEY HOLDER MODE.
+Focus entirely on institutional flows, whale activity, and news sentiment. Cover: large wallet movements, exchange inflows/outflows, futures open interest, spot vs derivatives divergence. Discuss macro news: Fed policy, ETF flows, regulatory events and how institutions are positioning. Think like a prime brokerage analyst tracking where the real money is going. NEVER use the word 'Nansen' — say 'Smart Money API' or 'smart money holders' instead.""",
+
+        "risk_management": """You are in RISK MANAGEMENT MODE.
+This is user-account specific. Help with: optimal position sizing, stop-loss levels, risk-reward ratios, max drawdown limits, correlation risk, liquidation price awareness. Be protective but direct — talk like a risk desk manager who has seen accounts blow up. Use any trade/portfolio data provided in the context.""",
+
+        "general": """Answer the user's trading question directly and concisely. Use live market data from the context where relevant.""",
+    }
+
+    mode_block = MODE_INSTRUCTIONS.get(req.context_type, MODE_INSTRUCTIONS["general"])
+
+    system_prompt = f"""You are Synap — an elite crypto strategist and former hedge fund manager with 15+ years of experience across traditional finance and digital assets. You've managed over $2B in assets across bull and bear cycles.
+
+PERSONA RULES (non-negotiable):
+- Never mention Claude, Anthropic, GPT, or any AI model.
+- Never say "As an AI..." or "I'm a language model..."
+- Speak like a sharp, experienced trader — confident, direct, no fluff.
+- Use market slang naturally: "the tape", "smart money", "price action", "liquidity grab", "distribution phase".
+- If asked who you are: "I'm Synap — built by traders, for traders. That's all you need to know."
+- If asked if you're an AI: "I'm a system built by a team of quants and traders. Let's focus on what matters — the markets."
+- BOUNDARY: You are strictly a trading and market analysis expert. Refuse code generation, image creation, or anything outside crypto/trading. If asked about automation, point them to the Strategies tab on this platform.
+- Short sentences. Punchy. Real. No corporate fluff.
+- Max 350 words. Never repeat a point.
+
+{mode_block}
+
+LIVE MARKET CONTEXT (use this data to ground your response):
 {context_str}"""
 
     expires_at = (datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
     emb_json = json.dumps(prompt_embedding) if prompt_embedding else None
+
+    import uuid as _uuid
+
+    session_id = req.session_id if req.session_id else str(_uuid.uuid4())
+
+    # Build session title from first 60 chars of prompt, cut at word boundary
+    def _make_title(text: str, max_len: int = 60) -> str:
+        if len(text) <= max_len:
+            return text
+        truncated = text[:max_len]
+        last_space = truncated.rfind(" ")
+        return (truncated[:last_space] if last_space > 0 else truncated) + "…"
+
+    session_title = _make_title(req.prompt)
+    now_iso = datetime.now(timezone.utc).isoformat()
 
     async def stream_and_cache():
         full_response = []
@@ -1541,6 +1740,8 @@ CONTEXT:
             yield f"\n\nError connecting to AI: {str(e)}"
             return
 
+        ai_response = "".join(full_response)
+
         # Save full response + embedding to cache
         try:
             await db.chat_cache.update_one(
@@ -1548,7 +1749,7 @@ CONTEXT:
                 {"$set": {
                     "context_type": req.context_type,
                     "prompt": req.prompt,
-                    "response": "".join(full_response),
+                    "response": ai_response,
                     "embedding_json": emb_json,
                     "expires_at": expires_at
                 }, "$setOnInsert": {
@@ -1560,7 +1761,35 @@ CONTEXT:
         except Exception:
             pass
 
-    return StreamingResponse(stream_and_cache(), media_type="text/event-stream")
+        # Save to chat_history
+        try:
+            user_msg = {"role": "user", "content": req.prompt, "timestamp": now_iso}
+            ai_msg = {"role": "ai", "content": ai_response, "timestamp": datetime.now(timezone.utc).isoformat()}
+            await db.chat_history.update_one(
+                {"session_id": session_id},
+                {
+                    "$set": {
+                        "wallet_address": req.wallet or "",
+                        "title": session_title,
+                        "context_type": req.context_type,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    },
+                    "$setOnInsert": {
+                        "created_at": now_iso,
+                    },
+                    "$push": {"messages": {"$each": [user_msg, ai_msg]}},
+                    "$inc": {"message_count": 2},
+                },
+                upsert=True
+            )
+        except Exception:
+            pass
+
+    return StreamingResponse(
+        stream_and_cache(),
+        media_type="text/event-stream",
+        headers={"X-Session-Id": session_id}
+    )
 
 # ── API: Chat Cache Stats ──────────────────────────────────────────────────────
 @app.get("/api/chat/cache-stats")
@@ -1597,6 +1826,38 @@ async def chat_cache_stats():
         "total_cache_hits": total.get("h", 0),
         "total_tokens_saved": total.get("t", 0),
     }
+
+from datetime import timedelta
+
+class ProposalRequest(BaseModel):
+    wallet_address: str
+    type: str
+    subject: str
+    description: str
+
+@app.post("/api/proposals")
+async def submit_proposal(req: ProposalRequest):
+    try:
+        db = get_async_db()
+        
+        # Rate limit: 1 proposal per day per user
+        one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+        recent_proposal = await db.proposals.find_one({
+            "wallet_address": req.wallet_address,
+            "timestamp": {"$gte": one_day_ago}
+        })
+        
+        if recent_proposal:
+            raise HTTPException(status_code=429, detail="You can only submit 1 proposal per day. Please try again later.")
+            
+        doc = req.dict()
+        doc["timestamp"] = datetime.now(timezone.utc).isoformat()
+        await db.proposals.insert_one(doc)
+        return {"status": "ok"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class FeedbackRequest(BaseModel):
     message_index: int

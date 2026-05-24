@@ -36,7 +36,7 @@ CLAUDE_TEMPERATURE = 0.3  # Low temperature for consistent, analytical responses
 # RISK MANAGEMENT
 # ═══════════════════════════════════════════════════════════════════════════════
 INITIAL_CAPITAL = float(os.getenv("BRAIN_CAPITAL", "50"))  # Paper trading capital
-MAX_OPEN_POSITIONS = 1  # Max concurrent positions
+MAX_OPEN_POSITIONS = 2  # 1 AI bot + 1 strategy engine
 MAX_CAPITAL_PER_TRADE_PCT = 0.15  # 15% of capital per trade
 MAX_TOTAL_DEPLOYED_PCT = 0.40  # Max 40% capital deployed
 MAX_LEVERAGE = 10  # Max leverage allowed

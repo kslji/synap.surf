@@ -741,7 +741,9 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                   borderRadius: 12, padding: '10px 14px', cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{getCoinMeta(tradeCoin).emoji}</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#ffffff', fontSize: '12px', fontWeight: '800', flexShrink: 0 }}>
+                  {tradeCoin.charAt(0).toUpperCase()}
+                </div>
                 <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--t1)', flex: 1, textAlign: 'left', letterSpacing: '0.5px' }}>{tradeCoin}</span>
                 <span style={{ fontSize: 10, fontWeight: 700, color: getCoinMeta(tradeCoin).color, background: `${getCoinMeta(tradeCoin).color}22`, padding: '2px 8px', borderRadius: 6 }}>PERP</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2.5" style={{ transform: coinDropOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}><polyline points="6 9 12 15 18 9"/></svg>
@@ -784,7 +786,9 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                         onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                         onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <span style={{ fontSize: 15, width: 22, textAlign: 'center', lineHeight: 1 }}>{m.emoji}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#ffffff', fontSize: '11px', fontWeight: '800', flexShrink: 0 }}>
+                            {c.charAt(0).toUpperCase()}
+                          </div>
                           <span style={{ flex: 1, fontWeight: 800, fontSize: 13, color: active ? m.color : 'var(--t1)', letterSpacing: '0.3px' }}>{c}</span>
                           {lev && <span style={{ fontSize: 9, fontWeight: 700, color: lev <= 5 ? '#ff9f43' : 'var(--t3)' }}>{lev}x</span>}
                           {active && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={m.color} strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -990,7 +994,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
           <div className="rp-hdr" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px 12px' }}>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0, whiteSpace: 'nowrap' }}>
               Synap.surf AI 
-              <span className="limit-tooltip" data-tooltip="Free accounts are limited to 2 concurrent positions. Upgrade to Premium to manage up to 5 positions simultaneously." style={{ fontSize: 9, color: '#ff9f43', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.5px', textTransform: 'none', cursor: 'help', whiteSpace: 'nowrap' }}>ⓘ Limit</span>
+              <span className="limit-tooltip" data-tooltip="In the beta phase, users will be able to place one AI-powered order.." style={{ fontSize: 9, color: '#ff9f43', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.5px', textTransform: 'none', cursor: 'help', whiteSpace: 'nowrap' }}>ⓘ Limit</span>
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
               {hasOpenPosition ? (

@@ -28,20 +28,18 @@ def run_maintainer_cycle():
 
     db = get_db()
     
-    # 1. Fetch active subscriptions to build watchlist
-    subs_rows = list(db.synap_surf_ai.find({"status": "ACTIVE"}, {"asset_name": 1}))
-    active_assets = list(set([s.get("asset_name") for s in subs_rows if s.get("asset_name") and s.get("asset_name") != "AUTO"]))
-
-    # 2. Build Master Watchlist
+    # Watchlist = strictly top 10 most volatile Hyperliquid assets by 24h % move.
+    # Refresh every 30 minutes so we always track the freshest movers.
     current_time = time.time()
-    if current_time - last_vol_update_time >= 7200 or not cached_vol_leaders:
-        logger.info("Updating top volatility coins (runs every 2 hours)...")
+    if current_time - last_vol_update_time >= 1800 or not cached_vol_leaders:
+        logger.info("🔥 Refreshing top-10 volatility leaders from Hyperliquid (30-min cycle)...")
         cached_vol_leaders = market_data.get_top_volatility_coins(limit=10)
         last_vol_update_time = current_time
 
-    master_watchlist = list(set(cached_vol_leaders + active_assets))
-    
-    logger.info(f"Master Watchlist ({len(master_watchlist)} coins): {master_watchlist}")
+    # Strict: only the volatility top-10. No additions.
+    master_watchlist = cached_vol_leaders[:10]
+
+    logger.info(f"🎯 Trading Universe — Top 10 Volatile: {master_watchlist}")
     
     # Save the master watchlist to DB for the frontend to read
     try:

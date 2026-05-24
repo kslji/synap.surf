@@ -33,8 +33,8 @@ export default function TradeHistory({ trades }) {
             const isPos = (t.pnl_usd || 0) >= 0;
             const icon = coinIcon(t.coin);
             const cls = coinClass(t.coin);
-            const isManual = !t.action || t.action === 'MANUAL_OR_EXTERNAL_TRADE';
-            const execLabel = t.action === 'BOT' ? 'BOT' : (isManual ? 'MANUAL' : 'BOT');
+            const isFill = t.event === 'FILL';
+            const execLabel = t.action === 'BOT' ? 'BOT' : (isFill ? 'FILL' : 'MANUAL');
             const sizeUsd = t.position_size_usd || t.size_usd || 0;
             return (
               <div key={t._id || i} className="dt-row">
@@ -50,7 +50,7 @@ export default function TradeHistory({ trades }) {
                   <span className={`dt-side ${(t.side || 'LONG').toLowerCase()}`}>{t.side || 'LONG'}</span>
                 </div>
                 <div className="dt-col-type">
-                  <span className={`dt-side ${execLabel === 'BOT' ? 'long' : 'short'}`}>{execLabel}</span>
+                  <span className={`dt-side ${execLabel === 'BOT' ? 'long' : execLabel === 'FILL' ? '' : 'short'}`}>{execLabel}</span>
                 </div>
                 <div className="dt-col">${Number(t.entry_price || 0).toFixed(2)}</div>
                 <div className="dt-col">
