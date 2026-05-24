@@ -197,7 +197,8 @@ async def worker_loop():
             db = get_sync_db()
             signal = db.signals_queue.find_one_and_update(
                 {"status": "PENDING"},
-                {"$set": {"status": "PROCESSING"}}
+                {"$set": {"status": "PROCESSING"}},
+                sort=[("timestamp", 1)],
             )
             if signal:
                 await process_signal(signal)

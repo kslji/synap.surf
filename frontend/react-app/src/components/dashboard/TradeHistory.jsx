@@ -5,7 +5,13 @@ export default function TradeHistory({ trades }) {
   const visible = (Array.isArray(trades) ? trades : []).filter(t => {
     const ev = t.event || '';
     const st = t.status || '';
-    return ev === 'TRADE_OPEN' || ev === 'TRADE_CLOSE' || ev === 'FILL' || st === 'EXECUTED';
+    return (
+      ev === 'TRADE_OPEN' ||
+      ev === 'TRADE_CLOSE' ||
+      ev === 'FILL' ||
+      st === 'EXECUTED' ||
+      st === 'FILLED'
+    );
   });
 
   return (

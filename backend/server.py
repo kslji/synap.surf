@@ -14,9 +14,11 @@ import glob
 import json
 import uuid
 import re
+import logging
 
 import sys
 from pathlib import Path
+from bson import ObjectId
 
 # Ensure backend directory is in path for db import
 sys.path.append(str(Path(__file__).parent.parent))
@@ -34,12 +36,29 @@ from synap.config import ANTHROPIC_API_KEY, CLAUDE_MODEL
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from synap.market_data import get_top_3_perps_with_details, get_mid_prices
+from synap.market_data import get_top_3_perps_with_details, get_mid_prices, get_coin_mid_price
 
 
 import asyncio
 from contextlib import asynccontextmanager
 from backend.services import volatility_service, market_intel_service, trade_history_sync_service, trade_cleanup_service
+from backend.trade_sync import sync_wallet_fills, sync_all_registered_wallets
+
+logger = logging.getLogger(__name__)
+
+
+def _serialize_trade_doc(doc: dict) -> dict:
+    """Make a Mongo trade document JSON-safe for API/WebSocket responses."""
+    out: dict = {}
+    for key, val in doc.items():
+        if isinstance(val, ObjectId):
+            out[key] = str(val)
+        elif isinstance(val, datetime):
+            out[key] = val.isoformat()
+        else:
+            out[key] = val
+    return out
+
 
 # ── Semantic Similarity Model (lazy-loaded at first use) ──────────────────────
 import hashlib
@@ -83,6 +102,17 @@ async def lifespan(app: FastAPI):
     task4 = asyncio.create_task(trade_cleanup_service())
     # Pre-warm the sentence-transformers model in background so first user request is instant
     asyncio.create_task(asyncio.to_thread(_get_embedding_model))
+
+    async def _bootstrap_trade_sync():
+        try:
+            db = get_async_db()
+            n = await sync_all_registered_wallets(db)
+            if n:
+                print(f"Bootstrap: synced {n} Hyperliquid fills into trade_logs")
+        except Exception as e:
+            print(f"Bootstrap trade sync failed: {e}")
+
+    asyncio.create_task(_bootstrap_trade_sync())
     yield
     # Shutdown
     task1.cancel()
@@ -92,32 +122,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AlgoBrain Dashboard", lifespan=lifespan)
 
-# ─── WebSocket connection manager for real-time trade history ───────────────
-class _TradeConnMgr:
-    def __init__(self):
-        self._conns: dict[str, list[WebSocket]] = {}
-
-    async def connect(self, wallet: str, ws: WebSocket):
-        await ws.accept()
-        self._conns.setdefault(wallet.lower(), []).append(ws)
-
-    def disconnect(self, wallet: str, ws: WebSocket):
-        conns = self._conns.get(wallet.lower(), [])
-        if ws in conns:
-            conns.remove(ws)
-
-    async def push(self, wallet: str, payload: dict):
-        dead = []
-        for ws in self._conns.get(wallet.lower(), []):
-            try:
-                await ws.send_json(payload)
-            except Exception:
-                dead.append(ws)
-        for ws in dead:
-            self._conns[wallet.lower()].remove(ws)
-
-_trade_mgr = _TradeConnMgr()
-# ────────────────────────────────────────────────────────────────────────────
+# WebSocket logic has been moved to websocket_service.py
 
 app.add_middleware(
     CORSMiddleware,
@@ -177,7 +182,7 @@ def _save_users(data: dict) -> None:
 
 
 # ── Helper: Load all JSONL trades ─────────────────────────────────────────────
-async def _load_all_trades(wallet: str = None) -> list[dict]:
+async def _load_all_trades(wallet: str = None, *, sync_exchange: bool = True) -> list[dict]:
     try:
         if not wallet or wallet in ('null', 'undefined', ''):
             return []
@@ -185,15 +190,16 @@ async def _load_all_trades(wallet: str = None) -> list[dict]:
         wallet = wallet.strip()
             
         db = get_async_db()
+        if sync_exchange:
+            await sync_wallet_fills(wallet, db)
+
         q = {"$or": [
             {"user_id": re.compile(f"^{re.escape(wallet)}$", re.IGNORECASE)},
             {"wallet_address": re.compile(f"^{re.escape(wallet)}$", re.IGNORECASE)},
         ]}
-        rows = await db.trade_logs.find(q).sort("timestamp", -1).limit(20).to_list(20)
-        for r in rows:
-            if "_id" in r:
-                r["_id"] = str(r["_id"])
-        return list(reversed(rows))
+        rows = await db.trade_logs.find(q).sort("timestamp", -1).limit(50).to_list(50)
+        serialized = [_serialize_trade_doc(r) for r in rows]
+        return serialized
     except Exception:
         return []
 
@@ -343,7 +349,17 @@ async def get_stats(wallet: str = None):
 # ── API: Recent Trades ─────────────────────────────────────────────────────────
 @app.get("/api/trades")
 async def get_trades(wallet: str = None):
-    return await _load_all_trades(wallet)
+    return await _load_all_trades(wallet, sync_exchange=True)
+
+
+@app.post("/api/trades/sync")
+async def sync_trades(wallet: str = None):
+    if not wallet or wallet in ("null", "undefined", ""):
+        raise HTTPException(status_code=400, detail="wallet query param required")
+    db = get_async_db()
+    inserted = await sync_wallet_fills(wallet.strip(), db)
+    trades = await _load_all_trades(wallet.strip(), sync_exchange=False)
+    return {"status": "ok", "inserted": inserted, "trades": trades}
 
 
 # ── API: User Settings (Paper vs Subscribers) ──────────────────────────────────
@@ -389,19 +405,51 @@ async def subscribe_strategy(request: Request):
     ai_engine = data.get("ai_engine", "CLAUDE")
     auto_risk = data.get("auto_risk", True)
     
+    is_active = data.get("is_active", True)
+    
     if not strategy_id or not wallet_address:
         raise HTTPException(status_code=400, detail="strategy_id and wallet_address required")
         
     try:
         db = get_async_db()
-        # Check strategy state
-        strat_state = await db.strategy_state.find_one({"strategy_id": strategy_id})
-        status = 'ACTIVE'
+        
+        # Check for open position
+        open_pos = await db.trade_logs.find_one({
+            "wallet_address": re.compile(f"^{re.escape(wallet_address)}$", re.IGNORECASE),
+            "status": "OPEN",
+            "strategy_id": strategy_id
+        })
+        
+        status = 'ACTIVE' if is_active else 'INACTIVE'
         alert_msg = None
         
-        if strat_state and strat_state.get("status") == 'IN_TRADE':
-            status = 'WAITING'
-            alert_msg = f"Alert: Strategy '{strategy_id}' is currently IN_TRADE. You have been placed in the waiting room and will be joined automatically when the current cycle finishes."
+        if open_pos:
+            if not is_active:
+                status = "STOPPING"
+                alert_msg = "Alert: You have an open position! Close the position manually or wait until it gets fulfilled. The bot is stopping."
+            else:
+                if target_pct is not None or stop_loss_pct is not None:
+                    # Update TP/SL in DB for the execution engine to pick up
+                    update_fields = {}
+                    if target_pct is not None:
+                        update_fields["take_profit_1_pct"] = target_pct
+                    if stop_loss_pct is not None:
+                        update_fields["stop_loss_pct"] = stop_loss_pct
+                    if update_fields:
+                        await db.trade_logs.update_one({"_id": open_pos["_id"]}, {"$set": update_fields})
+                    alert_msg = "Alert: Position params updated for the open position."
+                else:
+                    alert_msg = "Alert: Parameters saved, but new margin/leverage won't apply to the currently open position."
+        else:
+            if is_active:
+                strat_state = await db.strategy_state.find_one({"strategy_id": strategy_id})
+                if strat_state and strat_state.get("status") == 'IN_TRADE':
+                    status = 'WAITING'
+                    alert_msg = f"Alert: Strategy '{strategy_id}' is currently IN_TRADE. You have been placed in the waiting room."
+                else:
+                    alert_msg = "Bot Activated. Parameters saved."
+            else:
+                alert_msg = "Bot Deactivated. Parameters saved."
         
         # Upsert subscription
         await db.synap_surf_ai.update_one(
@@ -429,12 +477,34 @@ async def get_strategy_status(wallet_address: str):
         raise HTTPException(status_code=400, detail="wallet_address required")
     db = get_async_db()
     
-    # Get active or waiting subscriptions
-    sub = await db.synap_surf_ai.find_one({"wallet_address": wallet_address, "status": {"$in": ["ACTIVE", "WAITING"]}})
-    if sub:
-        return {"status": "ok", "subscription_status": sub["status"], "asset_name": sub.get("asset_name"), "strategy_id": sub.get("strategy_id")}
+    # Get any subscription for this user
+    sub = await db.synap_surf_ai.find_one({"wallet_address": wallet_address, "strategy_id": "ALGO AI BOT"})
     
-    return {"status": "ok", "subscription_status": "INACTIVE"}
+    # Check if there is an active position
+    open_pos = await db.trade_logs.find_one({
+        "wallet_address": re.compile(f"^{re.escape(wallet_address)}$", re.IGNORECASE),
+        "status": "OPEN",
+        "strategy_id": "ALGO AI BOT"
+    })
+    
+    has_open_position = open_pos is not None
+    
+    if sub:
+        return {
+            "status": "ok", 
+            "subscription_status": sub.get("status", "INACTIVE"),
+            "is_active": sub.get("status") in ("ACTIVE", "WAITING"),
+            "has_open_position": has_open_position,
+            "params": {
+                "capital": sub.get("capital"),
+                "leverage": sub.get("leverage"),
+                "target_pct": sub.get("target_pct"),
+                "stop_loss_pct": sub.get("stop_loss_pct"),
+                "asset_name": sub.get("asset_name"),
+            }
+        }
+    
+    return {"status": "ok", "subscription_status": "INACTIVE", "is_active": False, "has_open_position": has_open_position}
 
 @app.post("/api/strategy/unsubscribe")
 async def unsubscribe_strategy(request: Request):
@@ -533,16 +603,73 @@ async def get_decisions(wallet: str = None):
 
 
 # ── API: Watchlist ─────────────────────────────────────────────────────────────
+DEFAULT_WATCHLIST = ["BTC", "ETH", "SOL"]
+
+
+def _parse_watchlist_json(row: dict | None) -> list[str] | None:
+    if not row or "value_json" not in row:
+        return None
+    try:
+        data = json.loads(row["value_json"])
+        if isinstance(data, list) and data:
+            return [str(c).upper().strip() for c in data if c]
+    except Exception:
+        pass
+    return None
+
+
 @app.get("/api/watchlist")
 async def get_watchlist():
     try:
         db = get_async_db()
-        row = await db.market_data.find_one({"key": "active_watchlist"})
-        if row and "value_json" in row:
-            return {"watchlist": json.loads(row["value_json"])}
+        user_row = await db.market_data.find_one({"key": "user_watchlist"})
+        user_list = _parse_watchlist_json(user_row)
+        if user_list:
+            return {"watchlist": user_list, "source": "user"}
+
+        active_row = await db.market_data.find_one({"key": "active_watchlist"})
+        active_list = _parse_watchlist_json(active_row)
+        if active_list:
+            return {"watchlist": active_list, "source": "maintainer"}
     except Exception:
         pass
-    return {"watchlist": ["BTC", "ETH", "SOL"]}
+    return {"watchlist": DEFAULT_WATCHLIST, "source": "default"}
+
+
+class WatchlistUpdate(BaseModel):
+    watchlist: list[str]
+
+
+@app.post("/api/watchlist")
+async def save_watchlist(body: WatchlistUpdate):
+    coins = [str(c).upper().strip() for c in (body.watchlist or []) if c]
+    if not coins:
+        raise HTTPException(status_code=400, detail="watchlist must contain at least one coin")
+    if len(coins) > 30:
+        raise HTTPException(status_code=400, detail="watchlist limited to 30 coins")
+    # dedupe preserving order
+    seen: set[str] = set()
+    unique: list[str] = []
+    for c in coins:
+        if c not in seen:
+            seen.add(c)
+            unique.append(c)
+    try:
+        db = get_async_db()
+        await db.market_data.update_one(
+            {"key": "user_watchlist"},
+            {
+                "$set": {
+                    "key": "user_watchlist",
+                    "value_json": json.dumps(unique),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+            upsert=True,
+        )
+        return {"status": "ok", "watchlist": unique}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/market/ticker")
@@ -699,14 +826,34 @@ class TradeCoinReq(BaseModel):
     coin: str
     wallet_address: str
 
+_hl_trader_cache: dict[str, tuple[object, float]] = {}
+_HL_TRADER_CACHE_TTL_SEC = 300
+
+
 async def get_hl_client(wallet_address: str):
+    from synap.hyperliquid_trader import HyperliquidTrader
+    import time
+
+    wallet_address = wallet_address.strip()
+    now = time.time()
+    cached = _hl_trader_cache.get(wallet_address.lower())
+    if cached and (now - cached[1]) < _HL_TRADER_CACHE_TTL_SEC:
+        return cached[0]
+
     db = get_async_db()
-    user = await db.users.find_one({"wallet_address": re.compile(f"^{wallet_address}$", re.IGNORECASE)})
+    user = await db.users.find_one(
+        {"wallet_address": re.compile(f"^{re.escape(wallet_address)}$", re.IGNORECASE)}
+    )
     if not user or not user.get("private_key"):
         raise ValueError("No private key configured for this wallet")
-    
-    from synap.hyperliquid_trader import HyperliquidTrader
-    return HyperliquidTrader(private_key=user["private_key"], wallet_address=wallet_address)
+
+    client = await asyncio.to_thread(
+        HyperliquidTrader,
+        user["private_key"],
+        wallet_address,
+    )
+    _hl_trader_cache[wallet_address.lower()] = (client, now)
+    return client
 
 @app.post("/api/trade/open")
 async def manual_trade_open(req: TradeOpenReq):
@@ -715,8 +862,7 @@ async def manual_trade_open(req: TradeOpenReq):
         
         entry_px = req.limit_price or 0.0
         if entry_px == 0.0:
-            prices = get_mid_prices()
-            entry_px = prices.get(req.coin.upper(), 0.0)
+            entry_px = await asyncio.to_thread(get_coin_mid_price, req.coin)
             
         if entry_px == 0.0:
             raise ValueError(f"Could not determine market price for {req.coin}")
@@ -735,19 +881,25 @@ async def manual_trade_open(req: TradeOpenReq):
                 raise ValueError(f"For SHORT trades, Stop Loss must be higher than entry price (${entry_px})")
         
         # HyperliquidTrader uses slightly different args than HyperliquidManualClient
-        res = client.open_position(
-            coin=req.coin,
-            side=req.side,
-            entry_price=entry_px,
-            size_usd=req.size_usd,
-            leverage=req.leverage,
-            stop_loss=req.sl_price or 0.0,
-            tp1=req.tp_price or 0.0,
-            tp2=0.0,
-            margin_mode=req.margin_mode,
+        res = await asyncio.to_thread(
+            client.open_position,
+            req.coin,
+            req.side,
+            entry_px,
+            req.size_usd,
+            req.leverage,
+            req.sl_price or 0.0,
+            req.tp_price or 0.0,
+            0.0,
+            1.0,
+            "Manual UI Trade",
+            req.margin_mode,
         )
-        if not res:
-            raise HTTPException(status_code=400, detail=res.get("message"))
+        if res is not True:
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to open position on Hyperliquid (already open, max positions, or order rejected)",
+            )
             
         db = get_async_db()
         trade_doc = {
@@ -768,8 +920,11 @@ async def manual_trade_open(req: TradeOpenReq):
         }
         result = await db.trade_logs.insert_one(trade_doc)
         trade_doc["_id"] = str(result.inserted_id)
-        asyncio.create_task(_trade_mgr.push(req.wallet_address, {"type": "new_trades", "trades": [trade_doc]}))
-        return res
+        return {"status": "ok", "coin": req.coin, "side": req.side, "entry_price": entry_px}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -777,57 +932,39 @@ async def manual_trade_open(req: TradeOpenReq):
 async def manual_trade_close(req: TradeCoinReq):
     try:
         client = await get_hl_client(req.wallet_address)
-        res = client.close_position(req.coin, 0.0)
-        if not res:
-            raise HTTPException(status_code=400, detail=res.get("message"))
-            
-        prices = get_mid_prices()
-        exit_px = prices.get(req.coin.upper(), 0.0)
-            
+        res = await asyncio.to_thread(
+            client.close_position, req.coin, 0.0, "Manual UI Close"
+        )
+        if res is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Close order for {req.coin} was rejected by Hyperliquid",
+            )
+
+        exit_px = await asyncio.to_thread(get_coin_mid_price, req.coin)
+
         db = get_async_db()
-        await db.trade_logs.insert_one({
+        trade_doc = {
             "user_id": req.wallet_address,
+            "wallet_address": req.wallet_address,
             "event": "TRADE_CLOSE",
             "coin": req.coin,
             "exit_price": exit_px,
+            "pnl_usd": float(res),
             "reasoning": "Manual UI Close",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        })
-        return res
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        result = await db.trade_logs.insert_one(trade_doc)
+        trade_doc["_id"] = str(result.inserted_id)
+        return {"status": "ok", "pnl_usd": float(res), "exit_price": exit_px}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.websocket("/ws/trades/{wallet}")
-async def ws_trades(websocket: WebSocket, wallet: str):
-    await _trade_mgr.connect(wallet, websocket)
-    try:
-        db = get_async_db()
-        q = {"$or": [
-            {"user_id": re.compile(f"^{wallet}$", re.IGNORECASE)},
-            {"wallet_address": re.compile(f"^{wallet}$", re.IGNORECASE)},
-        ]}
-        recent = await db.trade_logs.find(q).sort("timestamp", -1).limit(20).to_list(20)
-        for t in recent:
-            t["_id"] = str(t["_id"])
-        await websocket.send_json({"type": "history", "trades": list(reversed(recent))})
-        last_ts = recent[0]["timestamp"] if recent else ""
 
-        # Poll every 2 s for new trades from any source (worker bot, etc.)
-        while True:
-            await asyncio.sleep(2)
-            extra = {"timestamp": {"$gt": last_ts}} if last_ts else {}
-            new = await db.trade_logs.find({**q, **extra}).sort("timestamp", -1).limit(10).to_list(10)
-            if new:
-                for t in new:
-                    t["_id"] = str(t["_id"])
-                last_ts = new[0]["timestamp"]
-                await websocket.send_json({"type": "new_trades", "trades": list(reversed(new))})
-    except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        logger.error(f"WS /ws/trades/{wallet}: {e}")
-    finally:
-        _trade_mgr.disconnect(wallet, websocket)
 
 @app.get("/api/wallet/balance")
 def get_wallet_balance(wallet: Optional[str] = None):
@@ -1055,33 +1192,30 @@ async def list_strategies(coin: str = "BTC"):
         strats = []
         metadata_docs = await db.strategies_metadata.find({}).to_list(length=None)
         
+        empty_metrics = {
+            "winRate": 0.0,
+            "totalPnl": 0.0,
+            "drawdown": 0.0,
+            "trades": 0,
+        }
         for doc in metadata_docs:
             strats.append({
                 "id": doc.get("strategy_id"),
                 "name": doc.get("name"),
                 "description": doc.get("description"),
                 "tags": doc.get("tags", []),
-                "metrics": {
-                    "winRate": 0.0,
-                    "totalPnl": 0.0,
-                    "drawdown": 0.0,
-                    "trades": 0
-                }
+                "metrics": dict(empty_metrics),
+                "hasBacktest": False,
             })
         # Fetch cached backtest metrics for each strategy
         for strat in strats:
-            cache_row = await db.backtest_cache.find_one({"strategy_id": strat.get("id"), "timeframe": "1h", "coin": coin})
+            cache_row = await db.backtest_cache.find_one(
+                {"strategy_id": strat.get("id"), "timeframe": "1h", "coin": coin}
+            )
             if cache_row and "metrics_json" in cache_row:
                 strat["metrics"] = json.loads(cache_row["metrics_json"])
-            else:
-                # Default mock metrics until backtester runs
-                strat["metrics"] = {
-                    "winRate": 65.5,
-                    "totalPnl": 850.2,
-                    "drawdown": 4.5,
-                    "trades": 120
-                }
-                
+                strat["hasBacktest"] = True
+
         return strats
     except Exception as e:
         import traceback
@@ -1242,9 +1376,11 @@ async def _build_context(db, context_type: str, wallet: str = None) -> str:
                 pass
 
     if context_type in ("strategy_generation", "general"):
-        strats = await db.strategies.find({}).to_list(length=None)
+        strats = await db.strategies_metadata.find({}).to_list(length=None)
         if strats:
-            strat_lines = [f"{s.get('name', '')} ({s.get('tags', '')})" for s in strats]
+            strat_lines = [
+                f"{s.get('name', '')} ({', '.join(s.get('tags') or [])})" for s in strats
+            ]
             parts.append(f"AVAILABLE STRATEGIES ({len(strats)} total):\n" + "\n".join(strat_lines))
 
     if context_type in ("smart_money_holder", "general"):

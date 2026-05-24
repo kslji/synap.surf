@@ -374,6 +374,34 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     STOP_LOSS_PCT: 'AUTO',
     ASSET: 'AUTO'
   });
+  
+  const [botActive, setBotActive] = useState(false);
+  const [hasOpenPosition, setHasOpenPosition] = useState(false);
+  const [savingBot, setSavingBot] = useState(false);
+
+  // Fetch bot status on mount or when wallet changes
+  useEffect(() => {
+    const w = localStorage.getItem('wallet_address');
+    if (!w) return;
+    fetch(`/api/strategy/status?wallet_address=${encodeURIComponent(w)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setBotActive(d.is_active);
+          setHasOpenPosition(d.has_open_position);
+          if (d.params) {
+            setBotParams({
+              MARGIN: d.params.capital === 'AUTO' || d.params.capital == null ? 'AUTO' : d.params.capital.toString(),
+              LEVERAGE: d.params.leverage === 'AUTO' || d.params.leverage == null ? 'AUTO' : d.params.leverage.toString(),
+              TARGET_ROE_PCT: d.params.target_pct == null ? 'AUTO' : d.params.target_pct.toString(),
+              STOP_LOSS_PCT: d.params.stop_loss_pct == null ? 'AUTO' : d.params.stop_loss_pct.toString(),
+              ASSET: d.params.asset_name || 'AUTO'
+            });
+          }
+        }
+      })
+      .catch(() => {});
+  }, [walletBalance?.configured]);
 
   const handleBotChange = (key, val) => {
     setBotParams(prev => ({ ...prev, [key]: val }));
@@ -400,12 +428,14 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
     }
     
     try {
+      setSavingBot(true);
       const res = await fetch('/api/strategy/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet_address: w,
           strategy_id: 'ALGO AI BOT',
+          is_active: true,
           auto_risk: botParams.MARGIN === 'AUTO' || botParams.LEVERAGE === 'AUTO',
           capital: botParams.MARGIN === 'AUTO' ? 'AUTO' : capital,
           leverage: botParams.LEVERAGE === 'AUTO' ? 'AUTO' : lev,
@@ -417,9 +447,65 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Failed to save');
-      toast({ type: 'success', title: 'Settings Saved', message: 'AI Bot Parameters Saved!', duration: 5000 });
+      
+      if (data.alert) {
+        toast({ type: 'info', title: 'Status Update', message: data.alert, duration: 8000 });
+      } else {
+        toast({ type: 'success', title: 'Settings Saved', message: 'AI Bot Parameters Saved!', duration: 5000 });
+      }
     } catch (e) {
       toast({ type: 'error', title: 'Error', message: e.message, duration: 7000 });
+    } finally {
+      setSavingBot(false);
+      // Fetch fresh status to update the badge
+      fetch(`/api/strategy/status?wallet_address=${encodeURIComponent(w)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d) {
+            setBotActive(d.is_active);
+            setHasOpenPosition(d.has_open_position);
+          }
+        }).catch(() => {});
+    }
+  };
+
+  const stopBotParameters = async () => {
+    const w = localStorage.getItem('wallet_address');
+    if (!w) return;
+    try {
+      setSavingBot(true);
+      const res = await fetch('/api/strategy/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wallet_address: w,
+          strategy_id: 'ALGO AI BOT',
+          is_active: false,
+          auto_risk: true,
+          capital: "AUTO",
+          leverage: "AUTO",
+          asset_name: "AUTO",
+          ai_engine: "CLAUDE"
+        })
+      });
+      const data = await res.json();
+      if (data.alert) {
+        toast({ type: 'info', title: 'Status Update', message: data.alert, duration: 8000 });
+      } else {
+        toast({ type: 'success', title: 'Bot Stopped', message: 'Bot has been deactivated.', duration: 5000 });
+      }
+    } catch (e) {
+      toast({ type: 'error', title: 'Error', message: e.message, duration: 7000 });
+    } finally {
+      setSavingBot(false);
+      fetch(`/api/strategy/status?wallet_address=${encodeURIComponent(w)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d) {
+            setBotActive(d.is_active);
+            setHasOpenPosition(d.has_open_position);
+          }
+        }).catch(() => {});
     }
   };
 
@@ -901,11 +987,29 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
 
         {/* ALGO AI BOT SECTION */}
         <section className="rp-section">
-          <div className="rp-hdr">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="rp-hdr" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px 12px' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0, whiteSpace: 'nowrap' }}>
               Synap.surf AI 
-              <span className="limit-tooltip" data-tooltip="Free accounts are limited to 2 concurrent positions. Upgrade to Premium to manage up to 5 positions simultaneously." style={{ fontSize: 9, color: '#ff9f43', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.5px', textTransform: 'none', cursor: 'help' }}>ⓘ Limit</span>
+              <span className="limit-tooltip" data-tooltip="Free accounts are limited to 2 concurrent positions. Upgrade to Premium to manage up to 5 positions simultaneously." style={{ fontSize: 9, color: '#ff9f43', background: 'rgba(255, 159, 67, 0.1)', padding: '2px 6px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.5px', textTransform: 'none', cursor: 'help', whiteSpace: 'nowrap' }}>ⓘ Limit</span>
             </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+              {hasOpenPosition ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(24, 184, 122, 0.15)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(24, 184, 122, 0.3)' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)', animation: 'pulse 2s infinite', flexShrink: 0 }} />
+                  <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--green)', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>POSITION ACTIVE</span>
+                </div>
+              ) : botActive ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0, 210, 211, 0.15)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(0, 210, 211, 0.3)' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--accent)', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>SEARCHING TRADES</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255, 255, 255, 0.05)', padding: '4px 10px', borderRadius: 6 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--t3)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--t3)', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>INACTIVE</span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="bot-config">
             {Object.entries(botParams).map(([key, val]) => {
@@ -975,7 +1079,35 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 <span className="m-tgl grok-tooltip" data-tooltip="Right now Grok is unavailable" style={{ fontSize: 8, padding: '4px 10px', opacity: 0.5, cursor: 'not-allowed' }}>GROK</span>
               </div>
             </div>
-            <button className="bc-save-btn" onClick={saveBotParameters}>EXECUTE</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {botActive && (
+                <button 
+                  onClick={stopBotParameters} 
+                  disabled={savingBot} 
+                  style={{ 
+                    flex: 1, 
+                    background: 'rgba(233, 69, 96, 0.15)', 
+                    color: 'var(--red)', 
+                    border: '1px solid rgba(233, 69, 96, 0.3)', 
+                    borderRadius: 8, 
+                    fontSize: 13, 
+                    fontWeight: 800, 
+                    cursor: 'pointer', 
+                    padding: '12px 0' 
+                  }}
+                >
+                  STOP BOT
+                </button>
+              )}
+              <button 
+                className="bc-save-btn" 
+                onClick={saveBotParameters} 
+                disabled={savingBot}
+                style={{ flex: botActive ? 2 : 1 }}
+              >
+                {savingBot ? 'SAVING...' : (botActive ? 'UPDATE PARAMS' : 'EXECUTE')}
+              </button>
+            </div>
           </div>
         </section>
       </aside>

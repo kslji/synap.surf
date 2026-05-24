@@ -90,7 +90,7 @@ export function AuthProvider({ children }) {
         if (accounts.length > 0) {
           const address = accounts[0];
           setWalletAddress(address);
-          localStorage.setItem('hl_wallet', address);
+          localStorage.setItem('wallet_address', address);
           window.dispatchEvent(new Event('wallet_changed'));
           loginWallet(address);
         } else {
@@ -103,7 +103,7 @@ export function AuthProvider({ children }) {
   // Watch for local storage changes from manual connection
   useEffect(() => {
     const syncWallet = () => {
-      const address = localStorage.getItem('hl_wallet') || '';
+      const address = localStorage.getItem('wallet_address') || '';
       setWalletAddress(address);
       if (address) loginWallet(address);
     };

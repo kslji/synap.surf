@@ -270,9 +270,9 @@ export default function StrategyTerminal() {
       
       // Update the local state with new metrics and trades
       setStrategies(prev => prev.map(s => 
-        s.id === selected.id ? { ...s, metrics: data.metrics, trades: data.trades } : s
+        s.id === selected.id ? { ...s, metrics: data.metrics, trades: data.trades, hasBacktest: true } : s
       ));
-      setSelected(prev => ({ ...prev, metrics: data.metrics, trades: data.trades }));
+      setSelected(prev => ({ ...prev, metrics: data.metrics, trades: data.trades, hasBacktest: true }));
       
     } catch (e) {
       console.error("Backtest error:", e);
@@ -321,6 +321,7 @@ export default function StrategyTerminal() {
     drawdown: 0,
     trades: 0
   };
+  const hasBacktest = selected.hasBacktest === true;
 
   return (
     <div className="strategy-terminal">
@@ -431,24 +432,32 @@ export default function StrategyTerminal() {
           </div>
           
           <div className="strat-perf-grid">
-            <div className="perf-card">
-              <span className="label">WIN RATE</span>
-              <span className="value highlight" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(255,255,255,0.3)' }}>{metrics.winRate}%</span>
-            </div>
-            <div className="perf-card">
-              <span className="label">EST. PROFIT</span>
-              <span className={`value ${metrics.totalPnl >= 0 ? 'pos' : 'neg'}`}>
-                {metrics.totalPnl >= 0 ? '+' : '-'}${Math.abs(metrics.totalPnl).toFixed(2)}
-              </span>
-            </div>
-            <div className="perf-card">
-              <span className="label">MAX DRAWDOWN</span>
-              <span className="value neg">-{Math.abs(metrics.drawdown).toFixed(2)}%</span>
-            </div>
-            <div className="perf-card">
-              <span className="label">TOTAL TRADES</span>
-              <span className="value" style={{ color: '#ff9f43', textShadow: '0 2px 8px rgba(255,159,67,0.3)' }}>{metrics.trades}</span>
-            </div>
+            {!hasBacktest ? (
+              <div style={{ gridColumn: '1 / -1', padding: '12px', textAlign: 'center', color: 'var(--t2)', fontSize: '12px' }}>
+                No backtest yet — click <strong>RUN BACKTEST</strong> to simulate this strategy on historical data.
+              </div>
+            ) : (
+              <>
+                <div className="perf-card">
+                  <span className="label">WIN RATE</span>
+                  <span className="value highlight" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(255,255,255,0.3)' }}>{metrics.winRate}%</span>
+                </div>
+                <div className="perf-card">
+                  <span className="label">EST. PROFIT</span>
+                  <span className={`value ${metrics.totalPnl >= 0 ? 'pos' : 'neg'}`}>
+                    {metrics.totalPnl >= 0 ? '+' : '-'}${Math.abs(metrics.totalPnl).toFixed(2)}
+                  </span>
+                </div>
+                <div className="perf-card">
+                  <span className="label">MAX DRAWDOWN</span>
+                  <span className="value neg">-{Math.abs(metrics.drawdown).toFixed(2)}%</span>
+                </div>
+                <div className="perf-card">
+                  <span className="label">TOTAL TRADES</span>
+                  <span className="value" style={{ color: '#ff9f43', textShadow: '0 2px 8px rgba(255,159,67,0.3)' }}>{metrics.trades}</span>
+                </div>
+              </>
+            )}
           </div>
           
           <ErrorBoundary>

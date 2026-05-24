@@ -90,11 +90,16 @@ class HyperliquidTrader:
 
     # ── State Sync & Metadata Persistence ────────────────────────────────────
 
+    def _positions_storage_key(self) -> str:
+        return f"live_positions_{self.user_address.lower()}"
+
     def _load_local_state(self) -> List[Dict]:
-        """Load open positions metadata from db."""
+        """Load open positions metadata from db (per-wallet)."""
         try:
             db = get_sync_db()
-            kv_row = db.market_data.find_one({"key": "live_positions"})
+            kv_row = db.market_data.find_one({"key": self._positions_storage_key()})
+            if not kv_row:
+                kv_row = db.market_data.find_one({"key": "live_positions"})
             if kv_row and "value_json" in kv_row:
                 return json.loads(kv_row["value_json"])
         except Exception as e:
@@ -122,7 +127,7 @@ class HyperliquidTrader:
             )
             
             db.market_data.update_one(
-                {"key": "live_positions"},
+                {"key": self._positions_storage_key()},
                 {"$set": {
                     "value_json": json.dumps(positions, default=str),
                     "updated_at": datetime.now(timezone.utc).isoformat()
@@ -135,6 +140,46 @@ class HyperliquidTrader:
     def _save_state(self):
         """Saves current live portfolio snapshot. Keeps compatibility with PaperTrader."""
         self._save_local_state(self.positions)
+
+    def _get_exchange_position(self, coin: str) -> Optional[Dict]:
+        """Read a single open perp position from Hyperliquid (fast path for trade UI)."""
+        coin = coin.upper()
+        try:
+            state = self.info.user_state(self.user_address)
+            for entry in state.get("assetPositions", []):
+                pos = entry.get("position", {})
+                if pos.get("coin") == coin:
+                    szi = float(pos.get("szi", 0))
+                    if szi == 0:
+                        return None
+                    side = "LONG" if szi > 0 else "SHORT"
+                    lev_raw = pos.get("leverage", 10)
+                    if isinstance(lev_raw, dict):
+                        leverage = int(lev_raw.get("value", 10))
+                    else:
+                        leverage = int(lev_raw or 10)
+                    return {
+                        "coin": coin,
+                        "side": side,
+                        "size": abs(szi),
+                        "entry_price": float(pos.get("entryPx", 0)),
+                        "leverage": leverage,
+                        "unrealized_pnl": float(pos.get("unrealizedPnl", 0)),
+                    }
+        except Exception as e:
+            logger.error(f"Error reading exchange position for {coin}: {e}")
+        return None
+
+    def _count_exchange_positions(self) -> int:
+        try:
+            state = self.info.user_state(self.user_address)
+            return sum(
+                1
+                for entry in state.get("assetPositions", [])
+                if entry.get("position") and float(entry["position"].get("szi", 0)) != 0
+            )
+        except Exception:
+            return len(self._load_local_state())
 
     # ── Portfolio Info ────────────────────────────────────────────────────────
 
@@ -339,16 +384,13 @@ class HyperliquidTrader:
         """Open a new live position on Hyperliquid mainnet."""
         coin = coin.upper()
 
-        # Check existing positions in this coin
-        for pos in self.positions:
-            if pos["coin"] == coin:
-                logger.warning(
-                    f"Already have an open live position in {coin} — skipping"
-                )
-                return False
+        # Fast exchange check (avoid full positions sync on every open)
+        if self._get_exchange_position(coin):
+            logger.warning(f"Already have an open live position in {coin} — skipping")
+            return False
 
         # Enforce open slots risk limit
-        if len(self.positions) >= MAX_OPEN_POSITIONS:
+        if self._count_exchange_positions() >= MAX_OPEN_POSITIONS:
             logger.warning(
                 f"Max live positions ({MAX_OPEN_POSITIONS}) reached — skipping open"
             )
@@ -500,6 +542,15 @@ class HyperliquidTrader:
         """Close (or partially close) a live position on Hyperliquid mainnet."""
         coin = coin.upper()
 
+        exchange_pos = self._get_exchange_position(coin)
+        if not exchange_pos:
+            logger.info(f"No open {coin} position on Hyperliquid to close")
+            local = self._load_local_state()
+            pruned = [p for p in local if p.get("coin") != coin]
+            if len(pruned) != len(local):
+                self._save_local_state(pruned)
+            return 0.0
+
         positions = self._load_local_state()
         pos_idx = None
         for i, p in enumerate(positions):
@@ -508,37 +559,25 @@ class HyperliquidTrader:
                 break
 
         if pos_idx is None:
-            logger.warning(f"No tracked local position in {coin} to close")
-            # Close exchange position anyway to be safe
-            try:
-                self.exchange.market_close(coin)
-            except Exception:
-                pass
-            return None
-
-        pos = positions[pos_idx]
-        side = pos["side"]
-        entry_price = pos["entry_price"]
-        leverage = pos["leverage"]
-
-        # Fetch actual position size from exchange
-        real_sz = 0.0
-        try:
-            state = self.info.user_state(self.user_address)
-            for entry in state.get("assetPositions", []):
-                p = entry.get("position", {})
-                if p.get("coin") == coin:
-                    real_sz = abs(float(p.get("szi", 0)))
-                    break
-        except Exception:
-            pass
+            side = exchange_pos["side"]
+            entry_price = exchange_pos["entry_price"]
+            leverage = exchange_pos["leverage"]
+            real_sz = exchange_pos["size"]
+            logger.info(
+                f"Closing {coin} from exchange state (no local metadata after DB reset/external open)"
+            )
+        else:
+            pos = positions[pos_idx]
+            side = pos["side"]
+            entry_price = pos.get("entry_price") or exchange_pos["entry_price"]
+            leverage = pos.get("leverage") or exchange_pos["leverage"]
+            real_sz = exchange_pos["size"]
 
         if real_sz == 0.0:
-            logger.warning(
-                f"Exchange position for {coin} is already flat. Pruning local state."
-            )
-            positions.pop(pos_idx)
-            self._save_local_state(positions)
+            logger.warning(f"Exchange position for {coin} is already flat. Pruning local state.")
+            if pos_idx is not None:
+                positions.pop(pos_idx)
+                self._save_local_state(positions)
             return 0.0
 
         sz_to_close = real_sz * close_pct
@@ -601,10 +640,20 @@ class HyperliquidTrader:
                 self.total_fees_paid += exit_cost
 
                 # Calculate hold duration
-                opened_at = datetime.fromisoformat(pos["opened_at"])
-                hold_hours = (
-                    datetime.now(timezone.utc) - opened_at
-                ).total_seconds() / 3600
+                opened_at_raw = (
+                    positions[pos_idx].get("opened_at")
+                    if pos_idx is not None
+                    else None
+                )
+                if opened_at_raw:
+                    opened_at = datetime.fromisoformat(
+                        str(opened_at_raw).replace("Z", "+00:00")
+                    )
+                    hold_hours = (
+                        datetime.now(timezone.utc) - opened_at
+                    ).total_seconds() / 3600
+                else:
+                    hold_hours = 0.0
 
                 # Update stats
                 self.realized_pnl += pnl_usd
@@ -630,8 +679,11 @@ class HyperliquidTrader:
 
                 # Update local positioning list
                 if is_full_close:
-                    positions.pop(pos_idx)
-                else:
+                    if pos_idx is not None:
+                        positions.pop(pos_idx)
+                    else:
+                        positions = [p for p in positions if p.get("coin") != coin]
+                elif pos_idx is not None:
                     positions[pos_idx]["remaining_size_pct"] *= 1 - close_pct
                     trade_journal.log_trade_update(
                         coin,

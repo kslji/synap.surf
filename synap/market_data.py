@@ -215,6 +215,20 @@ def get_mid_prices() -> dict[str, float]:
         return {}
 
 
+def get_coin_mid_price(coin: str) -> float:
+    """Fetch a single coin mid price (faster than all_mids for trade endpoints)."""
+    coin = (coin or "").upper()
+    if not coin:
+        return 0.0
+    try:
+        info = _get_info()
+        mids = info.all_mids()
+        return float(mids.get(coin, 0))
+    except Exception as e:
+        logger.error(f"Failed to fetch mid for {coin}: {e}")
+        return 0.0
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # QUICK TECHNICAL ANALYSIS
 # ═══════════════════════════════════════════════════════════════════════════════

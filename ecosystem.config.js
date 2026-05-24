@@ -47,6 +47,12 @@ module.exports = {
       script: "python3",
       args: "-m synap.nansen_updater",
       interpreter: "none",
+    },
+    {
+      name: "websocket-service",
+      script: "python3",
+      args: "-m uvicorn backend.websocket_service:app --host 127.0.0.1 --port 8001",
+      interpreter: "none",
       watch: false
     }
   ]

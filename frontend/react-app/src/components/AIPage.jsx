@@ -36,7 +36,7 @@ export default function AIPage() {
     setFeedbacks(prev => ({ ...prev, [index]: newFeedback }));
     
     try {
-      await fetch('http://localhost:8000/api/ai/feedback', {
+      await fetch('/api/ai/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message_index: index, feedback: newFeedback || 'none', text: text.substring(0, 100) })

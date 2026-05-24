@@ -76,7 +76,8 @@ export function useDashboard() {
     if (!wallet || wallet === 'null') { setTrades([]); return; }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/trades/${wallet}`);
+    const host = window.location.hostname;
+    const ws = new WebSocket(`${protocol}//${host}:8001/ws/trades/${wallet}`);
 
     ws.onmessage = (e) => {
       try {
@@ -136,8 +137,23 @@ export function useDashboard() {
   }, [fetchAll, connectTradeWs]);
 
   const saveWatchlist = async (list) => {
-    await fetch('/api/watchlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ watchlist: list }) });
-    fetchPerps();
+    try {
+      const r = await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ watchlist: list }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        console.error('Failed to save watchlist:', err.detail || r.statusText);
+        return;
+      }
+      const data = await r.json();
+      setWatchlist(data.watchlist || list);
+      fetchPerps();
+    } catch (e) {
+      console.error('Failed to save watchlist:', e);
+    }
   };
 
   return { stats, trades, decisions, perps, watchlist, intel, topCoins, fetchAll, saveWatchlist };
