@@ -19,3 +19,11 @@ feedparser>=6.0.0
 
 # AI Brain trading system (algo_brain/)
 requests>=2.31.0
+
+# Backend Services & Server Dependencies
+motor>=3.3.0
+pymongo>=4.5.0
+pydantic>=2.4.0
+eth-account>=0.9.0
+sentence-transformers>=2.2.0
+torch>=2.0.0
