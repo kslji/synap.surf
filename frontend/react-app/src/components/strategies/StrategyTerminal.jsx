@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, Component } from 'react';
 import BacktestChart from './BacktestChart';
+import { useToast } from '../Toast';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
@@ -103,6 +104,10 @@ export default function StrategyTerminal() {
       .catch(console.error);
   }, []);
 
+  const [lastLogId, setLastLogId] = useState(null);
+
+  const toast = useToast();
+
   useEffect(() => {
     // Fetch strategies
     fetch(`/api/strategies?coin=${coin}`)
@@ -138,13 +143,75 @@ export default function StrategyTerminal() {
       .catch(console.error);
   }, [coin]);
 
+  useEffect(() => {
+    const savedWallet = localStorage.getItem('wallet_address');
+    if (!savedWallet || savedWallet === 'null') return;
+
+    // Poll for status and trade logs
+    const checkStatusAndLogs = async () => {
+      try {
+        const [statusRes, logsRes] = await Promise.all([
+          fetch(`/api/strategy/status?wallet_address=${encodeURIComponent(savedWallet)}`),
+          fetch(`/api/trade/logs?wallet_address=${encodeURIComponent(savedWallet)}&limit=1`)
+        ]);
+
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.subscription_status === 'ACTIVE' || statusData.subscription_status === 'WAITING') {
+            setIsExecuting(true);
+            setStatus(statusData.subscription_status);
+            if (statusData.asset_name && statusData.asset_name !== 'AUTO') setCoin(statusData.asset_name);
+          } else {
+            setIsExecuting(false);
+            setStatus('');
+          }
+        }
+
+        if (logsRes.ok) {
+          const logsData = await logsRes.json();
+          if (logsData.logs && logsData.logs.length > 0) {
+            const latestLog = logsData.logs[0];
+            setLastLogId(prevId => {
+              if (prevId && prevId !== latestLog._id) {
+                toast({ 
+                  type: 'success', 
+                  title: 'Order Executed', 
+                  message: `Your ${latestLog.side} order for ${latestLog.coin} has been executed by the AI bot!`, 
+                  duration: 8000 
+                });
+              }
+              return latestLog._id;
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check status/logs:", e);
+      }
+    };
+
+    checkStatusAndLogs();
+    const interval = setInterval(checkStatusAndLogs, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
+  }, [toast]);
+
   const filtered = strategies.filter(s => 
     s.name.toLowerCase().includes(search.toLowerCase()) || 
     (s.tags && s.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
   );
 
-  const handleExecuteBtnClick = () => {
+  const handleExecuteBtnClick = async () => {
     if (isExecuting) {
+      // Unsubscribe
+      const wallet = localStorage.getItem('wallet_address') || 'TEST_WALLET';
+      try {
+        await fetch('/api/strategy/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallet_address: wallet, strategy_id: selected.id })
+        });
+      } catch (e) {
+        console.error("Failed to unsubscribe", e);
+      }
       setIsExecuting(false);
       setStatus('');
       return;
@@ -490,7 +557,25 @@ export default function StrategyTerminal() {
             </div>
           </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--t3)', letterSpacing: '1px' }}>DB BOT STATUS:</div>
+            {isExecuting ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: status === 'WAITING' ? '#f5b301' : '#10ac84', boxShadow: `0 0 10px ${status === 'WAITING' ? '#f5b301' : '#10ac84'}` }}></div>
+                <span style={{ fontSize: '11px', fontWeight: 900, color: status === 'WAITING' ? '#f5b301' : '#10ac84' }}>
+                  {status === 'WAITING' ? 'ACTIVE (WAITING FOR SIGNAL)' : 'ACTIVE (TRADING)'}
+                </span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff4757', opacity: 0.5 }}></div>
+                <span style={{ fontSize: '11px', fontWeight: 900, color: '#ff4757', opacity: 0.8 }}>UNACTIVE</span>
+              </div>
+            )}
+          </div>
+
           <button 
+
             className={`strat-exec-btn${isExecuting ? (status === 'WAITING' ? ' waiting' : ' active') : ''}`}
             onClick={handleExecuteBtnClick}
             style={{ 

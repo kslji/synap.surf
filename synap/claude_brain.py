@@ -184,29 +184,22 @@ def build_data_packet(
         "open_positions": portfolio.get("open_position_count", 0),
         "win_rate": portfolio.get("win_rate", 0),
     }
-    sections.append(json.dumps(portfolio_summary, indent=2))
+    sections.append(json.dumps(portfolio_summary, separators=(',', ':')))
 
     if portfolio.get("positions"):
-        sections.append("\n### Open Positions:")
+        sections.append("positions:")
         for pos in portfolio["positions"]:
-            sections.append(
-                json.dumps(
-                    {
-                        "coin": pos["coin"],
-                        "side": pos["side"],
-                        "entry_price": pos["entry_price"],
-                        "current_price": pos.get("current_price", 0),
-                        "unrealized_pnl_pct": pos.get("unrealized_pnl_pct", 0),
-                        "stop_loss": pos["stop_loss"],
-                        "tp1": pos["take_profit_1"],
-                        "tp2": pos["take_profit_2"],
-                        "tp1_hit": pos.get("tp1_hit", False),
-                        "leverage": pos["leverage"],
-                        "opened_at": pos.get("opened_at", ""),
-                    },
-                    indent=2,
-                )
-            )
+            sections.append(json.dumps(
+                {
+                    "coin": pos["coin"], "side": pos["side"],
+                    "entry": pos["entry_price"], "price": pos.get("current_price", 0),
+                    "pnl_pct": pos.get("unrealized_pnl_pct", 0),
+                    "sl": pos["stop_loss"], "tp1": pos["take_profit_1"],
+                    "tp1_hit": pos.get("tp1_hit", False),
+                    "lev": pos["leverage"], "opened": pos.get("opened_at", ""),
+                },
+                separators=(',', ':'),
+            ))
 
     # ── Section 2: Market Sentiment ──────────────────────────────────────
     sections.append("\n## MARKET SENTIMENT")
@@ -254,8 +247,7 @@ def build_data_packet(
     perp_screener = nansen.get("perp_screener")
     if perp_screener:
         sections.append("### Perp Screener (Hyperliquid):")
-        # Truncate to avoid token bloat
-        sections.append(json.dumps(perp_screener, indent=2, default=str)[:2000])
+        sections.append(json.dumps(perp_screener, separators=(',', ':'), default=str)[:2000])
 
     sm_flows = nansen.get("smart_money_flows") or {}
     if sm_flows:
@@ -268,25 +260,43 @@ def build_data_packet(
     )
 
     # ── Section 5: Technical Analysis ────────────────────────────────────
-    sections.append("\n## TECHNICAL ANALYSIS")
+    # Compact summary — only fields Claude uses for decisions.
+    # Drops ema_20/ema_50/pivot/adx/volume_ratio (captured by regime/trend/vol).
+    def _tf_summary(t: dict) -> dict:
+        return {
+            "regime":      t.get("regime"),
+            "trend":       t.get("trend"),
+            "rsi":         t.get("rsi_14"),
+            "macd":        t.get("macd"),
+            "macd_signal": t.get("macd_signal"),
+            "bb_pct":      t.get("bb_pct"),
+            "atr_pct":     t.get("atr_pct"),
+            "vol":         t.get("volume_trend"),
+            "price":       t.get("current_price"),
+            "support":     t.get("support_1"),
+            "resist":      t.get("resistance_1"),
+        }
 
+    sections.append("\n## TECHNICAL ANALYSIS")
     for coin in watchlist_coins:
         tech = technicals.get(coin, {})
-        if tech and "error" not in tech:
-            sections.append(f"\n### {coin}:")
-            sections.append(json.dumps(tech, indent=2))
+        if not tech or "error" in tech:
+            continue
+        fast = tech.get("fast", {})
+        slow = tech.get("slow", {})
+        summary = {"fast": _tf_summary(fast), "slow": _tf_summary(slow)} if slow else _tf_summary(fast)
+        sections.append(f"\n{coin}: {json.dumps(summary, separators=(',', ':'))}")
 
     # ── Section 6: Funding Rates ─────────────────────────────────────────
     if funding_rates:
         sections.append("\n## FUNDING RATES (top coins)")
-        # Only show funding for watchlist coins
         relevant_funding = {
             k: f"{v * 100:.4f}%"
             for k, v in funding_rates.items()
             if k in watchlist_coins
         }
         if relevant_funding:
-            sections.append(json.dumps(relevant_funding, indent=2))
+            sections.append(json.dumps(relevant_funding, separators=(',', ':')))
 
     return "\n".join(sections)
 
@@ -351,7 +361,11 @@ def get_ai_decision(
             model=CLAUDE_MODEL,
             max_tokens=CLAUDE_MAX_TOKENS,
             temperature=CLAUDE_TEMPERATURE,
-            system=SYSTEM_PROMPT,
+            system=[{
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }],
             messages=[
                 {
                     "role": "user",
@@ -376,10 +390,11 @@ def get_ai_decision(
 
         decision = json.loads(response_text)
 
-        # Log the AI decision
+        # Log the AI decision and retrieve the unique decision ID
         from synap.trade_journal import log_ai_decision
 
-        log_ai_decision(decision, len(data_packet), len(raw_response))
+        dec_id = log_ai_decision(decision, len(data_packet), len(raw_response))
+        decision["_decision_id"] = str(dec_id) if dec_id else None
 
         return decision
 
@@ -406,6 +421,7 @@ def validate_decision(decision: dict) -> dict:
     Ensures all required fields exist and values are within limits.
     """
     validated = {
+        "_decision_id": decision.get("_decision_id"),
         "scan_result": decision.get("scan_result", {"top_coins": [], "reasoning": ""}),
         "trades": [],
         "position_updates": [],

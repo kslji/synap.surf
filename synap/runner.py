@@ -42,6 +42,24 @@ def run_brain():
 
     while True:
         try:
+            # Distributed lock: prevent concurrent runs if multiple processes start.
+            # Step 1: ensure the lock document exists.
+            # Step 2: atomically acquire it only if expired.
+            now_ts = time.time()
+            db.runner_lock.update_one(
+                {"_id": "runner_lock"},
+                {"$setOnInsert": {"locked_until": 0}},
+                upsert=True,
+            )
+            acquired = db.runner_lock.find_one_and_update(
+                {"_id": "runner_lock", "locked_until": {"$lt": now_ts}},
+                {"$set": {"locked_until": now_ts + AI_SCAN_INTERVAL_SECONDS - 60}},
+            )
+            if acquired is None:
+                logger.warning("Another runner instance is active. Sleeping...")
+                time.sleep(AI_SCAN_INTERVAL_SECONDS)
+                continue
+
             logger.info("\n🔍 Starting new AI evaluation cycle...")
             
             # 1. Load the latest market intelligence from MongoDB
@@ -140,6 +158,7 @@ def run_brain():
                         "strategy_id": "ALGO AI BOT",
                         "coin": coin,
                         "action": action,
+                        "decision_id": validated.get("_decision_id"),
                         "side": action.replace("OPEN_", ""),
                         "entry_price": trade.get("entry_price"),
                         "stop_loss": trade.get("stop_loss"),
@@ -153,13 +172,8 @@ def run_brain():
                     db.signals_queue.insert_one(signal_doc)
                     logger.info(f"📥 Pushed {action} on {coin} to signals_queue.")
             
-            # 5. Log decision for dashboard history
-            # The dashboard expects 'user_id' for segregation. Master signals don't have a specific user.
-            # However, for the AI Signals feed on the frontend to work, we log the master decision.
-            db.decision_logs.insert_one({
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "decision_json": json.dumps(validated)
-            })
+            # 5. Log decision for dashboard history is already handled by log_ai_decision inside claude_brain.py
+            # to prevent duplicate insertions, we do not log it again here.
             
             logger.info("✅ Cycle complete. Sleeping...")
             

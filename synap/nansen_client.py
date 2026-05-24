@@ -152,6 +152,33 @@ def _nansen_post(endpoint: str, body: dict, cache_key: str) -> Optional[dict]:
     if cached is not None:
         return cached
 
+    # 1. Check DB Cache
+    db_cached = None
+    try:
+        db = get_db()
+        row = db.nansen_cache.find_one({"cache_key": cache_key})
+        if row and "response_json" in row and "timestamp" in row:
+            ts = datetime.fromisoformat(row["timestamp"])
+            age = (datetime.now(timezone.utc) - ts).total_seconds()
+            db_cached = json.loads(row["response_json"])
+            
+            is_updater = os.getenv("IS_NANSEN_UPDATER") == "1"
+            if age < NANSEN_CACHE_TTL_SECONDS or not is_updater:
+                if age >= NANSEN_CACHE_TTL_SECONDS:
+                    logger.info(f"  🗄️ DB Cache hit (EXPIRED but used by non-updater): {cache_key}")
+                else:
+                    logger.info(f"  🗄️ DB Cache hit: {cache_key}")
+                _cache.set(cache_key, db_cached)
+                return db_cached
+    except Exception as e:
+        logger.warning(f"Error checking DB cache: {e}")
+
+    # 2. Block live calls for non-updater processes to preserve budget
+    is_updater = os.getenv("IS_NANSEN_UPDATER") == "1"
+    if not is_updater:
+        logger.warning(f"🚫 Non-updater process requested Nansen data, but it was not cached or fresh. Skipping live call to protect credits.")
+        return db_cached  # Return expired cache if exists, otherwise None
+
     if not _tracker.can_call():
         return None
 
@@ -181,7 +208,6 @@ def _nansen_post(endpoint: str, body: dict, cache_key: str) -> Optional[dict]:
     except requests.exceptions.HTTPError as e:
         if resp is not None:
             logger.error(f"Nansen API error ({resp.status_code}): {e}")
-            # Try to log the response body for debugging
             try:
                 logger.error(f"Response: {resp.text[:500]}")
             except Exception:
@@ -204,6 +230,33 @@ def _nansen_get(endpoint: str, params: dict, cache_key: str) -> Optional[dict]:
     if cached is not None:
         return cached
 
+    # 1. Check DB Cache
+    db_cached = None
+    try:
+        db = get_db()
+        row = db.nansen_cache.find_one({"cache_key": cache_key})
+        if row and "response_json" in row and "timestamp" in row:
+            ts = datetime.fromisoformat(row["timestamp"])
+            age = (datetime.now(timezone.utc) - ts).total_seconds()
+            db_cached = json.loads(row["response_json"])
+            
+            is_updater = os.getenv("IS_NANSEN_UPDATER") == "1"
+            if age < NANSEN_CACHE_TTL_SECONDS or not is_updater:
+                if age >= NANSEN_CACHE_TTL_SECONDS:
+                    logger.info(f"  🗄️ DB Cache hit (EXPIRED but used by non-updater): {cache_key}")
+                else:
+                    logger.info(f"  🗄️ DB Cache hit: {cache_key}")
+                _cache.set(cache_key, db_cached)
+                return db_cached
+    except Exception as e:
+        logger.warning(f"Error checking DB cache: {e}")
+
+    # 2. Block live calls for non-updater processes to preserve budget
+    is_updater = os.getenv("IS_NANSEN_UPDATER") == "1"
+    if not is_updater:
+        logger.warning(f"🚫 Non-updater process requested Nansen data, but it was not cached or fresh. Skipping live call to protect credits.")
+        return db_cached  # Return expired cache if exists, otherwise None
+
     if not _tracker.can_call():
         return None
 
@@ -216,13 +269,26 @@ def _nansen_get(endpoint: str, params: dict, cache_key: str) -> Optional[dict]:
         data = resp.json()
         _tracker.use_credit()
         _cache.set(cache_key, data)
+        try:
+            db = get_db()
+            db.nansen_cache.update_one(
+                {"cache_key": cache_key},
+                {"$set": {
+                    "endpoint": endpoint,
+                    "response_json": json.dumps(data),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }},
+                upsert=True
+            )
+        except Exception as dbe:
+            logger.error(f"Failed to cache Nansen to DB: {dbe}")
         return data
     except requests.exceptions.HTTPError as e:
         if resp is not None:
             logger.error(f"Nansen API error ({resp.status_code}): {e}")
             if resp.status_code in [401, 403]:
                 logger.error("Authentication failed. Check NANSEN_API_KEY. Pausing Nansen calls for this endpoint.")
-                _cache.set(cache_key, {}) # Cache an empty response to prevent spamming
+                _cache.set(cache_key, {})
             try:
                 logger.error(f"Response: {resp.text[:500]}")
             except Exception:

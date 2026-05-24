@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import sys
 import os
 
@@ -101,28 +101,144 @@ async def trade_history_sync_service():
                             fill_time = fill.get("time", 0)
                             dt = datetime.fromtimestamp(fill_time / 1000, tz=timezone.utc)
                             
-                            existing = await db.trade_logs.find_one({"user_id": wallet, "coin": fill["coin"], "side": fill["dir"], "timestamp": dt})
+                            # Check if this exact fill is already logged in the DB
+                            existing_exact = await db.trade_logs.find_one({
+                                "user_id": wallet,
+                                "coin": fill["coin"],
+                                "event": "FILL",
+                                "side": fill["dir"],
+                                "timestamp": dt
+                            })
                             
-                            if not existing:
+                            if not existing_exact:
+                                fill_dir = fill.get("dir", "")
+                                is_close = "Close" in fill_dir
                                 sz = float(fill.get("sz", 0))
                                 px = float(fill.get("px", 0))
                                 pnl = float(fill.get("closedPnl", 0))
-                                await db.trade_logs.insert_one({
+                                
+                                # Search for a matching local trade log in the last 90 seconds
+                                # (e.g. EXECUTED worker logs or TRADE_OPEN/TRADE_CLOSE manual logs)
+                                dt_start = dt - timedelta(seconds=90)
+                                dt_end = dt + timedelta(seconds=90)
+                                local_match = None
+                                
+                                async for row in db.trade_logs.find({
                                     "user_id": wallet,
-                                    "event": "FILL",
                                     "coin": fill["coin"],
-                                    "side": fill["dir"],
-                                    "entry_price": px,
-                                    "exit_price": px if pnl != 0 else None,
-                                    "pnl_usd": pnl if pnl != 0 else None,
-                                    "position_size_usd": sz * px,
-                                    "action": "MANUAL_OR_EXTERNAL_TRADE",
-                                    "details": "Direct fill from exchange",
-                                    "timestamp": dt
-                                })
+                                    "event": {"$ne": "FILL"}
+                                }):
+                                    row_ts = row.get("timestamp")
+                                    if not row_ts:
+                                        continue
+                                    if isinstance(row_ts, str):
+                                        try:
+                                            row_dt = datetime.fromisoformat(row_ts.replace("Z", "+00:00"))
+                                        except Exception:
+                                            continue
+                                    else:
+                                        row_dt = row_ts
+                                        
+                                    if row_dt.tzinfo is None:
+                                        row_dt = row_dt.replace(tzinfo=timezone.utc)
+                                        
+                                    if dt_start <= row_dt <= dt_end:
+                                        row_side = row.get("side", "")
+                                        row_event = row.get("event")
+                                        
+                                        is_match = False
+                                        if is_close:
+                                            if row_event == "TRADE_CLOSE" or "Close" in row_side:
+                                                is_match = True
+                                        else:
+                                            if row_event == "TRADE_OPEN" or row.get("status") == "EXECUTED" or "Open" in row_side:
+                                                is_match = True
+                                                
+                                        if is_match:
+                                            local_match = row
+                                            break
+                                            
+                                if local_match:
+                                    # Update and merge the exchange details into the existing local log to prevent duplication
+                                    action_type = "AI_BOT_TRADE"
+                                    details_str = "Synchronized AI execution"
+                                    
+                                    if local_match.get("reasoning") == "Manual UI Close" or local_match.get("event") == "TRADE_CLOSE":
+                                        action_type = "MANUAL_UI_CLOSE"
+                                        details_str = "Synchronized manual close"
+                                    elif local_match.get("reasoning") == "Manual UI Trade" or local_match.get("event") == "TRADE_OPEN":
+                                        action_type = "MANUAL_UI_TRADE"
+                                        details_str = "Synchronized manual open"
+                                        
+                                    await db.trade_logs.update_one(
+                                        {"_id": local_match["_id"]},
+                                        {"$set": {
+                                            "event": "FILL",
+                                            "side": fill_dir,
+                                            "entry_price": px if not is_close else local_match.get("entry_price", px),
+                                            "exit_price": px if is_close else None,
+                                            "pnl_usd": pnl if is_close else None,
+                                            "position_size_usd": sz * px,
+                                            "action": action_type,
+                                            "details": details_str,
+                                            "timestamp": dt,
+                                            "status": "FILLED"
+                                        }}
+                                    )
+                                    logger.info(f"🔄 Merged and synced HL fill for {fill['coin']} into local matched log")
+                                else:
+                                    # Insert as a new manual/external fill since no local match was found
+                                    await db.trade_logs.insert_one({
+                                        "user_id": wallet,
+                                        "event": "FILL",
+                                        "coin": fill["coin"],
+                                        "side": fill["dir"],
+                                        "entry_price": px,
+                                        "exit_price": px if pnl != 0 else None,
+                                        "pnl_usd": pnl if pnl != 0 else None,
+                                        "position_size_usd": sz * px,
+                                        "action": "MANUAL_OR_EXTERNAL_TRADE",
+                                        "details": "Direct fill from exchange",
+                                        "timestamp": dt
+                                    })
+                                    logger.info(f"📥 Logged new external fill for {fill['coin']} ({fill_dir})")
                 except Exception as ex:
                     logger.error(f"Error fetching fills for {wallet}: {ex}")
         except Exception as e:
             logger.error(f"Error in trade_history_sync_service: {e}")
             
         await asyncio.sleep(300) # 5 minutes
+
+
+async def trade_cleanup_service():
+    """Keeps only the 20 most recent trade logs for each user and system-wide, runs every 5 minutes."""
+    while True:
+        try:
+            db = get_async_db()
+            
+            # Get distinct user_ids
+            users = await db.trade_logs.distinct("user_id")
+            
+            # Ensure we also check for None or empty string user_ids (for global/system logs)
+            if None not in users:
+                users.append(None)
+                
+            for user in users:
+                if user:
+                    query = {"user_id": user}
+                else:
+                    query = {"user_id": {"$in": [None, ""]}}
+                    
+                # Find all trade logs for this user/system, sorted by timestamp descending
+                trades = await db.trade_logs.find(query).sort("timestamp", -1).to_list(length=None)
+                
+                if len(trades) > 20:
+                    old_ids = [t["_id"] for t in trades[20:]]
+                    res = await db.trade_logs.delete_many({"_id": {"$in": old_ids}})
+                    logger.info(f"🗑️ trade_cleanup_service: Cleaned up {res.deleted_count} old trade logs for user/system {user or 'SYSTEM'}")
+                    
+        except Exception as e:
+            logger.error(f"Error in trade_cleanup_service: {e}")
+            
+        await asyncio.sleep(300) # 5 minutes
+

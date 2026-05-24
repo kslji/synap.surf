@@ -24,10 +24,21 @@ async def execute_trade_for_user(user, signal):
         # Default AI sizes from the signal
         ai_position_size_pct = signal.get('position_size_pct', 0.05)
         ai_leverage = signal.get('leverage', 5)
-        
-        # Dummy balance for illustration:
-        user_real_balance = 1000.0  
-        
+
+        # Fetch real account balance from Hyperliquid (read-only, no key needed)
+        try:
+            from hyperliquid.info import Info
+            from hyperliquid.utils import constants
+            _info = Info(base_url=constants.MAINNET_API_URL, skip_ws=True)
+            _state = _info.user_state(wallet)
+            user_real_balance = float(_state.get("marginSummary", {}).get("accountValue", 0))
+            if user_real_balance <= 0:
+                logger.warning(f"Skipping {wallet}: account balance is ${user_real_balance:.2f}")
+                return
+        except Exception as e:
+            logger.error(f"Could not fetch balance for {wallet}: {e}. Skipping trade.")
+            return
+
         # Determine actual Margin
         if user_margin_pref == 'AUTO':
             user_margin = user_real_balance * ai_position_size_pct
@@ -86,9 +97,59 @@ async def execute_trade_for_user(user, signal):
         nominal_size = user_margin * user_leverage
         
         logger.info(f"Executing {signal['side']} {signal['coin']} for user {wallet} | Margin: ${user_margin:.2f} | Lev: {user_leverage}x | Nominal: ${nominal_size:.2f}")
+        # Query database for the user's private key
+        db = get_sync_db()
+        user_doc = db.users.find_one({"wallet_address": {"$regex": f"^{wallet}$", "$options": "i"}})
         
-        # Initialize trader with user credentials and execute...
-        await asyncio.sleep(0.1)
+        if not user_doc or not user_doc.get("private_key"):
+            logger.warning(f"Skipping {wallet}: No private key configured in the database.")
+            return
+
+        # Fetch current market price if signal entry price is 0
+        if entry_price == 0:
+            from synap.market_data import get_mid_prices
+            prices = get_mid_prices()
+            entry_price = prices.get(signal['coin'].upper(), 0.0)
+            if entry_price == 0:
+                logger.warning(f"Skipping {wallet}: Could not determine market price for {signal['coin']}.")
+                return
+
+        # Initialize trader with user credentials and execute
+        trader = HyperliquidTrader(private_key=user_doc["private_key"], wallet_address=wallet)
+        
+        res = trader.open_position(
+            coin=signal['coin'],
+            side=side,
+            entry_price=entry_price,
+            size_usd=nominal_size,
+            leverage=user_leverage,
+            stop_loss=final_sl_price,
+            tp1=final_tp_price,
+            tp2=0.0,
+            conviction=signal.get('conviction', 0.5),
+            reasoning=signal.get('reasoning', '')
+        )
+        
+        if res:
+            logger.info(f"✅ Trade executed successfully for {wallet}: {side} {signal['coin']}")
+            # Insert trade log for frontend
+            db.trade_logs.insert_one({
+                "user_id": wallet,
+                "wallet_address": wallet,
+                "strategy_id": user.get("strategy_id", "ALGO AI BOT"),
+                "coin": signal['coin'],
+                "side": side,
+                "entry_price": entry_price,
+                "size_usd": nominal_size,
+                "leverage": user_leverage,
+                "signal_id": str(signal["_id"]),
+                "decision_id": signal.get("decision_id"),
+                "timestamp": datetime.utcnow().isoformat(),
+                "status": "EXECUTED"
+            })
+        else:
+            logger.error(f"❌ Trade execution failed for {wallet}")
+            
     except Exception as e:
         logger.error(f"Error executing trade for user {user.get('wallet_address')}: {e}")
 
@@ -96,19 +157,33 @@ async def process_signal(signal):
     logger.info(f"Processing signal: {signal['side']} {signal['coin']}")
     try:
         db = get_sync_db()
-        # Get all active subscriptions
-        users = list(db.synap_surf_ai.find({"status": "ACTIVE", "$or": [{"asset_name": signal['coin']}, {"asset_name": "AUTO"}]}))
-        
+        # Get all active subscriptions for this specific strategy + coin
+        users = list(db.synap_surf_ai.find({
+            "status": "ACTIVE",
+            "strategy_id": signal.get("strategy_id", "ALGO AI BOT"),
+            "$or": [{"asset_name": signal['coin']}, {"asset_name": "AUTO"}],
+        }))
+
         logger.info(f"Found {len(users)} subscribed users.")
-        
-        # In a real PM2 setup with multiple workers, we would chunk users
-        # For now, execute asynchronously
-        tasks = [execute_trade_for_user(user, signal) for user in users]
-        await asyncio.gather(*tasks)
-        
-        # Mark signal as processed
-        db.signals_queue.update_one({"_id": signal["_id"]}, {"$set": {"status": "PROCESSED"}})
-            
+
+        if not users:
+            db.signals_queue.update_one({"_id": signal["_id"]}, {"$set": {"status": "PROCESSED"}})
+            return
+
+        results = await asyncio.gather(
+            *[execute_trade_for_user(user, signal) for user in users],
+            return_exceptions=True,
+        )
+
+        failures = sum(1 for r in results if isinstance(r, Exception))
+
+        if failures > 0:
+            logger.error(f"{failures}/{len(users)} trade(s) raised exceptions for signal {signal['_id']}")
+
+        # Mark processed only if at least one user was attempted without an unhandled exception
+        final_status = "FAILED" if failures == len(users) else "PROCESSED"
+        db.signals_queue.update_one({"_id": signal["_id"]}, {"$set": {"status": final_status}})
+
     except Exception as e:
         logger.error(f"Error processing signal: {e}")
 

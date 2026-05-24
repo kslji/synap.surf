@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from synap.config import CORE_WATCHLIST
 from synap import market_data
 from synap import news_sentiment
 from backend.database import get_sync_db as get_db
@@ -40,7 +39,7 @@ def run_maintainer_cycle():
         cached_vol_leaders = market_data.get_top_volatility_coins(limit=10)
         last_vol_update_time = current_time
 
-    master_watchlist = list(set(cached_vol_leaders + CORE_WATCHLIST + active_assets))
+    master_watchlist = list(set(cached_vol_leaders + active_assets))
     
     logger.info(f"Master Watchlist ({len(master_watchlist)} coins): {master_watchlist}")
     

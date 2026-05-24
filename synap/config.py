@@ -29,7 +29,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "your_token_here")
 # CLAUDE AI SETTINGS
 # ═══════════════════════════════════════════════════════════════════════════════
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5")
-CLAUDE_MAX_TOKENS = 10000
+CLAUDE_MAX_TOKENS = 2000
 CLAUDE_TEMPERATURE = 0.3  # Low temperature for consistent, analytical responses
 
 # ═══════════════════════════════════════════════════════════════════════════════

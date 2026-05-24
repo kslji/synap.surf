@@ -29,6 +29,7 @@ NANSEN_REFRESH_INTERVAL = 14400
 
 
 def run_nansen_update():
+    os.environ["IS_NANSEN_UPDATER"] = "1"
     logger.info("=" * 60)
     logger.info(f"🔷 NANSEN UPDATE START: {datetime.now(timezone.utc)}")
     logger.info("=" * 60)

@@ -38,7 +38,7 @@ from synap.market_data import get_top_3_perps_with_details, get_mid_prices
 
 import asyncio
 from contextlib import asynccontextmanager
-from backend.services import volatility_service, market_intel_service, trade_history_sync_service
+from backend.services import volatility_service, market_intel_service, trade_history_sync_service, trade_cleanup_service
 
 # ── Semantic Similarity Model (lazy-loaded at first use) ──────────────────────
 import hashlib
@@ -79,6 +79,7 @@ async def lifespan(app: FastAPI):
     task1 = asyncio.create_task(volatility_service())
     task2 = asyncio.create_task(market_intel_service())
     task3 = asyncio.create_task(trade_history_sync_service())
+    task4 = asyncio.create_task(trade_cleanup_service())
     # Pre-warm the sentence-transformers model in background so first user request is instant
     asyncio.create_task(asyncio.to_thread(_get_embedding_model))
     yield
@@ -86,6 +87,7 @@ async def lifespan(app: FastAPI):
     task1.cancel()
     task2.cancel()
     task3.cancel()
+    task4.cancel()
 
 app = FastAPI(title="AlgoBrain Dashboard", lifespan=lifespan)
 
@@ -168,8 +170,38 @@ async def _load_all_decisions(wallet: str = None) -> list[dict]:
         if not wallet or wallet in ('null', 'undefined', ''):
             return []
             
+        w = wallet.strip().lower()
         db = get_async_db()
-        rows = await db.decision_logs.find({"user_id": wallet}).sort("timestamp", -1).to_list(length=None)
+        
+        # 1. Verify user exists and has a configured private key
+        user = await db.users.find_one({"wallet_address": re.compile(f"^{w}$", re.IGNORECASE)})
+        if not user or not user.get("private_key"):
+            # If user hasn't attached private key, hide all AI signals
+            return []
+            
+        # 2. Get decision_ids of all trades actually executed for this user
+        trades = await db.trade_logs.find({
+            "user_id": re.compile(f"^{w}$", re.IGNORECASE),
+            "decision_id": {"$exists": True, "$ne": None}
+        }).to_list(length=None)
+        
+        decision_ids = {t["decision_id"] for t in trades if t.get("decision_id")}
+        if not decision_ids:
+            return []
+            
+        # 3. Query decision_logs for matching ObjectIds
+        from bson import ObjectId
+        obj_ids = []
+        for d_id in decision_ids:
+            try:
+                obj_ids.append(ObjectId(d_id))
+            except Exception:
+                pass
+                
+        if not obj_ids:
+            return []
+            
+        rows = await db.decision_logs.find({"_id": {"$in": obj_ids}}).sort("timestamp", -1).to_list(length=None)
         for r in rows:
             if "_id" in r:
                 r["_id"] = str(r["_id"])
@@ -252,9 +284,10 @@ async def get_stats(wallet: str = None):
         # Case insensitive match for user_id
         trades_list = await db.trade_logs.find({"user_id": re.compile(f"^{wallet}$", re.IGNORECASE)}).to_list(length=None)
         
-        total_trades = len(trades_list)
-        winning = sum(1 for t in trades_list if t.get("pnl_usd") and t.get("pnl_usd") > 0)
-        losing = sum(1 for t in trades_list if t.get("pnl_usd") is not None and t.get("pnl_usd") <= 0 and t.get("event") == "TRADE_CLOSE")
+        closed_trades = [t for t in trades_list if t.get("event") == "TRADE_CLOSE"]
+        total_trades = len(closed_trades)
+        winning = sum(1 for t in closed_trades if (t.get("pnl_usd") or 0) > 0)
+        losing  = sum(1 for t in closed_trades if (t.get("pnl_usd") or 0) <= 0)
         win_rate = (winning / total_trades * 100) if total_trades > 0 else 0.0
         
         return {
@@ -303,6 +336,7 @@ async def refresh_portfolio(req: Request):
     return {"status": "ok", "message": "Refresh requested"}
 
 @app.post("/api/strategy/subscribe")
+@app.post("/api/strategies/subscribe")
 async def subscribe_strategy(request: Request):
     """User selects a strategy. If IN_TRADE, they join the waiting room."""
     data = await request.json()
@@ -320,7 +354,7 @@ async def subscribe_strategy(request: Request):
     
     target_pct = data.get("target_pct") # None means AUTO
     stop_loss_pct = data.get("stop_loss_pct") # None means AUTO
-    asset_name = data.get("asset_name", "AUTO")
+    asset_name = data.get("asset_name") or data.get("coin", "AUTO")
     ai_engine = data.get("ai_engine", "CLAUDE")
     auto_risk = data.get("auto_risk", True)
     
@@ -358,14 +392,72 @@ async def subscribe_strategy(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/strategy/status")
+async def get_strategy_status(wallet_address: str):
+    if not wallet_address:
+        raise HTTPException(status_code=400, detail="wallet_address required")
+    db = get_async_db()
+    
+    # Get active or waiting subscriptions
+    sub = await db.synap_surf_ai.find_one({"wallet_address": wallet_address, "status": {"$in": ["ACTIVE", "WAITING"]}})
+    if sub:
+        return {"status": "ok", "subscription_status": sub["status"], "asset_name": sub.get("asset_name"), "strategy_id": sub.get("strategy_id")}
+    
+    return {"status": "ok", "subscription_status": "INACTIVE"}
+
+@app.post("/api/strategy/unsubscribe")
+async def unsubscribe_strategy(request: Request):
+    data = await request.json()
+    wallet_address = data.get("wallet_address")
+    strategy_id = data.get("strategy_id", "ALGO AI BOT")
+    if not wallet_address:
+        raise HTTPException(status_code=400, detail="wallet_address required")
+    db = get_async_db()
+    await db.synap_surf_ai.update_one(
+        {"wallet_address": wallet_address, "strategy_id": strategy_id},
+        {"$set": {"status": "INACTIVE"}}
+    )
+    return {"status": "ok", "subscription_status": "INACTIVE"}
+
+@app.get("/api/trade/logs")
+async def get_trade_logs(wallet_address: str, limit: int = 10):
+    if not wallet_address:
+        raise HTTPException(status_code=400, detail="wallet_address required")
+    db = get_async_db()
+    cursor = db.trade_logs.find({"wallet_address": wallet_address}).sort("timestamp", -1).limit(limit)
+    logs = await cursor.to_list(length=limit)
+    for log in logs:
+        if "_id" in log:
+            log["_id"] = str(log["_id"])
+    return {"status": "ok", "logs": logs}
+
+
 # ── API: AI Signals (Clean Feed) ──────────────────────────────────────────────
 @app.get("/api/decisions")
 async def get_decisions(wallet: str = None):
     decisions_raw = await _load_all_decisions(wallet)
     
+    # Query all (decision_id, coin) pairs executed for this user
+    executed_pairs = set()
+    if wallet:
+        try:
+            db = get_async_db()
+            trades_list = await db.trade_logs.find({
+                "user_id": re.compile(f"^{wallet}$", re.IGNORECASE),
+                "decision_id": {"$exists": True, "$ne": None}
+            }).to_list(length=None)
+            
+            for t in trades_list:
+                d_id = t.get("decision_id")
+                coin = t.get("coin", "").upper()
+                if d_id and coin:
+                    executed_pairs.add((str(d_id), coin))
+        except Exception:
+            pass
+            
     feed = []
     for d_row in decisions_raw:
-        ts = d_row.get("timestamp")
+        ts_str = d_row.get("timestamp")
         dj = d_row.get("decision_json")
         if dj:
             try:
@@ -374,17 +466,22 @@ async def get_decisions(wallet: str = None):
                 
                 # Add actionable trades
                 for rec_trade in trades:
-                    signal_data = {
-                        "coin": rec_trade.get("coin"),
-                        "reasoning": rec_trade.get("reasoning", "").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"),
-                        "conviction": rec_trade.get("conviction"),
-                        "side": rec_trade.get("action", "LONG").replace("OPEN_", ""),
-                        "leverage": rec_trade.get("leverage"),
-                        "entry_price": rec_trade.get("entry_price"),
-                        "position_size_pct": rec_trade.get("position_size_pct"),
-                        "event": "SIGNAL"
-                    }
-                    feed.append({"type": "signal", "timestamp": ts, "data": signal_data})
+                    coin = rec_trade.get("coin", "").upper()
+                    d_id_str = str(d_row["_id"])
+                    
+                    # ONLY show the signal if this specific coin was actually executed for this decision!
+                    if (d_id_str, coin) in executed_pairs:
+                        signal_data = {
+                            "coin": rec_trade.get("coin"),
+                            "reasoning": rec_trade.get("reasoning", "").replace("Nansen", "Smart Money Holder").replace("nansen", "smart money holder"),
+                            "conviction": rec_trade.get("conviction"),
+                            "side": rec_trade.get("action", "LONG").replace("OPEN_", ""),
+                            "leverage": rec_trade.get("leverage"),
+                            "entry_price": rec_trade.get("entry_price"),
+                            "position_size_pct": rec_trade.get("position_size_pct"),
+                            "event": "SIGNAL"
+                        }
+                        feed.append({"type": "signal", "timestamp": ts_str, "data": signal_data})
                 
                 # If there were no trades but a skip reason was provided, emit a SKIP signal
                 if not trades and dec_obj.get("skip_reason"):
@@ -395,7 +492,7 @@ async def get_decisions(wallet: str = None):
                         "side": "SKIP",
                         "event": "SIGNAL"
                     }
-                    feed.append({"type": "signal", "timestamp": ts, "data": signal_data})
+                    feed.append({"type": "signal", "timestamp": ts_str, "data": signal_data})
             except Exception:
                 pass
 
@@ -488,6 +585,18 @@ async def get_hl_top_perps():
         return data
     except Exception as e:
         print(f"ERROR: /api/hl_top_perps: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/volatility_ticker")
+async def get_volatility_ticker():
+    try:
+        db = get_async_db()
+        row = await db.market_data.find_one({"key": "volatility_ticker_top_20"})
+        if row and "value_json" in row:
+            data = json.loads(row["value_json"])
+            return data.get("data", [])
+        return []
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -757,8 +866,8 @@ async def auth_me(wallet: str):
     return {
         "wallet_address": user.get("wallet_address", wallet),
         "email": user.get("email", ""),
-        "private_key": user.get("private_key", ""),
-        "subscriptions": [s for s in subs]
+        "has_private_key": bool(user.get("private_key")),
+        "subscriptions": [{**s, "_id": str(s["_id"])} if "_id" in s else s for s in subs]
     }
 
 
@@ -1070,18 +1179,23 @@ async def chat_endpoint(req: ChatRequest):
     import hashlib
     from datetime import datetime, timezone, timedelta
 
-    # TTL per context type (seconds). risk_management is shorter as it's user-specific.
+    # TTLs aligned to actual data refresh rates.
+    # market_analysis/general: maintainer refreshes every 60 min → 1 hr TTL.
+    # smart_money_holder: Nansen updates every 4 hrs → 4 hr TTL.
+    # risk_management: user-specific trades change frequently → keep short.
     TTL_MAP = {
-        "strategy_generation": 7200,   # 2 hours — strategies rarely change
-        "market_analysis":     1800,   # 30 minutes
-        "smart_money_holder":  1800,   # 30 minutes
-        "risk_management":     900,    # 15 minutes — user trades change frequently
-        "general":             900,    # 15 minutes
+        "strategy_generation": 14400,  # 4 hours — strategies almost never change
+        "market_analysis":     3600,   # 1 hour — matches maintainer cycle
+        "smart_money_holder":  14400,  # 4 hours — matches Nansen refresh rate
+        "risk_management":     900,    # 15 minutes — user-specific trades change
+        "general":             3600,   # 1 hour
     }
-    ttl_seconds = TTL_MAP.get(req.context_type, 900)
+    ttl_seconds = TTL_MAP.get(req.context_type, 3600)
 
-    # Build deterministic cache key from normalized prompt + context_type + wallet
-    normalized = f"{req.prompt.strip().lower()}|{req.context_type}|{req.wallet or ''}"
+    # Wallet is only relevant for risk_management (user-specific trade context).
+    # All other context types return identical responses for all users — share one cache entry.
+    wallet_in_key = req.wallet if req.context_type == "risk_management" else ""
+    normalized = f"{req.prompt.strip().lower()}|{req.context_type}|{wallet_in_key}"
     cache_key = hashlib.sha256(normalized.encode()).hexdigest()
 
     SIMILARITY_THRESHOLD = 0.88  # 88% cosine similarity = semantic match

@@ -175,32 +175,30 @@ def log_trade_update(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def log_ai_decision(decision: dict, raw_prompt_size: int = 0, raw_response_size: int = 0, user_id: str = None):
+def log_ai_decision(decision: dict, raw_prompt_size: int = 0, raw_response_size: int = 0):
     """Log the full AI decision for review and debugging."""
+    trades = decision.get("trades", [])
+    updates = decision.get("position_updates", [])
+    scan = decision.get("scan_result", {})
+
+    logger.info(f"  🧠 AI Decision: {len(trades)} new trades, {len(updates)} position updates")
+    if scan.get("top_coins"):
+        logger.info(f"  👀 Watching: {scan['top_coins']}")
+    if scan.get("reasoning"):
+        logger.info(f"  💭 {scan['reasoning'][:200]}")
+
     try:
         db = get_sync_db()
-        db.decision_logs.insert_one({
-            "user_id": user_id,
+        res = db.decision_logs.insert_one({
             "prompt_chars": raw_prompt_size,
             "response_chars": raw_response_size,
             "decision_json": json.dumps(decision, default=str),
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
+        return res.inserted_id
     except Exception as e:
         logger.error(f"DB Error log_ai_decision: {e}")
-
-    # Summary log
-    trades = decision.get("trades", [])
-    updates = decision.get("position_updates", [])
-    scan = decision.get("scan_result", {})
-
-    logger.info(
-        f"  🧠 AI Decision: {len(trades)} new trades, {len(updates)} position updates"
-    )
-    if scan.get("top_coins"):
-        logger.info(f"  👀 Watching: {scan['top_coins']}")
-    if scan.get("reasoning"):
-        logger.info(f"  💭 {scan['reasoning'][:200]}")
+        return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

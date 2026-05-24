@@ -56,12 +56,15 @@ export function useDashboard() {
       const wData = await wRes.json();
       const userWatchlist = wData.watchlist || [];
       setWatchlist(userWatchlist);
-      const res = await fetch('/api/hl_top_perps?t=' + Date.now());
+      const res = await fetch('/api/volatility_ticker?t=' + Date.now());
       const data = await res.json();
-      const ctxs = data.ctxs || [];
-      const coins = ctxs.map(ctx => {
-        const mark = parseFloat(ctx.markPx || 0), prev = parseFloat(ctx.prevDayPx || mark);
-        return { name: ctx.name || '?', mark, chg: prev ? ((mark - prev) / prev) * 100 : 0, absChg: Math.abs(prev ? ((mark - prev) / prev) * 100 : 0) };
+      const coins = (Array.isArray(data) ? data : []).map(c => {
+        return { 
+          name: c.coin || '?', 
+          mark: parseFloat(c.price || 0), 
+          chg: (parseFloat(c.change_pct || 0)) * 100, 
+          absChg: Math.abs(parseFloat(c.change_pct || 0)) * 100 
+        };
       });
       const sorted = coins.sort((a, b) => b.absChg - a.absChg);
       setPerps(sorted);

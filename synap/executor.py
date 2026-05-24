@@ -72,8 +72,8 @@ def execute_pool(payload_path: str):
                 "position_updates": user_updates,
             }
             
-            # 2. Log the personalized decision to DB (Mapped to wallet!)
-            log_ai_decision(user_decision, user_id=wallet)
+            # 2. Log the personalized decision to DB
+            log_ai_decision(user_decision)
             logger.info(f"  Logged personalized AI decision for {wallet}.")
 
             # 3. Execute Trades

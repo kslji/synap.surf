@@ -41,7 +41,7 @@ export default function MultiChartTerminal({ coins, onBack, theme }) {
         const pJson = await pRes.json();
 
         const watchlistSymbols = wJson.watchlist || [];
-        const assets = pJson.assets || [];
+        const assets = pJson.ctxs || pJson.assets || [];
 
         // Calculate volatility for all assets
         const calculated = assets.map(a => {

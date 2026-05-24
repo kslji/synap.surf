@@ -23,14 +23,13 @@ export default function Settings() {
   const [keyStatus, setKeyStatus] = useState(() => localStorage.getItem('hl_key_status') || null);
 
   useEffect(() => {
-    if (userProfile?.private_key) {
-      setHlKey(userProfile.private_key);
+    if (userProfile?.has_private_key) {
       setKeyStatus('saved');
     } else {
       setHlKey('');
       setKeyStatus(null);
     }
-  }, [userProfile?.private_key]);
+  }, [userProfile?.has_private_key]);
 
   const handleSaveKey = async () => {
     if (!walletAddress) {
