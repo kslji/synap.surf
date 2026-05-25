@@ -1070,7 +1070,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               );
             })}
             <div className="bc-field" style={{ marginTop: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>TELEGRAM NOTIFS</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>NOTIFS</label>
               <label className="switch mini">
                 <input type="checkbox" defaultChecked />
                 <span className="slider round" />
