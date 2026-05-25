@@ -37,10 +37,10 @@ function CustomDropdown({ options, value, onChange, label }) {
       {isOpen && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0,
-          background: 'rgba(26, 30, 35, 0.85)', backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(0, 229, 255, 0.15)',
+          background: 'var(--card)', backdropFilter: 'blur(12px)',
+          border: '1px solid var(--border)',
           borderRadius: '12px', zIndex: 50, overflowY: 'auto', maxHeight: '280px',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 229, 255, 0.05)',
+          boxShadow: 'var(--shadow)',
           padding: '6px'
         }}>
           {options.map(opt => (
@@ -96,10 +96,11 @@ export default function StrategyTerminal() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [activeStrategyInfo, setActiveStrategyInfo] = useState(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(280);
   const [isResizing, setIsResizing] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showHandHint, setShowHandHint] = useState(() => !localStorage.getItem('strat_panel_opened'));
 
   const togglePanel = () => {
     const opening = !isPanelOpen;
@@ -112,6 +113,13 @@ export default function StrategyTerminal() {
     setIsSidebarOpen(opening);
     if (opening) setIsPanelOpen(false);
   };
+
+  useEffect(() => {
+    if (isPanelOpen && showHandHint) {
+      setShowHandHint(false);
+      localStorage.setItem('strat_panel_opened', '1');
+    }
+  }, [isPanelOpen]);
 
   useEffect(() => {
     if (!isResizing) return;
@@ -650,7 +658,7 @@ export default function StrategyTerminal() {
                 <>
                   <div className="perf-card">
                     <span className="label">WIN RATE</span>
-                    <span className="value highlight" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(255,255,255,0.3)' }}>{metrics.winRate}%</span>
+                    <span className="value highlight" style={{ color: 'var(--t1)' }}>{metrics.winRate}%</span>
                   </div>
                   <div className="perf-card">
                     <span className="label">EST. PROFIT</span>
@@ -827,7 +835,7 @@ export default function StrategyTerminal() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: 'rgba(255,255,255,0.02)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: 'var(--sub-bg)', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--t3)', letterSpacing: '1px' }}>STATUS</div>
             {isExecuting ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -962,8 +970,8 @@ export default function StrategyTerminal() {
       {/* Right panel — matches multichart/dashboard right-panel design */}
       {posModal && (
         <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && setPosModal(false)} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="modal-content" style={{ maxWidth: 1000, width: '90%', background: '#13171a', border: '1px solid var(--border)', borderRadius: 16, padding: 0, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="modal-content" style={{ maxWidth: 1000, width: '90%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ display: 'inline-block', width: 4, height: 16, background: 'var(--accent)', borderRadius: 2 }} />
                 Active Positions
@@ -973,7 +981,7 @@ export default function StrategyTerminal() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--t2)', fontSize: 13, fontWeight: 700 }}>
+                  <tr style={{ background: 'var(--sub-bg)', color: 'var(--t2)', fontSize: 13, fontWeight: 700 }}>
                     <th style={{ padding: '16px 24px', fontWeight: 600 }}>Coin</th>
                     <th style={{ padding: '16px', fontWeight: 600 }}>Size</th>
                     <th style={{ padding: '16px', fontWeight: 600 }}>Position Value</th>
@@ -994,7 +1002,7 @@ export default function StrategyTerminal() {
                     const pnlPct = p.pnl_pct !== undefined ? p.pnl_pct : (p.unrealized_pnl_pct || 0);
                     const isPos = pnlUsd >= 0;
                     return (
-                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border)', position: 'relative' }}>
                         <td style={{ padding: '16px 24px' }}>
                           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: isLong ? 'var(--green)' : 'var(--red)' }} />
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -1040,6 +1048,17 @@ export default function StrategyTerminal() {
             : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           }
         </button>
+        {showHandHint && (
+          <div style={{
+            position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)',
+            zIndex: 200, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6,
+            animation: 'handPulse 1.2s ease-in-out infinite', pointerEvents: 'none',
+            marginRight: 8, whiteSpace: 'nowrap'
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', letterSpacing: 1, textTransform: 'uppercase' }}>Open Panel</span>
+            <span style={{ fontSize: 22 }}>👉</span>
+          </div>
+        )}
         <aside className="right-panel" style={isPanelOpen ? { width: panelWidth } : {}}>
         <section className="rp-section">
           <div className="rp-hdr">
@@ -1066,7 +1085,7 @@ export default function StrategyTerminal() {
                   { label: 'TAKE PROFIT', value: activeStrategyInfo.target_pct != null ? `${activeStrategyInfo.target_pct}%` : 'AUTO' },
                   { label: 'STOP LOSS', value: activeStrategyInfo.stop_loss_pct != null ? `${activeStrategyInfo.stop_loss_pct}%` : 'AUTO' },
                 ].map(({ label, value }) => (
-                  <div key={label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 10px' }}>
+                  <div key={label} style={{ background: 'var(--sub-bg)', borderRadius: 8, padding: '8px 10px' }}>
                     <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 3 }}>{label}</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{value}</div>
                   </div>
@@ -1157,6 +1176,12 @@ export default function StrategyTerminal() {
         </section>
       </aside>
       </div>
+      <style>{`
+        @keyframes handPulse {
+          0%, 100% { transform: translateY(-50%) translateX(0); opacity: 1; }
+          50% { transform: translateY(-50%) translateX(8px); opacity: 0.7; }
+        }
+      `}</style>
     </div>
   );
 }

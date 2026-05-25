@@ -12,11 +12,11 @@ function SignalModal({ item, onClose }) {
 
   return (
     <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()} style={{ backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-      <div className="modal-content" style={{ maxWidth: 500, width: '90%', background: '#13171a', border: `1px solid ${themeBorder}`, borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: `0 20px 60px ${themeBg}` }}>
+      <div className="modal-content" style={{ maxWidth: 500, width: '90%', background: 'var(--card)', border: `1px solid ${themeBorder}`, borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: `0 20px 60px ${themeBg}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 28px', borderBottom: `1px solid ${themeBorder}`, background: `linear-gradient(to right, ${themeBg}, transparent)` }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-              <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{t.coin}</h2>
+              <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: 'var(--t1)', letterSpacing: 1 }}>{t.coin}</h2>
               <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: '6px', background: isSkip ? 'rgba(255,255,255,0.1)' : (isLong ? 'rgba(24,184,122,0.15)' : 'rgba(233,69,96,0.15)'), color: themeColor, textTransform: 'uppercase', letterSpacing: 1 }}>
                 {t.event?.replace('TRADE_', '') || 'SIGNAL'}
               </span>
@@ -39,22 +39,22 @@ function SignalModal({ item, onClose }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
             {t.conviction && !isNaN(t.conviction) && (
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+              <div style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '16px', borderRadius: '12px' }}>
                 <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>CONVICTION</span>
                 <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: 'var(--accent)' }}>{Math.round(t.conviction * 100)}%</span>
               </div>
             )}
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+            <div style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '16px', borderRadius: '12px' }}>
               <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>SIDE</span>
               <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: themeColor }}>{t.side || 'LONG'}</span>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+            <div style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '16px', borderRadius: '12px' }}>
               <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>LEVERAGE</span>
-              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: '#fff' }}>{t.leverage || '5'}x</span>
+              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: 'var(--t1)' }}>{t.leverage || '5'}x</span>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+            <div style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '16px', borderRadius: '12px' }}>
               <span style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--t3)', letterSpacing: 1, marginBottom: 4 }}>PRICE</span>
-              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: '#fff' }}>{t.exit_price ? `$${t.exit_price}` : (t.entry_price ? `$${t.entry_price}` : (t.price ? `$${t.price}` : 'Market'))}</span>
+              <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: 'var(--t1)' }}>{t.exit_price ? `$${t.exit_price}` : (t.entry_price ? `$${t.entry_price}` : (t.price ? `$${t.price}` : 'Market'))}</span>
             </div>
           </div>
         </div>
@@ -121,8 +121,8 @@ function TelegramModal({ onClose }) {
 function PositionsModal({ positions, onClose, handleClose, closingCoin }) {
   return (
     <div className="modal-overlay active" onClick={e => e.target === e.currentTarget && onClose()} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="modal-content" style={{ maxWidth: 1000, width: '90%', background: '#13171a', border: '1px solid var(--border)', borderRadius: '16px', padding: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="modal-content" style={{ maxWidth: 1000, width: '90%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ display: 'inline-block', width: 4, height: 16, background: 'var(--accent)', borderRadius: 2 }}></span>
             Active Positions
@@ -133,7 +133,7 @@ function PositionsModal({ positions, onClose, handleClose, closingCoin }) {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--t2)', fontSize: 13, fontWeight: 700 }}>
+              <tr style={{ background: 'var(--sub-bg)', color: 'var(--t2)', fontSize: 13, fontWeight: 700 }}>
                 <th style={{ padding: '16px 24px', fontWeight: 600 }}>Coin</th>
                 <th style={{ padding: '16px', fontWeight: 600 }}>Size</th>
                 <th style={{ padding: '16px', fontWeight: 600 }}>Position Value</th>
@@ -158,7 +158,7 @@ function PositionsModal({ positions, onClose, handleClose, closingCoin }) {
                   const isPos = pnlUsd >= 0;
                   
                   return (
-                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'relative', transition: 'background 0.2s', ':hover': { background: 'rgba(255,255,255,0.02)' } }}>
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border)', position: 'relative', transition: 'background 0.2s', ':hover': { background: 'rgba(255,255,255,0.02)' } }}>
                       <td style={{ padding: '16px 24px' }}>
                         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: isLong ? 'var(--green)' : 'var(--red)' }}></div>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
@@ -669,14 +669,14 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
 
             {/* Market / Limit + Cross / Isolated row */}
             <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ display: 'flex', flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ display: 'flex', flex: 1, background: 'var(--sub-bg)', borderRadius: 10, padding: 3, border: '1px solid var(--border)' }}>
                 {['market', 'limit'].map(m => (
                   <button key={m} onClick={() => setHlOrderMode(m)} style={{ flex: 1, padding: '5px 0', fontSize: 10, fontWeight: 800, border: 'none', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s', background: hlOrderMode === m ? 'var(--accent)' : 'transparent', color: hlOrderMode === m ? '#fff' : 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {m}
                   </button>
                 ))}
               </div>
-              <div style={{ display: 'flex', flex: 1, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ display: 'flex', flex: 1, background: 'var(--sub-bg)', borderRadius: 10, padding: 3, border: '1px solid var(--border)' }}>
                 {['cross', 'isolated'].map(m => (
                   <button key={m} onClick={() => setMarginMode(m)} style={{ flex: 1, padding: '5px 0', fontSize: 10, fontWeight: 800, border: 'none', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s', background: marginMode === m ? (m === 'isolated' ? 'rgba(255,159,67,0.8)' : 'var(--accent)') : 'transparent', color: marginMode === m ? '#fff' : 'var(--t3)', textTransform: 'capitalize', letterSpacing: '0.3px' }}>
                     {m}
@@ -686,7 +686,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
             </div>
 
             {/* Wallet Balance */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--sub-bg)', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 4 }}>
               <div>
                 <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--t3)', letterSpacing: '0.5px', marginBottom: 3 }}>ACCOUNT VALUE</div>
                  <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--t1)', letterSpacing: '-0.5px' }}>
@@ -711,7 +711,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
 
             {/* Perps Overview */}
             {walletBalance?.configured && (
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '12px 14px' }}>
+              <div style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
                 <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--t3)', letterSpacing: '1px', marginBottom: 10 }}>PERPS OVERVIEW</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
                   {[
@@ -737,11 +737,11 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 onClick={() => setCoinDropOpen(o => !o)}
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--sub-bg)', border: '1px solid var(--border)',
                   borderRadius: 12, padding: '10px 14px', cursor: 'pointer', transition: 'all 0.2s',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#ffffff', fontSize: '12px', fontWeight: '800', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '50%', background: 'var(--border)', border: '1px solid var(--border)', color: 'var(--t1)', fontSize: '12px', fontWeight: '800', flexShrink: 0 }}>
                   {tradeCoin.charAt(0).toUpperCase()}
                 </div>
                 <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--t1)', flex: 1, textAlign: 'left', letterSpacing: '0.5px' }}>{tradeCoin}</span>
@@ -752,14 +752,14 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               {coinDropOpen && (
                 <div style={{
                   position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 999,
-                  background: 'rgba(14,18,26,0.98)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14,
-                  boxShadow: '0 16px 48px rgba(0,0,0,0.6)', overflow: 'hidden',
+                  background: 'var(--card)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid var(--border)', borderRadius: 14,
+                  boxShadow: 'var(--shadow)', overflow: 'hidden',
                   animation: 'toastIn 0.18s ease',
                   display: 'flex', flexDirection: 'column',
                 }}>
                   {/* Search box */}
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'sticky', top: 0, background: 'rgba(14,18,26,0.99)', zIndex: 1 }}>
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--card)', zIndex: 1 }}>
                     <input
                       autoFocus
                       type="text"
@@ -767,7 +767,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                       value={coinSearch}
                       onChange={e => setCoinSearch(e.target.value.toUpperCase())}
                       onClick={e => e.stopPropagation()}
-                      style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 10px', color: 'var(--t1)', fontSize: 12, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', background: 'var(--sub-bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--t1)', fontSize: 12, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
                   {/* Coin list */}
@@ -780,13 +780,13 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                         <button key={c} onClick={() => { setTradeCoin(c); setCoinDropOpen(false); setCoinSearch(''); setTradeLev(1); }} style={{
                           width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                           padding: '9px 14px', background: active ? `${m.color}18` : 'transparent',
-                          border: 'none', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                          border: 'none', borderBottom: '1px solid var(--border)',
                           cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left',
                         }}
-                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--sub-bg)'; }}
                         onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#ffffff', fontSize: '11px', fontWeight: '800', flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'var(--border)', border: '1px solid var(--border)', color: 'var(--t1)', fontSize: '11px', fontWeight: '800', flexShrink: 0 }}>
                             {c.charAt(0).toUpperCase()}
                           </div>
                           <span style={{ flex: 1, fontWeight: 800, fontSize: 13, color: active ? m.color : 'var(--t1)', letterSpacing: '0.3px' }}>{c}</span>
@@ -805,11 +805,11 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <label style={{ fontSize: 9, fontWeight: 800, color: 'var(--t3)', letterSpacing: '0.5px' }}>MARGIN <span style={{ color: 'var(--t3)', fontWeight: 500, fontSize: 8 }}>(Min $10 total size)</span></label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ 
-                    display: 'flex', alignItems: 'center', 
-                    background: 'rgba(255,255,255,0.05)', 
-                    border: '1px solid rgba(255,255,255,0.1)', 
-                    borderRadius: '8px', 
+                  <div style={{
+                    display: 'flex', alignItems: 'center',
+                    background: 'var(--sub-bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
                     padding: '4px 8px',
                     transition: 'all 0.2s'
                   }}>
@@ -838,7 +838,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 {[25, 50, 75, 100].map(pct => (
                   <button key={pct}
                     onClick={() => maxSize > 0 && setTradeSize(Math.floor(maxSize * pct / 100))}
-                    style={{ fontSize: 10, fontWeight: 800, background: maxSize > 0 && sizePercent === pct ? 'var(--accent)' : 'rgba(255,255,255,0.06)', color: maxSize > 0 && sizePercent === pct ? '#fff' : 'var(--t3)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: maxSize > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', opacity: maxSize === 0 ? 0.4 : 1 }}>
+                    style={{ fontSize: 10, fontWeight: 800, background: maxSize > 0 && sizePercent === pct ? 'var(--accent)' : 'var(--sub-bg)', color: maxSize > 0 && sizePercent === pct ? '#fff' : 'var(--t3)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px', cursor: maxSize > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.15s', opacity: maxSize === 0 ? 0.4 : 1 }}>
                     {pct}%
                   </button>
                 ))}
@@ -861,7 +861,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4 }}>
                 {levPresets.map(lv => (
                   <button key={lv} onClick={() => setTradeLev(lv)}
-                    style={{ fontSize: 10, fontWeight: 800, flex: 1, background: tradeLev === lv ? (lv >= maxLeverage * 0.8 ? 'var(--red)' : 'var(--accent)') : 'rgba(255,255,255,0.06)', color: tradeLev === lv ? '#fff' : 'var(--t3)', border: 'none', borderRadius: 8, padding: '4px 4px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                    style={{ fontSize: 10, fontWeight: 800, flex: 1, background: tradeLev === lv ? (lv >= maxLeverage * 0.8 ? 'var(--red)' : 'var(--accent)') : 'var(--sub-bg)', color: tradeLev === lv ? '#fff' : 'var(--t3)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 4px', cursor: 'pointer', transition: 'all 0.15s' }}>
                     {lv}×
                   </button>
                 ))}
@@ -903,7 +903,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
             <div className="tt-btns">
               <button className="tt-btn buy" onClick={() => handleTrade('LONG')} disabled={tradeLoading}>{tradeLoading ? '...' : 'LONG'}</button>
               <button className="tt-btn sell" onClick={() => handleTrade('SHORT')} disabled={tradeLoading}>{tradeLoading ? '...' : 'SHORT'}</button>
-              <button className="tt-btn close" style={{ background: 'var(--t3)', color: '#fff', gridColumn: 'span 2' }} onClick={() => handleTrade('CLOSE')} disabled={tradeLoading}>{tradeLoading ? '...' : 'CLOSE'}</button>
+              <button className="tt-btn close" style={{ background: '#6b7280', color: '#fff', gridColumn: 'span 2' }} onClick={() => handleTrade('CLOSE')} disabled={tradeLoading}>{tradeLoading ? '...' : 'CLOSE'}</button>
             </div>
           </div>
         </section>
@@ -1038,17 +1038,17 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                     <div style={{ position: 'relative' }} data-bot-asset-drop>
                       <button 
                         onClick={() => setBotAssetDropOpen(o => !o)}
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', color: 'var(--t1)', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                        style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--t1)', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
                       >
                         {val}
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2.5" style={{ transform: botAssetDropOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9"/></svg>
                       </button>
                       {botAssetDropOpen && (
-                        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#1e1e24', border: '1px solid var(--border)', borderRadius: 12, padding: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, zIndex: 100, boxShadow: '0 8px 24px rgba(0,0,0,0.6)', width: 160 }}>
+                        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, zIndex: 100, boxShadow: 'var(--shadow)', width: 160 }}>
                           {activeCoins.map(c => (
                             <button key={c} onClick={() => { handleBotChange(key, c); setBotAssetDropOpen(false); }}
                               style={{ background: val === c ? 'rgba(0, 210, 211, 0.1)' : 'transparent', color: val === c ? 'var(--accent)' : 'var(--t2)', border: 'none', borderRadius: 6, padding: '6px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'left', transition: 'all 0.1s' }}
-                              onMouseEnter={e => { if (val !== c) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                              onMouseEnter={e => { if (val !== c) e.currentTarget.style.background = 'var(--sub-bg)'; }}
                               onMouseLeave={e => { if (val !== c) e.currentTarget.style.background = 'transparent'; }}
                             >
                               {c}

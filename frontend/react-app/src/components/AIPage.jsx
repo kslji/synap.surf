@@ -165,15 +165,15 @@ export default function AIPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32, paddingBottom: 40 }}>
               {/* Back Button */}
               <div style={{ display: 'flex', justifyContent: 'flex-start', animation: 'fadeIn 0.5s' }}>
-                <button 
+                <button
                   onClick={() => setMessages([])}
                   style={{
-                    background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 20px',
+                    background: 'var(--sub-bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px 20px',
                     color: 'var(--t2)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
                     cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', backdropFilter: 'blur(10px)'
                   }}
                   onMouseOver={e => { e.currentTarget.style.color = '#ff9f43'; e.currentTarget.style.borderColor = '#ff9f43'; e.currentTarget.style.background = 'rgba(255,159,67,0.1)'; }}
-                  onMouseOut={e => { e.currentTarget.style.color = 'var(--t2)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'rgba(0,0,0,0.2)'; }}
+                  onMouseOut={e => { e.currentTarget.style.color = 'var(--t2)'; e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--sub-bg)'; }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                   Back to Options
@@ -182,8 +182,8 @@ export default function AIPage() {
               
               {messages.map((msg, i) => (
                 <div key={i} style={{ display: 'flex', gap: 20, flexDirection: msg.role === 'user' ? 'row-reverse' : 'row', animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                  <div style={{ 
-                    background: msg.role === 'user' ? 'rgba(255,255,255,0.06)' : 'transparent', 
+                  <div style={{
+                    background: msg.role === 'user' ? 'var(--sub-bg)' : 'transparent',
                     color: 'var(--t1)',
                     padding: msg.role === 'user' ? '12px 20px' : '8px 0', 
                     borderRadius: '20px',
@@ -205,19 +205,19 @@ export default function AIPage() {
                         {msg.content && (
                           <ReactMarkdown
                             components={{
-                              h1: ({node, ...props}) => <h1 style={{fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 16, marginTop: 8}} {...props} />,
-                              h2: ({node, ...props}) => <h2 style={{fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 12, marginTop: 16}} {...props} />,
-                              h3: ({node, ...props}) => <h3 style={{fontSize: 16, fontWeight: 600, color: '#e2e8f0', marginBottom: 8, marginTop: 12}} {...props} />,
-                              p: ({node, ...props}) => <p style={{marginBottom: 16, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.7, fontSize: 15}} {...props} />,
-                              strong: ({node, ...props}) => <strong style={{color: '#fff', fontWeight: 600}} {...props} />,
+                              h1: ({node, ...props}) => <h1 style={{fontSize: 20, fontWeight: 700, color: 'var(--t1)', marginBottom: 16, marginTop: 8}} {...props} />,
+                              h2: ({node, ...props}) => <h2 style={{fontSize: 18, fontWeight: 700, color: 'var(--t1)', marginBottom: 12, marginTop: 16}} {...props} />,
+                              h3: ({node, ...props}) => <h3 style={{fontSize: 16, fontWeight: 600, color: 'var(--t1)', marginBottom: 8, marginTop: 12}} {...props} />,
+                              p: ({node, ...props}) => <p style={{marginBottom: 16, color: 'var(--t1)', lineHeight: 1.7, fontSize: 15}} {...props} />,
+                              strong: ({node, ...props}) => <strong style={{color: 'var(--t1)', fontWeight: 600}} {...props} />,
                               ul: ({node, ...props}) => <ul style={{paddingLeft: 24, marginBottom: 16}} {...props} />,
                               ol: ({node, ...props}) => <ol style={{paddingLeft: 24, marginBottom: 16}} {...props} />,
-                              li: ({node, ...props}) => <li style={{marginBottom: 8, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.7}} {...props} />,
+                              li: ({node, ...props}) => <li style={{marginBottom: 8, color: 'var(--t1)', lineHeight: 1.7}} {...props} />,
                               code: ({node, inline, ...props}) => inline
-                                ? <code style={{background: 'rgba(255,255,255,0.1)', color: '#e2e8f0', padding: '2px 6px', borderRadius: 4, fontSize: 13.5, fontFamily: 'monospace'}} {...props} />
-                                : <code style={{display: 'block', background: '#1e1e1e', color: '#d4d4d4', padding: '16px', borderRadius: 8, fontSize: 13.5, fontFamily: 'monospace', overflowX: 'auto', marginBottom: 16}} {...props} />,
-                              blockquote: ({node, ...props}) => <blockquote style={{borderLeft: '3px solid rgba(255,255,255,0.2)', paddingLeft: 16, color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic', margin: '16px 0'}} {...props} />,
-                              hr: ({node, ...props}) => <hr style={{border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '24px 0'}} {...props} />,
+                                ? <code style={{background: 'var(--sub-bg)', color: 'var(--t1)', padding: '2px 6px', borderRadius: 4, fontSize: 13.5, fontFamily: 'monospace'}} {...props} />
+                                : <code style={{display: 'block', background: 'var(--surface)', color: 'var(--t1)', padding: '16px', borderRadius: 8, fontSize: 13.5, fontFamily: 'monospace', overflowX: 'auto', marginBottom: 16, border: '1px solid var(--border)'}} {...props} />,
+                              blockquote: ({node, ...props}) => <blockquote style={{borderLeft: '3px solid var(--border)', paddingLeft: 16, color: 'var(--t2)', fontStyle: 'italic', margin: '16px 0'}} {...props} />,
+                              hr: ({node, ...props}) => <hr style={{border: 'none', borderTop: '1px solid var(--border)', margin: '24px 0'}} {...props} />,
                             }}
                           >
                             {msg.content}
@@ -230,7 +230,7 @@ export default function AIPage() {
                         {/* Action Icons (Copy, Like, Dislike) */}
                         {!msg.isThinking && msg.content && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12, opacity: 0.6 }}>
-                            <button 
+                            <button
                               onClick={() => {
                                 navigator.clipboard.writeText(msg.content);
                                 const el = document.getElementById(`copy-icon-${i}`);
@@ -241,7 +241,7 @@ export default function AIPage() {
                                   }, 2000);
                                 }
                               }}
-                              style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+                              style={{ background: 'none', border: 'none', color: 'var(--t2)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
                               title="Copy"
                             >
                               <svg id={`copy-icon-${i}`} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -249,18 +249,18 @@ export default function AIPage() {
                                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                               </svg>
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleFeedback(i, 'like', msg.content)}
-                              style={{ background: 'none', border: 'none', color: feedbacks[i] === 'like' ? '#10b981' : '#fff', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                              style={{ background: 'none', border: 'none', color: feedbacks[i] === 'like' ? '#10b981' : 'var(--t2)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
                               title="Good response"
                             >
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
                               </svg>
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleFeedback(i, 'dislike', msg.content)}
-                              style={{ background: 'none', border: 'none', color: feedbacks[i] === 'dislike' ? '#ef4444' : '#fff', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                              style={{ background: 'none', border: 'none', color: feedbacks[i] === 'dislike' ? '#ef4444' : 'var(--t2)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
                               title="Bad response"
                             >
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -286,15 +286,15 @@ export default function AIPage() {
 
       {/* Clean Input Area */}
       <div style={{ position: 'fixed', bottom: 0, left: 90, right: 0, padding: '16px 40px 12px 40px', zIndex: 100, background: 'linear-gradient(to top, var(--bg) 80%, transparent)' }}>
-        <div style={{ 
+        <div style={{
           maxWidth: '768px', margin: '0 auto', position: 'relative',
-          background: '#2A2A2A', borderRadius: 24,
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--white)', borderRadius: 24,
+          border: '1px solid var(--border)',
           transition: 'border 0.3s ease, box-shadow 0.3s ease',
           display: 'flex', flexDirection: 'column'
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.background = '#2F2F2F'; }}
-        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = '#2A2A2A'; }}
+        onFocus={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(79,124,138,0.1)'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
         >
           <div style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '8px 12px 8px 20px' }}>
             <input 
@@ -311,18 +311,18 @@ export default function AIPage() {
                 boxSizing: 'border-box'
               }}
             />
-            <button 
+            <button
               onClick={() => handleSend()}
               disabled={!input.trim() || isTyping}
-              style={{ 
-                background: input.trim() && !isTyping ? '#fff' : 'rgba(255,255,255,0.05)', 
-                width: 36, height: 36, borderRadius: '50%', 
+              style={{
+                background: input.trim() && !isTyping ? 'var(--accent)' : 'var(--sub-bg)',
+                width: 36, height: 36, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: input.trim() && !isTyping ? 'pointer' : 'default',
                 transition: 'all 0.2s',
-                border: 'none',
+                border: '1px solid var(--border)',
                 marginLeft: 12,
-                color: input.trim() && !isTyping ? '#000' : 'var(--t3)'
+                color: input.trim() && !isTyping ? '#fff' : 'var(--t3)'
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -332,7 +332,7 @@ export default function AIPage() {
             </button>
           </div>
         </div>
-        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 8, marginBottom: 0, paddingBottom: 0, fontWeight: 400, letterSpacing: 0.2, lineHeight: 1 }}>
+        <p style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 11, marginTop: 8, marginBottom: 0, paddingBottom: 0, fontWeight: 400, letterSpacing: 0.2, lineHeight: 1 }}>
           AI can make mistakes. Please double-check responses.
         </p>
       </div>

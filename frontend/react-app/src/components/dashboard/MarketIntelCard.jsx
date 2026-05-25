@@ -31,7 +31,7 @@ export default function MarketIntelCard({ intel: rawIntel }) {
           }}>{status}</span>
         </div>
         <div className="fg-badge-wrap">
-          <span className="fg-label" style={{ color: '#fff' }}>SENTIMENT</span>
+          <span className="fg-label" style={{ color: 'var(--t1)' }}>SENTIMENT</span>
           <div className="badge" style={fg ? {
             background: isFear ? 'rgba(233,69,96,0.15)' : 'rgba(24,184,122,0.15)',
             color: isFear ? 'var(--red)' : 'var(--green)',
@@ -44,16 +44,16 @@ export default function MarketIntelCard({ intel: rawIntel }) {
       <div className="intel-grid">
         <div className="intel-col-left" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {intel.market_headlines && intel.market_headlines.length > 0 ? (
-            <div className="intel-body-box" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px' }}>
+            <div className="intel-body-box" style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '16px', borderRadius: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8"></path><path d="M15 18h-5"></path><path d="M10 6h8v4h-8V6Z"></path></svg>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#fff', letterSpacing: 1.5 }}>MARKET HEADLINES</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--t1)', letterSpacing: 1.5 }}>MARKET HEADLINES</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {intel.market_headlines.slice(0, 3).map((hl, i) => (
-                  <a key={i} href={hl.link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: '3px solid var(--accent)', transition: 'background 0.2s' }}
-                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
+                  <a key={i} href={hl.link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '10px', background: 'var(--sub-bg)', borderRadius: '8px', borderLeft: '3px solid var(--accent)', transition: 'background 0.2s' }}
+                     onMouseEnter={e => e.currentTarget.style.background = 'var(--border)'}
+                     onMouseLeave={e => e.currentTarget.style.background = 'var(--sub-bg)'}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginBottom: 4, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{hl.title}</div>
                     {hl.description && (
                       <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 6, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{hl.description}</div>
@@ -66,23 +66,23 @@ export default function MarketIntelCard({ intel: rawIntel }) {
                 ))}
                 {(intel.market_headlines.length > 3 || (intel.coin_headlines && Object.keys(intel.coin_headlines).length > 0)) && (
                   <button onClick={() => setActiveModal('headlines')} style={{
-                    background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--accent)',
+                    background: 'var(--sub-bg)', border: 'none', color: 'var(--accent)',
                     padding: '8px 12px', borderRadius: '6px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                     marginTop: 4, transition: 'background 0.2s'
-                  }} onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.05)'}>
+                  }} onMouseEnter={e => e.currentTarget.style.background='var(--border)'} onMouseLeave={e => e.currentTarget.style.background='var(--sub-bg)'}>
                     View All Headlines & Coin News...
                   </button>
                 )}
               </div>
             </div>
           ) : (
-            <div className="intel-body-box" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
+            <div className="intel-body-box" style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '16px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s' }}
                  onClick={() => setActiveModal('macro')}
-                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-                 onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'; }}>
+                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
+                 onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 10px var(--accent)' }}></span>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#fff', letterSpacing: 1.5 }}>MACRO ASSESSMENT</span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--t1)', letterSpacing: 1.5 }}>MACRO ASSESSMENT</span>
               </div>
               <div style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--t2)', fontWeight: 500, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {renderText(intel.market_view)}
@@ -113,7 +113,7 @@ export default function MarketIntelCard({ intel: rawIntel }) {
             </div>
           )}
         </div>
-        <div className="intel-col-right" style={{ borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: 16 }}>
+        <div className="intel-col-right" style={{ borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
             <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--t1)', letterSpacing: 1.5 }}>TRENDING</span>
@@ -122,8 +122,8 @@ export default function MarketIntelCard({ intel: rawIntel }) {
             {(intel.trending_coins || []).slice(0, 5).map((c, i) => (
               <div key={i} style={{ 
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: i === 0 ? 'linear-gradient(90deg, rgba(255,159,67,0.1), transparent)' : 'rgba(255,255,255,0.02)',
-                border: i === 0 ? '1px solid rgba(255,159,67,0.2)' : '1px solid rgba(255,255,255,0.05)',
+                background: i === 0 ? 'linear-gradient(90deg, rgba(255,159,67,0.1), transparent)' : 'var(--sub-bg)',
+                border: i === 0 ? '1px solid rgba(255,159,67,0.2)' : '1px solid var(--border)',
                 padding: '6px 12px', borderRadius: 8, transition: 'all 0.2s ease'
               }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: i === 0 ? '#ff9f43' : 'var(--t1)' }}>{c}</span>
@@ -142,9 +142,9 @@ export default function MarketIntelCard({ intel: rawIntel }) {
 
     {activeModal === 'macro' && (
       <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setActiveModal(null)} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: '#13171a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'linear-gradient(to right, rgba(0,210,211,0.05), transparent)' }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', gap: 12, letterSpacing: 1.5 }}>
+        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to right, rgba(0,210,211,0.05), transparent)' }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 12, letterSpacing: 1.5 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 15px var(--accent)' }}></span>
               MACRO ASSESSMENT
             </h2>
@@ -159,7 +159,7 @@ export default function MarketIntelCard({ intel: rawIntel }) {
 
     {activeModal === 'scan' && intel.scan_reasoning && (
       <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setActiveModal(null)} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: '#13171a', border: '1px solid rgba(24,184,122,0.2)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(24,184,122,0.1)' }}>
+        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: 'var(--card)', border: '1px solid rgba(24,184,122,0.2)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(24,184,122,0.1)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(24,184,122,0.1)', background: 'linear-gradient(to right, rgba(24,184,122,0.05), transparent)' }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 12, letterSpacing: 1.5, textShadow: '0 0 20px rgba(24,184,122,0.4)' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>
@@ -179,9 +179,9 @@ export default function MarketIntelCard({ intel: rawIntel }) {
 
     {activeModal === 'headlines' && (
       <div className="modal-overlay active" onClick={(e) => e.target === e.currentTarget && setActiveModal(null)} style={{ backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: '#13171a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'linear-gradient(to right, rgba(0,210,211,0.05), transparent)' }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', gap: 12, letterSpacing: 1.5 }}>
+        <div className="modal-content" style={{ maxWidth: 800, width: '90%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '16px', padding: 0, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(to right, rgba(0,210,211,0.05), transparent)' }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 12, letterSpacing: 1.5 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 15px var(--accent)' }}></span>
               MARKET & COIN NEWS
             </h2>
@@ -190,12 +190,12 @@ export default function MarketIntelCard({ intel: rawIntel }) {
           <div style={{ padding: '24px', maxHeight: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
             {intel.market_headlines && intel.market_headlines.length > 0 && (
               <div>
-                <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 8, letterSpacing: 1.5 }}>GLOBAL MARKET NEWS</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--accent)', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 8, letterSpacing: 1.5 }}>GLOBAL MARKET NEWS</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {intel.market_headlines.map((hl, i) => (
-                    <a key={i} href={hl.link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', borderLeft: '4px solid var(--accent)', transition: 'background 0.2s' }}
-                       onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.04)'} onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.02)'}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 8, lineHeight: 1.4 }}>{hl.title}</div>
+                    <a key={i} href={hl.link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '16px', background: 'var(--sub-bg)', borderRadius: '12px', borderLeft: '4px solid var(--accent)', transition: 'background 0.2s' }}
+                       onMouseEnter={e => e.currentTarget.style.background='var(--border)'} onMouseLeave={e => e.currentTarget.style.background='var(--sub-bg)'}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--t1)', marginBottom: 8, lineHeight: 1.4 }}>{hl.title}</div>
                       {hl.description && <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 12, lineHeight: 1.6 }}>{hl.description}</div>}
                       <div style={{ fontSize: 12, color: 'var(--t3)', display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                         <span>{hl.source}</span>
@@ -209,7 +209,7 @@ export default function MarketIntelCard({ intel: rawIntel }) {
             
             {intel.coin_headlines && Object.keys(intel.coin_headlines).length > 0 && (
               <div>
-                <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--green)', marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 8, letterSpacing: 1.5 }}>COIN-SPECIFIC NEWS</h3>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--green)', marginBottom: 16, borderBottom: '1px solid var(--border)', paddingBottom: 8, letterSpacing: 1.5 }}>COIN-SPECIFIC NEWS</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {Object.entries(intel.coin_headlines).map(([coin, hls]) => (
                     <div key={coin}>
@@ -218,9 +218,9 @@ export default function MarketIntelCard({ intel: rawIntel }) {
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingLeft: 12 }}>
                         {hls.map((hl, i) => (
-                          <a key={i} href={hl.link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', borderLeft: '4px solid var(--green)', transition: 'background 0.2s' }}
-                             onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.04)'} onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.02)'}>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 8, lineHeight: 1.4 }}>{hl.title}</div>
+                          <a key={i} href={hl.link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '16px', background: 'var(--sub-bg)', borderRadius: '12px', borderLeft: '4px solid var(--green)', transition: 'background 0.2s' }}
+                             onMouseEnter={e => e.currentTarget.style.background='var(--border)'} onMouseLeave={e => e.currentTarget.style.background='var(--sub-bg)'}>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--t1)', marginBottom: 8, lineHeight: 1.4 }}>{hl.title}</div>
                             {hl.description && <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 12, lineHeight: 1.6 }}>{hl.description}</div>}
                             <div style={{ fontSize: 12, color: 'var(--t3)', display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                               <span>{hl.source}</span>

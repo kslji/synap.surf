@@ -33,7 +33,7 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
         <div className="bal-info">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span className="bal-label" style={{ marginBottom: 0 }}>TOTAL EQUITY</span>
-            <div className="bot-status-chip" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="bot-status-chip" style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
               <div className="bsc-dot running" style={{ background: 'var(--accent)', width: 6, height: 6, borderRadius: '50%' }} />
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', letterSpacing: '0.5px' }}>Points: 0</span>
             </div>

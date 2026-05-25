@@ -922,6 +922,17 @@ button {
 
 .qbtn.dark {
   background: var(--sidebar);
+  color: #ffffff;
+}
+
+[data-theme='light'] .qbtn.dark {
+  background: var(--sub-bg);
+  color: var(--t2);
+  border: 1px solid var(--border);
+}
+
+[data-theme='light'] .qbtn.dark:hover {
+  background: var(--card);
   color: var(--t1);
 }
 
@@ -2128,21 +2139,18 @@ input:checked+.slider:before {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-bottom: 16px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  background: var(--surface);
   padding: 14px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
 }
 
-.tpsl-grid::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+[data-theme='dark'] .tpsl-grid {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .tt-row {
@@ -2165,25 +2173,37 @@ input:checked+.slider:before {
 }
 
 .tt-lev-input {
-  background: rgba(14, 18, 26, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sub-bg);
+  border: 1px solid var(--border);
   border-radius: 10px;
   display: flex;
   align-items: center;
   padding: 0 12px;
   height: 42px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow);
 }
 
 .tt-lev-input:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(14, 18, 26, 0.8);
+  border-color: var(--accent);
+  background: var(--white);
 }
 
 .tt-lev-input:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15), 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 3px rgba(79, 124, 138, 0.12);
+  background: var(--white);
+}
+
+[data-theme='dark'] .tt-lev-input {
+  background: rgba(14, 18, 26, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .tt-lev-input:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(14, 18, 26, 0.8);
+}
+[data-theme='dark'] .tt-lev-input:focus-within {
   background: rgba(14, 18, 26, 0.9);
 }
 
@@ -2343,7 +2363,7 @@ input:checked + .switch.mini .slider:before {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
   margin-bottom: 12px;
 }
@@ -2412,10 +2432,10 @@ input:checked + .switch.mini .slider:before {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--sub-bg);
   padding: 12px 8px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2448,8 +2468,8 @@ input:checked + .switch.mini .slider:before {
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px dashed rgba(255, 255, 255, 0.05);
+  background: var(--surface);
+  border: 1px dashed var(--border);
   border-radius: 18px;
   margin: 10px 0;
 }
@@ -2572,8 +2592,8 @@ input:checked + .switch.mini .slider:before {
 }
 
 .strat-search {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px 16px;
   display: flex;
@@ -2584,9 +2604,9 @@ input:checked + .switch.mini .slider:before {
 }
 
 .strat-search:focus-within {
-  border-color: rgba(0, 229, 255, 0.5);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(79, 124, 138, 0.15);
+  background: var(--white);
 }
 
 .strat-search input {
@@ -2608,8 +2628,8 @@ input:checked + .switch.mini .slider:before {
 }
 
 .strat-item {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 18px;
   cursor: pointer;
@@ -2622,16 +2642,16 @@ input:checked + .switch.mini .slider:before {
   content: '';
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
-  background: radial-gradient(circle at top right, rgba(0, 229, 255, 0.1), transparent 70%);
+  background: radial-gradient(circle at top right, rgba(0, 229, 255, 0.08), transparent 70%);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
 }
 
 .strat-item:hover {
-  border-color: rgba(0, 229, 255, 0.3);
+  border-color: var(--accent);
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow);
 }
 
 .strat-item:hover::before {
@@ -2640,8 +2660,8 @@ input:checked + .switch.mini .slider:before {
 
 .strat-item.active {
   border-color: var(--accent);
-  background: linear-gradient(145deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.02));
-  box-shadow: 0 8px 32px rgba(0, 229, 255, 0.15), inset 0 0 0 1px rgba(0, 229, 255, 0.2);
+  background: var(--sub-bg);
+  box-shadow: 0 8px 32px rgba(79, 124, 138, 0.12), inset 0 0 0 1px rgba(79, 124, 138, 0.2);
 }
 
 .strat-item h4 {
@@ -2688,12 +2708,12 @@ input:checked + .switch.mini .slider:before {
 }
 
 .strat-header-card {
-  background: linear-gradient(135deg, rgba(16, 22, 29, 0.95), rgba(10, 14, 20, 0.85));
+  background: var(--card);
   backdrop-filter: blur(20px);
   border-radius: 20px;
   padding: 24px 32px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2706,7 +2726,7 @@ input:checked + .switch.mini .slider:before {
   content: '';
   position: absolute;
   top: -50%; left: -50%; width: 200%; height: 200%;
-  background: radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.15), transparent 60%);
+  background: radial-gradient(circle at 50% 0%, rgba(79, 124, 138, 0.08), transparent 60%);
   pointer-events: none;
 }
 
@@ -2716,7 +2736,7 @@ input:checked + .switch.mini .slider:before {
   margin: 0;
   color: var(--t1);
   letter-spacing: -0.5px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  text-shadow: none;
   position: relative;
   z-index: 1;
 }
@@ -2733,17 +2753,17 @@ input:checked + .switch.mini .slider:before {
 .strat-perf-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 8px;
 }
 
 .perf-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--white);
+  border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 24px;
+  padding: 14px 10px;
   text-align: center;
   backdrop-filter: blur(12px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -2759,42 +2779,42 @@ input:checked + .switch.mini .slider:before {
 
 .perf-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 16px 40px rgba(0, 229, 255, 0.12);
-  border-color: rgba(0, 229, 255, 0.3);
-  background: linear-gradient(145deg, rgba(0, 229, 255, 0.08), rgba(255, 255, 255, 0.02));
+  box-shadow: 0 16px 40px rgba(79, 124, 138, 0.12);
+  border-color: var(--accent);
+  background: var(--sub-bg);
 }
 
 .perf-card .label {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 800;
   color: var(--t3);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   display: block;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
 .perf-card .value {
-  font-size: 26px;
+  font-size: 18px;
   font-weight: 900;
   color: var(--t1);
-  letter-spacing: -1px;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  letter-spacing: -0.5px;
+  text-shadow: none;
 }
 
 .perf-card .value.pos { color: var(--green); text-shadow: 0 2px 12px rgba(24, 184, 122, 0.3); }
 .perf-card .value.neg { color: var(--red); text-shadow: 0 2px 12px rgba(233, 69, 96, 0.3); }
 
 .strat-execution-panel {
-  background: linear-gradient(145deg, rgba(14, 18, 26, 0.85), rgba(10, 14, 20, 0.95));
+  background: var(--white);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow);
   position: relative;
 }
 
@@ -2819,21 +2839,21 @@ input:checked + .switch.mini .slider:before {
 }
 
 .exec-input-wrap {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sub-bg);
+  border: 1px solid var(--border);
   border-radius: 12px;
   display: flex;
   align-items: center;
   padding: 0 14px;
   height: 44px;
   transition: all 0.2s ease;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
 .exec-input-wrap:focus-within {
-  border-color: rgba(0, 229, 255, 0.5);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(0, 229, 255, 0.1);
-  background: rgba(0, 0, 0, 0.3);
+  border-color: var(--accent);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03), 0 0 0 2px rgba(79, 124, 138, 0.12);
+  background: var(--white);
 }
 
 .exec-input-wrap input, .exec-input-wrap select, .exec-input-wrap span {
@@ -3073,6 +3093,68 @@ input:checked + .switch.mini .slider:before {
   border-style: solid;
   border-color: var(--border) transparent transparent transparent;
   pointer-events: none;
+}
+
+/* ── Strategy Terminal Dark Theme Overrides ─────────────────────────────── */
+[data-theme='dark'] .strat-title-wrap h2 {
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+[data-theme='dark'] .perf-card .value {
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+[data-theme='dark'] .strat-search {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .strat-search:focus-within {
+  border-color: rgba(0, 229, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.1);
+}
+[data-theme='dark'] .strat-item {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border-color: rgba(255, 255, 255, 0.05);
+}
+[data-theme='dark'] .strat-item:hover {
+  border-color: rgba(0, 229, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+[data-theme='dark'] .strat-item.active {
+  background: linear-gradient(145deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.02));
+  box-shadow: 0 8px 32px rgba(0, 229, 255, 0.15), inset 0 0 0 1px rgba(0, 229, 255, 0.2);
+}
+[data-theme='dark'] .strat-header-card {
+  background: linear-gradient(135deg, rgba(16, 22, 29, 0.95), rgba(10, 14, 20, 0.85));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+[data-theme='dark'] .strat-header-card::before {
+  background: radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.15), transparent 60%);
+}
+[data-theme='dark'] .perf-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+[data-theme='dark'] .perf-card:hover {
+  background: linear-gradient(145deg, rgba(0, 229, 255, 0.08), rgba(255, 255, 255, 0.02));
+  border-color: rgba(0, 229, 255, 0.3);
+  box-shadow: 0 16px 40px rgba(0, 229, 255, 0.12);
+}
+[data-theme='dark'] .strat-execution-panel {
+  background: linear-gradient(145deg, rgba(14, 18, 26, 0.85), rgba(10, 14, 20, 0.95));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+[data-theme='dark'] .exec-input-wrap {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+[data-theme='dark'] .exec-input-wrap:focus-within {
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(0, 229, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 /* Remove spin buttons from number inputs */
