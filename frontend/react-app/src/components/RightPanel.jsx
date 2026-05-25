@@ -243,6 +243,14 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [panelWidth, setPanelWidth] = useState(380);
   const [isResizing, setIsResizing] = useState(false);
+  const showNotificationsComingSoon = () => {
+    toast({
+      type: 'info',
+      title: 'Coming Soon',
+      message: 'Trade notifications will be available in a future Synap Pro release.',
+      duration: 4500,
+    });
+  };
 
   useEffect(() => {
     if (!isResizing) return;
@@ -660,8 +668,13 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>NOTIFS</label>
-                <label className="switch mini" style={{ margin: 0 }}>
-                  <input type="checkbox" defaultChecked />
+                <label
+                  className="switch mini"
+                  style={{ margin: 0, opacity: 0.55, cursor: 'not-allowed' }}
+                  title="Coming soon: trade notifications will be available in a future Synap Pro release."
+                  onClick={(e) => { e.preventDefault(); showNotificationsComingSoon(); }}
+                >
+                  <input type="checkbox" checked={false} readOnly disabled />
                   <span className="slider round" />
                 </label>
               </div>
@@ -1071,8 +1084,13 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
             })}
             <div className="bc-field" style={{ marginTop: 8 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>NOTIFS</label>
-              <label className="switch mini">
-                <input type="checkbox" defaultChecked />
+              <label
+                className="switch mini"
+                style={{ opacity: 0.55, cursor: 'not-allowed' }}
+                title="Coming soon: trade notifications will be available in a future Synap Pro release."
+                onClick={(e) => { e.preventDefault(); showNotificationsComingSoon(); }}
+              >
+                <input type="checkbox" checked={false} readOnly disabled />
                 <span className="slider round" />
               </label>
             </div>

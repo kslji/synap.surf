@@ -3031,17 +3031,17 @@ input:checked + .switch.mini .slider:before {
   bottom: 130%;
   left: 50%;
   transform: translateX(-50%);
-  background: #1e1e24;
-  border: 1px solid var(--border);
-  color: var(--t1);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 10px;
+  background: #080c12;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  font-weight: 700;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+  font-weight: 800;
   animation: fadeIn 0.2s ease-out;
 }
 .grok-tooltip:hover::before {
@@ -3052,7 +3052,7 @@ input:checked + .switch.mini .slider:before {
   transform: translateX(-50%);
   border-width: 5px;
   border-style: solid;
-  border-color: var(--border) transparent transparent transparent;
+  border-color: #080c12 transparent transparent transparent;
   pointer-events: none;
 }
 

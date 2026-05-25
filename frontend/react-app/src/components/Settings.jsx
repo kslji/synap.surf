@@ -102,6 +102,15 @@ export default function Settings() {
     }
   };
 
+  const showTelegramComingSoon = () => {
+    toast({
+      type: 'info',
+      title: 'Coming Soon',
+      message: 'Telegram trade alerts will be available in a future Synap Pro release.',
+      duration: 4500,
+    });
+  };
+
   return (
     <div className="main-content dashboard fade-in" style={{ padding: '40px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg)' }}>
       <header className="dash-header" style={{ marginBottom: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -305,29 +314,28 @@ export default function Settings() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6, color: 'var(--t1)' }}>Telegram Notifications</div>
-                    <div style={{ fontSize: 13, color: 'var(--t3)', fontWeight: 600 }}>Free during early access. Later included with Synap Pro.</div>
+                    <div style={{ fontSize: 13, color: 'var(--t2)', fontWeight: 650, lineHeight: 1.5 }}>
+                      Coming soon. Trade alerts will be included with Synap Pro when subscriptions launch.
+                    </div>
                   </div>
-                  <label className="switch mini">
-                    <input type="checkbox" checked={tgNotifs} onChange={(e) => {
-                      if (!tgToken) {
-                        toast({ type: 'error', title: 'Missing Bot Token', message: 'Please add a valid Telegram Bot Token below first.', duration: 3000 });
-                        return;
-                      }
-                      setTgNotifs(e.target.checked);
-                    }} />
+                  <label
+                    className="switch mini"
+                    title="Coming soon: Telegram trade alerts will be included with Synap Pro."
+                    onClick={(e) => { e.preventDefault(); showTelegramComingSoon(); }}
+                    style={{ opacity: 0.55, cursor: 'not-allowed' }}
+                  >
+                    <input type="checkbox" checked={false} readOnly disabled />
                     <span className="slider round" />
                   </label>
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Enter Telegram Bot Token (e.g. 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11)" 
+                  placeholder="Telegram bot token setup will be available soon"
                   value={tgToken}
-                  onChange={(e) => {
-                    setTgToken(e.target.value);
-                    localStorage.setItem('tg_token', e.target.value);
-                    if (!e.target.value) setTgNotifs(false);
-                  }}
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', color: 'var(--t1)', fontSize: 13 }}
+                  readOnly
+                  disabled
+                  onClick={showTelegramComingSoon}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', color: 'var(--t2)', fontSize: 13, cursor: 'not-allowed', opacity: 0.72 }}
                 />
               </div>
             </div>

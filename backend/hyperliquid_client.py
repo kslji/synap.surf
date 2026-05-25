@@ -1,4 +1,3 @@
-import os
 import logging
 from typing import Optional, Dict, Any, List
 
@@ -10,20 +9,18 @@ from hyperliquid.utils import constants
 logger = logging.getLogger(__name__)
 
 class HyperliquidManualClient:
-    def __init__(self):
-        # Read at runtime so Settings saves are reflected immediately
-        private_key = os.environ.get("HL_PRIVATE_KEY", "").strip()
-        wallet = os.environ.get("HL_WALLET", "").strip()
+    def __init__(self, private_key: str, wallet_address: str):
+        private_key = (private_key or "").strip()
+        wallet_address = (wallet_address or "").strip()
 
-        if not private_key or not wallet:
+        if not private_key or not wallet_address:
             raise ValueError(
-                "Hyperliquid credentials not configured. "
-                "Go to Settings → Exchange Integration, enter your Private Key "
-                "and connect your EVM wallet, then click 'Save & Connect'."
+                "Hyperliquid credentials not configured for this wallet. "
+                "Connect your wallet and save its Hyperliquid private key in Settings."
             )
 
         self.wallet = Account.from_key(private_key)
-        self.user_address = wallet
+        self.user_address = wallet_address
         self.base_url = constants.MAINNET_API_URL
 
         self.exchange = Exchange(

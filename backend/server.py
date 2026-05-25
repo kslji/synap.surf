@@ -1263,6 +1263,7 @@ async def save_hl_keys(req: KeysReq):
                 {"wallet_address": re.compile(f"^{wallet_addr}$", re.IGNORECASE)},
                 {"$set": update_doc}
             )
+            _hl_trader_cache.pop(wallet_addr.lower(), None)
 
         # Handle global Telegram settings
         if req.telegram_bot_token is not None or req.telegram_chat_id is not None:
