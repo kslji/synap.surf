@@ -2,6 +2,16 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
+const isMobileBrowser = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia?.('(pointer: coarse)')?.matches;
+};
+
+const openMetaMaskMobile = () => {
+  const dappUrl = `${window.location.host}${window.location.pathname}${window.location.search}`;
+  window.location.href = `https://metamask.app.link/dapp/${dappUrl}`;
+};
+
 export function AuthProvider({ children }) {
   const [walletAddress, setWalletAddress] = useState(() => localStorage.getItem('wallet_address') || '');
   const [userProfile, setUserProfile] = useState({ email: '', subscriptions: [] });
@@ -53,6 +63,11 @@ export function AuthProvider({ children }) {
         throw err;
       }
     } else {
+      if (walletType === 'metamask' && isMobileBrowser()) {
+        openMetaMaskMobile();
+        throw new Error('Opening MetaMask mobile. If it does not open, install MetaMask or use the wallet browser.');
+      }
+
       let name = 'MetaMask';
       if (walletType === 'phantom') name = 'Phantom';
       if (walletType === 'backpack') name = 'Backpack';

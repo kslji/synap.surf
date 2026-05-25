@@ -32,6 +32,7 @@ const getInitialTheme = () => {
 
 function MobileDesktopNotice() {
   const [showNotice, setShowNotice] = useState(false);
+  const { connectWallet } = useAuth();
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('desktop_notice_dismissed') === 'true';
@@ -46,6 +47,15 @@ function MobileDesktopNotice() {
   const dismissNotice = () => {
     sessionStorage.setItem('desktop_notice_dismissed', 'true');
     setShowNotice(false);
+  };
+
+  const connectOnMobile = async () => {
+    dismissNotice();
+    try {
+      await connectWallet('metamask');
+    } catch (e) {
+      console.info(e.message);
+    }
   };
 
   if (!showNotice) return null;
@@ -64,7 +74,10 @@ function MobileDesktopNotice() {
         <p>
           Synap has advanced charts, AI trading controls, and portfolio panels. For the best user experience, please open it on a desktop or laptop.
         </p>
-        <button type="button" onClick={dismissNotice}>Continue on mobile</button>
+        <div className="mobile-desktop-notice-actions">
+          <button type="button" className="primary" onClick={connectOnMobile}>Connect wallet</button>
+          <button type="button" className="secondary" onClick={dismissNotice}>Continue on mobile</button>
+        </div>
       </div>
     </div>
   );

@@ -3877,16 +3877,30 @@ input[type=number].no-spin {
   line-height: 1.55;
 }
 
+.mobile-desktop-notice-actions {
+  display: grid;
+  gap: 10px;
+}
+
 .mobile-desktop-notice button {
   width: 100%;
   min-height: 48px;
   border: 0;
   border-radius: 14px;
-  background: #ffffff;
-  color: #0b0e11;
   font-size: 14px;
   font-weight: 900;
   cursor: pointer;
+}
+
+.mobile-desktop-notice button.primary {
+  background: #ffffff;
+  color: #0b0e11;
+}
+
+.mobile-desktop-notice button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 @media (max-width: 767px) {
