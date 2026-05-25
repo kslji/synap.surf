@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 from datetime import datetime, timezone
+from pymongo.errors import DuplicateKeyError
 
 logger = logging.getLogger("backend.trade_sync")
 
@@ -57,7 +57,7 @@ async def sync_wallet_fills(wallet: str, db, *, info=None) -> int:
     if not wallet or not wallet.startswith("0x") or len(wallet) != 42:
         return 0
 
-    wallet = wallet.strip()
+    wallet = wallet.strip().lower()
     inserted = 0
 
     try:
@@ -75,13 +75,25 @@ async def sync_wallet_fills(wallet: str, db, *, info=None) -> int:
 
         for fill in fills:
             tid = fill.get("tid")
+            doc = _fill_to_doc(wallet, fill)
+
             if tid is not None:
-                existing = await db.trade_logs.find_one(
-                    {
-                        "user_id": re.compile(f"^{re.escape(wallet)}$", re.IGNORECASE),
-                        "hl_tid": tid,
-                    }
-                )
+                try:
+                    res = await db.trade_logs.update_one(
+                        {
+                            "user_id": wallet,
+                            "hl_tid": tid,
+                            "event": "FILL",
+                        },
+                        {"$setOnInsert": doc},
+                        upsert=True,
+                    )
+                    if res.upserted_id:
+                        inserted += 1
+                    continue
+                except DuplicateKeyError:
+                    continue
+
             else:
                 dt = datetime.fromtimestamp(fill.get("time", 0) / 1000, tz=timezone.utc)
                 existing = await db.trade_logs.find_one(
@@ -97,9 +109,11 @@ async def sync_wallet_fills(wallet: str, db, *, info=None) -> int:
             if existing:
                 continue
 
-            doc = _fill_to_doc(wallet, fill)
-            await db.trade_logs.insert_one(doc)
-            inserted += 1
+            try:
+                await db.trade_logs.insert_one(doc)
+                inserted += 1
+            except DuplicateKeyError:
+                continue
 
         if inserted:
             logger.info("Synced %s new fills for %s", inserted, wallet[:10])
