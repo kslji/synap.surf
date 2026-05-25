@@ -207,7 +207,7 @@ export default function Settings() {
               {/* ── Step 2: Wallet Address ── */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <label style={{ fontSize: 14, fontWeight: 800, color: 'var(--t1)' }}>Wallet Address (HL_WALLET)</label>
+                  <label style={{ fontSize: 14, fontWeight: 800, color: 'var(--t1)' }}>Wallet Address</label>
                   {walletStatus === 'connected' && (
                     <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 800, background: 'rgba(24,184,122,0.15)', padding: '4px 10px', borderRadius: 8 }}>CONNECTED ✓</span>
                   )}

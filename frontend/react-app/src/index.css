@@ -400,6 +400,100 @@ button {
   border-radius: 12px;
   width: fit-content;
   border: 1px solid var(--border);
+  position: relative;
+}
+
+.wallet-first-hint {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 12px);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 250px;
+  padding: 12px 36px 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  background: rgba(13, 17, 23, 0.96);
+  color: #ffffff;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.34);
+  animation: walletHintFloat 1.8s ease-in-out infinite;
+}
+
+.wallet-first-hint::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: rgba(13, 17, 23, 0.96);
+  border-left: 1px solid rgba(125, 211, 252, 0.24);
+  border-bottom: 1px solid rgba(125, 211, 252, 0.24);
+  transform: rotate(-45deg);
+}
+
+.wallet-first-hint-hand {
+  flex: 0 0 auto;
+  font-size: 22px;
+  line-height: 1;
+  animation: walletHandPoint 1.1s ease-in-out infinite;
+}
+
+.wallet-first-hint strong,
+.wallet-first-hint span {
+  display: block;
+}
+
+.wallet-first-hint strong {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.wallet-first-hint span {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.wallet-first-hint-close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes walletHintFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes walletHandPoint {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
 }
 
 .qbtn.tiny {
@@ -3282,6 +3376,14 @@ input[type=number].no-spin {
     flex-wrap: wrap;
   }
 
+  .wallet-first-hint {
+    width: min(260px, calc(100vw - 44px));
+  }
+
+  .wallet-first-hint::before {
+    left: 24px;
+  }
+
   .qbtn.tiny {
     width: 48px;
     height: 48px;
@@ -3648,6 +3750,7 @@ input[type=number].no-spin {
     font-size: 16px !important;
   }
 }
+
 
 @media (max-width: 480px) {
   .main-area,

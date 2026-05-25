@@ -6,6 +6,9 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pointsTip, setPointsTip] = useState(null);
   const { walletAddress, disconnectWallet } = useAuth();
+  const [showWalletHint, setShowWalletHint] = useState(() => {
+    return !localStorage.getItem('wallet_hint_dismissed') && !localStorage.getItem('wallet_address');
+  });
   const pct = Number(stats?.pnl_pct) || 0;
 
   const handleRefresh = async () => {
@@ -21,11 +24,18 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
   };
 
   const handleWalletClick = () => {
+    localStorage.setItem('wallet_hint_dismissed', 'true');
+    setShowWalletHint(false);
     if (walletAddress) {
       disconnectWallet();
     } else {
       window.dispatchEvent(new Event('trigger_wallet_connect'));
     }
+  };
+
+  const dismissWalletHint = () => {
+    localStorage.setItem('wallet_hint_dismissed', 'true');
+    setShowWalletHint(false);
   };
 
   return (
@@ -108,6 +118,16 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
           <span className="bal-eth">≈ {((stats.equity || 0) / (stats.eth_price || 3200)).toFixed(4)} ETH</span>
         </div>
         <div className="bal-actions-row" style={{ display: 'flex', gap: 8 }}>
+          {showWalletHint && !walletAddress && (
+            <div className="wallet-first-hint" role="status">
+              <button className="wallet-first-hint-close" type="button" aria-label="Dismiss wallet hint" onClick={dismissWalletHint}>×</button>
+              <div className="wallet-first-hint-hand">👇</div>
+              <div>
+                <strong>Connect wallet</strong>
+                <span>Start tracking your equity and trades.</span>
+              </div>
+            </div>
+          )}
           <button className={`qbtn tiny ${walletAddress ? 'active-wallet' : 'dark'}`} title={walletAddress ? 'Disconnect Wallet' : 'Connect Wallet'} onClick={handleWalletClick}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={walletAddress ? "#ff6b6b" : "currentColor"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
