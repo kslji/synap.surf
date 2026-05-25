@@ -238,7 +238,6 @@ export default function Settings() {
           
           {/* Subscription Model */}
           <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Tier 1 */}
             <div style={{ 
               background: 'linear-gradient(145deg, #1e2329, #0d1117)', 
               borderRadius: 24, padding: '2px', position: 'relative', overflow: 'hidden',
@@ -252,40 +251,46 @@ export default function Settings() {
                   <div>
                     <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--t3)', marginBottom: 8, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Subscription</h3>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-1px' }}>Synap Pro</h2>
+                      <h2 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-1px' }}>Early Access</h2>
                     </div>
+                    <p style={{ color: 'rgba(255,255,255,0.62)', fontSize: 13, lineHeight: 1.5, marginTop: 8, maxWidth: 520, fontWeight: 600 }}>
+                      All features are free for early users. Advanced automation will move into Synap Pro later, and early users will be rewarded in future platform programs.
+                    </p>
                   </div>
-                  <div style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 800, letterSpacing: '1px' }}>
-                    {userProfile.subscriptions?.length > 0 ? 'ACTIVE' : 'INACTIVE'}
+                  <div style={{ background: 'rgba(24,184,122,0.18)', color: '#7ee0ad', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 800, letterSpacing: '1px' }}>
+                    FREE NOW
                   </div>
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {['Submit Community Hub proposals', 'Instant Telegram alerts', 'Automated AI trading (Powered by Claude AI)', '25+ fully backtested automated strategies'].map((feat, i) => (
-                      <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, color: '#e6edf3', fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
-                          <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                        {feat}
+                  <h4 style={{ color: '#fff', fontSize: 13, fontWeight: 900, margin: '0 0 14px 0', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    Future subscription access
+                  </h4>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {[
+                      { tier: 'Pro', title: 'Automatic AI trading', desc: 'Run trades from the Synap.surf AI card using your configured risk parameters.' },
+                      { tier: 'Pro', title: 'Strategy auto-trading', desc: 'Subscribed users can let selected strategies execute automatically.' },
+                      { tier: 'Pro', title: 'Unlimited AI chat', desc: 'Pro users get unlimited AI market prompts.' },
+                      { tier: 'Pro', title: 'Telegram trade notifications', desc: 'Receive Telegram alerts for every trade opened, updated, or closed.' },
+                    ].map((feat) => (
+                      <li key={feat.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, color: '#e6edf3', fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>
+                        <span style={{
+                          minWidth: 40, height: 20, borderRadius: 999, flexShrink: 0, marginTop: 1,
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          background: feat.tier === 'Free' ? 'rgba(255,255,255,0.08)' : 'rgba(24,184,122,0.14)',
+                          color: feat.tier === 'Free' ? 'rgba(255,255,255,0.72)' : '#7ee0ad',
+                          fontSize: 10, fontWeight: 900, textTransform: 'uppercase'
+                        }}>{feat.tier}</span>
+                        <span>
+                          <span style={{ display: 'block', color: '#fff', fontWeight: 850 }}>{feat.title}</span>
+                          <span style={{ display: 'block', color: 'rgba(255,255,255,0.58)', fontSize: 12, marginTop: 2 }}>{feat.desc}</span>
+                        </span>
                       </li>
                     ))}
                   </ul>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 'auto' }}>
-                  <button style={{ padding: '12px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'rgba(0,210,211,0.1)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}>
-                    <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>$2</div>
-                    <div style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600 }}>2 Days</div>
-                  </button>
-                  <button style={{ padding: '12px 8px', borderRadius: 12, background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(0,210,211,0.3)' }} onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,210,211,0.4)'; }} onMouseOut={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,210,211,0.3)'; }}>
-                    <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>$5</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>7 Days</div>
-                  </button>
-                  <button style={{ padding: '12px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'rgba(0,210,211,0.1)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}>
-                    <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>$15</div>
-                    <div style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600 }}>1 Month</div>
-                  </button>
+                  <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '12px 14px', color: 'rgba(255,255,255,0.7)', fontSize: 12, lineHeight: 1.5, fontWeight: 600 }}>
+                    Early users can currently use the platform for free and will be rewarded in future. Pricing will be announced before subscriptions are enforced.
+                  </div>
                 </div>
               </div>
             </div>
@@ -300,7 +305,7 @@ export default function Settings() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6, color: 'var(--t1)' }}>Telegram Notifications</div>
-                    <div style={{ fontSize: 13, color: 'var(--t3)', fontWeight: 600 }}>Receive alerts in your Telegram group</div>
+                    <div style={{ fontSize: 13, color: 'var(--t3)', fontWeight: 600 }}>Free during early access. Later included with Synap Pro.</div>
                   </div>
                   <label className="switch mini">
                     <input type="checkbox" checked={tgNotifs} onChange={(e) => {

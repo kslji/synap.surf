@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Synap — AI Trading Dashboard</title>
     <meta name="description" content="Synap — Real-time AI-powered algorithmic trading dashboard with live positions, signals, and market intelligence." />
+    <link rel="icon" type="image/png" href="/synap.png" />
+    <link rel="apple-touch-icon" href="/synap.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <!-- Instant theme application: reads localStorage BEFORE React mounts to prevent white/blank flash -->
     <script>
       (function() {
         try {
-          var theme = localStorage.getItem('theme') || 'light';
+          var theme = localStorage.getItem('theme') || 'dark';
           document.documentElement.setAttribute('data-theme', theme);
           // Apply background immediately so there is ZERO flash
           var bg = theme === 'dark' ? '#0b0e11' : '#eef1f4';
@@ -24,7 +26,7 @@
     <style>
       html, body, #root {
         min-height: 100vh;
-        background: #eef1f4;
+        background: #0b0e11;
       }
       /* Skeleton theme variables — light mode defaults */
       :root {

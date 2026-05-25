@@ -1,10 +1,10 @@
 import { useAuth } from '../context/AuthContext.jsx';
 
-export default function Sidebar({ view, setView, theme, toggleTheme }) {
+export default function Sidebar({ view, setView, theme, toggleTheme, onHome }) {
   const { walletAddress, connectWallet, disconnectWallet } = useAuth();
   return (
     <aside className="sidebar">
-      <div className="sb-logo" onClick={() => setView('dashboard')} style={{ cursor: 'pointer' }}>
+      <div className="sb-logo" onClick={onHome || (() => setView('dashboard'))} style={{ cursor: 'pointer' }} title="Home">
         <img 
           src="/synap.png" 
           alt="Synap Logo" 

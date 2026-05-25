@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pointsTip, setPointsTip] = useState(null);
   const { walletAddress, disconnectWallet } = useAuth();
   const pct = Number(stats?.pnl_pct) || 0;
 
@@ -33,10 +34,72 @@ export default function BalanceCard({ stats, onShowCharts, onRefresh }) {
         <div className="bal-info">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span className="bal-label" style={{ marginBottom: 0 }}>TOTAL EQUITY</span>
-            <div className="bot-status-chip" style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div className="bsc-dot running" style={{ background: 'var(--accent)', width: 6, height: 6, borderRadius: '50%' }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', letterSpacing: '0.5px' }}>Points: 0</span>
+            <div
+              className="bot-status-chip points-disabled"
+              aria-label="Points will be used for future rewards"
+              onMouseEnter={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setPointsTip({
+                  top: rect.bottom + 10,
+                  left: Math.max(12, rect.right - 260),
+                });
+              }}
+              onMouseLeave={() => setPointsTip(null)}
+              style={{
+                background: 'var(--sub-bg)',
+                border: '1px solid var(--border)',
+                padding: '4px 10px',
+                borderRadius: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                position: 'relative',
+                opacity: 0.62,
+                cursor: 'not-allowed',
+                filter: 'grayscale(0.55)',
+              }}
+            >
+              <style>{`
+                .points-reward-popup::before {
+                  content: '';
+                  position: absolute;
+                  top: -5px;
+                  right: 18px;
+                  width: 9px;
+                  height: 9px;
+                  background: #05080d;
+                  border-left: 1px solid rgba(255,255,255,0.18);
+                  border-top: 1px solid rgba(255,255,255,0.18);
+                  transform: rotate(45deg);
+                }
+              `}</style>
+              <div className="bsc-dot" style={{ background: 'var(--t3)', width: 6, height: 6, borderRadius: '50%' }} />
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)', letterSpacing: '0.5px' }}>Points: 0</span>
             </div>
+            {pointsTip && (
+              <div
+                className="points-reward-popup"
+                role="tooltip"
+                style={{
+                  position: 'fixed',
+                  top: pointsTip.top,
+                  left: pointsTip.left,
+                  width: 260,
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  background: '#05080d',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  color: '#ffffff',
+                  boxShadow: '0 16px 44px rgba(0,0,0,0.45)',
+                  fontSize: 12,
+                  lineHeight: 1.45,
+                  fontWeight: 800,
+                  zIndex: 9999,
+                }}
+              >
+                Points are currently disabled and will be activated in future reward updates.
+              </div>
+            )}
           </div>
           <div className="bal-main-row">
             <h1 id="equityValue">${fmt(stats.equity)}</h1>

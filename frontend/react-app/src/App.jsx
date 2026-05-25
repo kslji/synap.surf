@@ -3,6 +3,7 @@ import { useDashboard } from './hooks/useDashboard.js';
 import Sidebar from './components/Sidebar.jsx';
 import RightPanel from './components/RightPanel.jsx';
 import Dashboard from './components/dashboard/Dashboard.jsx';
+import LandingPage from './components/LandingPage.jsx';
 import { ToastProvider } from './components/Toast.jsx';
 
 // Lazy load heavy pages — they won't be downloaded until user navigates to them
@@ -14,8 +15,27 @@ const Settings           = lazy(() => import('./components/Settings.jsx'));
 const AIPage             = lazy(() => import('./components/AIPage.jsx'));
 import { useAuth } from './context/AuthContext.jsx';
 
+const getInitialTheme = () => {
+  const storedTheme = localStorage.getItem('theme');
+  const defaultVersion = localStorage.getItem('theme_default_v2');
+
+  if (!defaultVersion) {
+    localStorage.setItem('theme_default_v2', 'dark');
+    if (!storedTheme || storedTheme === 'light') {
+      localStorage.setItem('theme', 'dark');
+      return 'dark';
+    }
+  }
+
+  return storedTheme || 'dark';
+};
+
 export default function App() {
   const { connectWallet } = useAuth();
+  const [showLanding, setShowLanding] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('landing') === 'true' || !localStorage.getItem('seen_landing');
+  });
   const [view, setView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('view') || localStorage.getItem('app_view') || 'dashboard';
@@ -49,7 +69,14 @@ export default function App() {
   // Handle browser Back/Forward buttons
   useEffect(() => {
     const onPopState = (e) => {
-      const newView = e.state?.view || new URLSearchParams(window.location.search).get('view') || 'dashboard';
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('landing') === 'true') {
+        setShowLanding(true);
+        return;
+      }
+
+      setShowLanding(false);
+      const newView = e.state?.view || params.get('view') || 'dashboard';
       setView(newView);
       // Ensure nested views like the AI chat are cleared when navigating back
       window.dispatchEvent(new Event('resetAIPage'));
@@ -66,7 +93,7 @@ export default function App() {
   }, [view]);
 
   const [tradingMode, setTradingMode] = useState(() => localStorage.getItem('trading_mode') || 'bot');
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [theme, setTheme] = useState(getInitialTheme);
   const { stats, trades, decisions, perps, intel, topCoins, fetchAll } = useDashboard();
 
   const safeStats = stats || { equity: 0, pnl_pct: 0, win_rate: 0, realized_pnl: 0, total_trades: 0, positions: [], last_updated: '' };
@@ -84,6 +111,21 @@ export default function App() {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
+  };
+
+  const openLanding = () => {
+    const url = new URL(window.location);
+    url.searchParams.set('landing', 'true');
+    window.history.pushState({ landing: true }, '', url);
+    setShowLanding(true);
+  };
+
+  const launchApp = () => {
+    const url = new URL(window.location);
+    url.searchParams.delete('landing');
+    url.searchParams.set('view', view);
+    window.history.pushState({ view }, '', url);
+    setShowLanding(false);
   };
 
   useEffect(() => {
@@ -124,10 +166,18 @@ export default function App() {
     }
   };
 
+  if (showLanding) {
+    return (
+      <ToastProvider>
+        <LandingPage onLaunch={launchApp} theme={theme} toggleTheme={toggleTheme} />
+      </ToastProvider>
+    );
+  }
+
   return (
     <ToastProvider>
       <div className="shell">
-        <Sidebar view={view} setView={changeView} theme={theme} toggleTheme={toggleTheme} />
+        <Sidebar view={view} setView={changeView} theme={theme} toggleTheme={toggleTheme} onHome={openLanding} />
         <Suspense fallback={null}>
           {renderView()}
         </Suspense>
