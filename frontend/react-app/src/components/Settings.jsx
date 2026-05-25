@@ -112,7 +112,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="main-content dashboard fade-in" style={{ padding: '40px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg)' }}>
+    <div className="main-content dashboard fade-in settings-page" style={{ padding: '40px', overflowY: 'auto', flex: 1, backgroundColor: 'var(--bg)' }}>
       <header className="dash-header" style={{ marginBottom: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: 36, margin: 0, fontWeight: 900, letterSpacing: '-1px', color: 'var(--t1)' }}>Settings</h2>
@@ -120,13 +120,13 @@ export default function Settings() {
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px', maxWidth: '1200px' }}>
+      <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px', maxWidth: '1200px' }}>
         
         {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div className="settings-column" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           
           {/* User Profile Section */}
-          <section style={{ backgroundColor: 'var(--card)', borderRadius: 24, padding: 32, border: '1px solid var(--border)', boxShadow: 'var(--shadow)', position: 'relative', overflow: 'hidden' }}>
+          <section className="settings-card" style={{ backgroundColor: 'var(--card)', borderRadius: 24, padding: 32, border: '1px solid var(--border)', boxShadow: 'var(--shadow)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, background: 'radial-gradient(circle, rgba(108, 92, 231, 0.15) 0%, rgba(255,255,255,0) 70%)', borderRadius: '50%' }}></div>
             
             <h3 style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)', marginBottom: 24, letterSpacing: '1.5px', textTransform: 'uppercase' }}>User Profile</h3>
@@ -151,7 +151,7 @@ export default function Settings() {
           </section>
 
           {/* Hyperliquid API Settings */}
-          <section style={{ backgroundColor: 'var(--card)', borderRadius: 24, padding: 32, border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+          <section className="settings-card" style={{ backgroundColor: 'var(--card)', borderRadius: 24, padding: 32, border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
             <h3 style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)', marginBottom: 24, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Exchange Integration</h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -243,10 +243,10 @@ export default function Settings() {
         </div>
 
         {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div className="settings-column" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           
           {/* Subscription Model */}
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <section className="settings-card subscription-card" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div style={{ 
               background: 'linear-gradient(145deg, #1e2329, #0d1117)', 
               borderRadius: 24, padding: '2px', position: 'relative', overflow: 'hidden',
@@ -306,7 +306,7 @@ export default function Settings() {
           </section>
 
           {/* Account Settings */}
-          <section style={{ backgroundColor: 'var(--card)', borderRadius: 24, padding: 32, border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+          <section className="settings-card" style={{ backgroundColor: 'var(--card)', borderRadius: 24, padding: 32, border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
             <h3 style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent)', marginBottom: 28, letterSpacing: '1.5px', textTransform: 'uppercase' }}>Security & Preferences</h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -330,7 +330,7 @@ export default function Settings() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Telegram bot token setup will be available soon"
+                  placeholder="Telegram setup will be available soon"
                   value={tgToken}
                   readOnly
                   disabled

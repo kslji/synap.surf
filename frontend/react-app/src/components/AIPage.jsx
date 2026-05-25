@@ -107,7 +107,7 @@ export default function AIPage() {
   // Wallet is no longer required to view the AI page
 
   return (
-    <div className="main-content fade-in" style={{ 
+    <div className="main-content fade-in ai-page" style={{ 
       display: 'flex', flexDirection: 'column', flex: 1, 
       background: 'radial-gradient(circle at 50% 0%, rgba(255, 159, 67, 0.1) 0%, var(--bg) 60%)', 
       height: '100vh', minHeight: 0, position: 'relative', overflow: 'hidden' 
@@ -120,12 +120,12 @@ export default function AIPage() {
 
 
       {/* Chat Area */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '40px 40px 160px 40px', display: 'flex', flexDirection: 'column', zIndex: 1 }}>
-        <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32, flex: 1 }}>
+      <div className="ai-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '40px 40px 160px 40px', display: 'flex', flexDirection: 'column', zIndex: 1 }}>
+        <div className="ai-inner" style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32, flex: 1 }}>
           
           {messages.length === 0 ? (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', animation: 'fadeIn 1s ease-out' }}>
-              <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <div className="ai-empty-state" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', animation: 'fadeIn 1s ease-out' }}>
+              <div className="ai-hero-copy" style={{ textAlign: 'center', marginBottom: 48 }}>
                 <h1 style={{ fontSize: 48, fontWeight: 900, color: 'var(--t1)', letterSpacing: '-2px', marginBottom: 16 }}>How can I help you dominate the markets?</h1>
                 <p style={{ fontSize: 18, color: 'var(--t3)', fontWeight: 500 }}>
                   Select a prompt below or type your own question.<br/>
@@ -134,14 +134,15 @@ export default function AIPage() {
                   </span>
                 </p>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: '800px' }}>
+              <div className="ai-prompt-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: '800px' }}>
                 {[
                   { title: 'Market Analysis', desc: 'Analyze current momentum across the top crypto markets', icon: '📈', id: 'market_analysis' },
                   { title: 'Strategy Generation', desc: 'What is the best trading strategy right now based on current market conditions?', icon: '🧠', id: 'strategy_generation' },
                   { title: 'Smart money holder', desc: 'Analyze smart money flows and holder behavior', icon: '📰', id: 'smart_money_holder' },
                   { title: 'Risk Management', desc: 'Calculate optimal position sizing', icon: '🛡️', id: 'risk_management' }
                 ].map((item, i) => (
-                  <button 
+                  <button
+                    className="ai-prompt-card" 
                     key={i} 
                     onClick={() => handleSend(item.desc, item.id)}
                     style={{ 
@@ -285,8 +286,8 @@ export default function AIPage() {
       </div>
 
       {/* Clean Input Area */}
-      <div style={{ position: 'fixed', bottom: 0, left: 90, right: 0, padding: '16px 40px 12px 40px', zIndex: 100, background: 'linear-gradient(to top, var(--bg) 80%, transparent)' }}>
-        <div style={{
+      <div className="ai-composer-bar" style={{ position: 'fixed', bottom: 0, left: 90, right: 0, padding: '16px 40px 12px 40px', zIndex: 100, background: 'linear-gradient(to top, var(--bg) 80%, transparent)' }}>
+        <div className="ai-composer" style={{
           maxWidth: '768px', margin: '0 auto', position: 'relative',
           background: 'var(--white)', borderRadius: 24,
           border: '1px solid var(--border)',

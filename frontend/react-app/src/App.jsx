@@ -30,6 +30,46 @@ const getInitialTheme = () => {
   return storedTheme || 'dark';
 };
 
+function MobileDesktopNotice() {
+  const [showNotice, setShowNotice] = useState(false);
+
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem('desktop_notice_dismissed') === 'true';
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+
+    if (!dismissed && isMobileViewport && isTouchDevice) {
+      setShowNotice(true);
+    }
+  }, []);
+
+  const dismissNotice = () => {
+    sessionStorage.setItem('desktop_notice_dismissed', 'true');
+    setShowNotice(false);
+  };
+
+  if (!showNotice) return null;
+
+  return (
+    <div className="mobile-desktop-notice" role="dialog" aria-modal="true" aria-labelledby="mobileDesktopNoticeTitle">
+      <div className="mobile-desktop-notice-card">
+        <div className="mobile-desktop-notice-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="12" rx="2" />
+            <path d="M8 20h8" />
+            <path d="M12 16v4" />
+          </svg>
+        </div>
+        <h2 id="mobileDesktopNoticeTitle">Best viewed on desktop</h2>
+        <p>
+          Synap has advanced charts, AI trading controls, and portfolio panels. For the best user experience, please open it on a desktop or laptop.
+        </p>
+        <button type="button" onClick={dismissNotice}>Continue on mobile</button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const { connectWallet } = useAuth();
   const [showLanding, setShowLanding] = useState(() => {
@@ -170,6 +210,7 @@ export default function App() {
     return (
       <ToastProvider>
         <LandingPage onLaunch={launchApp} theme={theme} toggleTheme={toggleTheme} />
+        <MobileDesktopNotice />
       </ToastProvider>
     );
   }
@@ -178,7 +219,11 @@ export default function App() {
     <ToastProvider>
       <div className="shell">
         <Sidebar view={view} setView={changeView} theme={theme} toggleTheme={toggleTheme} onHome={openLanding} />
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <div className="main-content route-loading">
+            <div className="route-loading-card">Loading workspace...</div>
+          </div>
+        }>
           {renderView()}
         </Suspense>
         {view !== 'strategies' && view !== 'proposals' && view !== 'settings' && view !== 'ai' && (
@@ -191,6 +236,7 @@ export default function App() {
           />
         )}
       </div>
+      <MobileDesktopNotice />
     </ToastProvider>
   );
 }

@@ -3166,3 +3166,926 @@ input[type=number].no-spin::-webkit-outer-spin-button {
 input[type=number].no-spin {
   -moz-appearance: textfield;
 }
+
+/* ── Mobile Polish Layer ───────────────────────────────────────────────────
+   Keeps desktop layouts intact while making inline-heavy pages usable on
+   phones. These rules intentionally live last so they can override component
+   inline defaults where necessary. */
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .shell {
+    width: 100%;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(13, 17, 23, 0.96);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .sb-nav {
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .sb-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sb-item {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .main-area,
+  .main-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    padding: 14px !important;
+  }
+
+  .hero-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .bal-card.compact,
+  .market-intel-card,
+  .table-section,
+  .ticker-row,
+  .right-panel .rp-section,
+  .rp-section {
+    width: 100%;
+    min-width: 0;
+    border-radius: 20px;
+  }
+
+  .bal-card.compact {
+    padding: 18px;
+    min-height: 178px;
+  }
+
+  .bal-top > .bal-info > div:first-child {
+    align-items: flex-start !important;
+    gap: 10px;
+  }
+
+  .bal-main-row {
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .bal-main-row h1,
+  #equityValue {
+    font-size: clamp(34px, 13vw, 52px) !important;
+    line-height: 1;
+    overflow-wrap: anywhere;
+  }
+
+  .bal-badge {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  .bal-actions-row {
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .qbtn.tiny {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
+
+  .ticker-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .ticker-meta {
+    white-space: normal;
+    min-width: 0;
+  }
+
+  .ticker-chips {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .wchip {
+    min-width: 76px;
+  }
+
+  .table-section {
+    padding: 16px;
+    overflow-x: hidden;
+  }
+
+  .data-table {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dt-head,
+  .dt-row {
+    min-width: 560px;
+  }
+
+  .dt-empty {
+    min-width: 0;
+    padding: 40px 12px;
+  }
+
+  .table-hdr {
+    align-items: stretch !important;
+  }
+
+  .table-hdr h2 {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .table-hdr-right {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .rp-container {
+    width: 100% !important;
+    min-width: 0 !important;
+    position: static !important;
+    display: block !important;
+    order: 2;
+  }
+
+  .rp-resizer,
+  .rp-toggle-btn {
+    display: none !important;
+  }
+
+  .right-panel {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    position: static !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 14px !important;
+    gap: 14px !important;
+    overflow: visible !important;
+  }
+
+  .right-panel > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .trade-ticket,
+  .bot-config {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .tt-row,
+  .tt-btns,
+  .tpsl-grid,
+  .tg-config-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .tt-tabs,
+  .bc-field {
+    gap: 10px;
+  }
+
+  .bc-field {
+    align-items: flex-start;
+  }
+
+  .bc-field input {
+    width: min(120px, 42vw);
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .chart-container {
+    min-height: 300px;
+    height: 52vh !important;
+  }
+
+  .charts-grid.correlation-mode {
+    height: 62vh !important;
+    min-height: 360px;
+  }
+
+  .charts-grid.correlation-mode .chart-container {
+    height: 100% !important;
+    min-height: 360px;
+  }
+
+  .corr-legend,
+  .cl-items {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .main-content.dashboard > div[style*="grid"] {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+    max-width: none !important;
+  }
+
+  .main-content.dashboard header,
+  .dash-header {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    align-items: start !important;
+    margin-bottom: 22px !important;
+  }
+
+  .main-content.dashboard h2,
+  .dash-header h2 {
+    font-size: clamp(28px, 10vw, 38px) !important;
+    line-height: 1.05 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .main-content.dashboard section {
+    border-radius: 18px !important;
+    padding: 20px !important;
+    min-width: 0 !important;
+  }
+
+  .main-content.dashboard input {
+    min-width: 0;
+    font-size: 16px !important;
+  }
+
+  .main-content.dashboard button {
+    min-height: 42px;
+  }
+
+  .main-content.fade-in {
+    min-height: calc(100dvh - 72px) !important;
+  }
+
+  .main-content.fade-in > div[style*="overflow-y"] {
+    padding: 24px 14px 140px !important;
+  }
+
+  .main-content.fade-in h1 {
+    font-size: clamp(28px, 10vw, 40px) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .main-content.fade-in p,
+  .main-content.fade-in li {
+    font-size: 14px !important;
+  }
+
+  .main-content.fade-in div[style*="grid-template-columns: 1fr 1fr"],
+  .main-content.fade-in div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .main-content.fade-in div[style*="justify-content: center"] {
+    justify-content: flex-start !important;
+  }
+
+  .main-content.fade-in div[style*="max-width: 800px"] {
+    max-width: none !important;
+  }
+
+  .main-content.fade-in button[style*="text-align: left"] {
+    min-height: 150px !important;
+  }
+
+  .modal-content {
+    width: calc(100vw - 28px) !important;
+    max-width: calc(100vw - 28px) !important;
+    max-height: calc(100dvh - 48px);
+    overflow-y: auto;
+    padding: 20px !important;
+    border-radius: 18px !important;
+  }
+
+  .strategy-terminal {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: calc(100dvh - 72px);
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    padding: 12px !important;
+    overflow: visible !important;
+  }
+
+  .strategy-terminal > div:first-child {
+    width: 100% !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  .strat-sidebar {
+    width: 100% !important;
+    max-height: 280px;
+    height: auto !important;
+    overflow: hidden;
+    gap: 12px;
+  }
+
+  .strat-list {
+    max-height: 210px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .strat-item {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .strat-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+    gap: 14px;
+  }
+
+  .strat-main > div[style*="flex-direction: row"] {
+    flex-direction: column !important;
+    overflow: visible !important;
+    gap: 14px !important;
+  }
+
+  .strat-main > div[style*="flex-direction: row"] > div {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .strat-header-card {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 18px !important;
+    border-radius: 16px;
+  }
+
+  .strat-title-wrap h2 {
+    font-size: clamp(22px, 8vw, 30px) !important;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .strat-title-wrap p {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: 12px !important;
+  }
+
+  .strat-perf-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .perf-card {
+    padding: 12px 8px;
+    border-radius: 14px;
+  }
+
+  .strat-execution-panel {
+    padding: 16px !important;
+    border-radius: 16px;
+  }
+
+  .exec-controls {
+    gap: 12px;
+  }
+
+  .exec-input-wrap {
+    min-width: 0;
+  }
+
+  .exec-input-wrap input,
+  .exec-input-wrap select,
+  .exec-input-wrap textarea {
+    font-size: 16px !important;
+    min-width: 0;
+  }
+
+  .exec-btn,
+  .beautiful-backtest-btn,
+  .bc-save-btn {
+    min-height: 48px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .main-content:not(.dashboard) > div[style*="max-width"],
+  .main-content:not(.dashboard) form {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .main-content form {
+    padding: 18px !important;
+    border-radius: 18px !important;
+    gap: 18px !important;
+  }
+
+  .main-content textarea {
+    min-height: 160px !important;
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-area,
+  .main-content {
+    padding: 12px !important;
+  }
+
+  .bal-card.compact,
+  .market-intel-card,
+  .table-section,
+  .ticker-row,
+  .right-panel .rp-section,
+  .rp-section {
+    border-radius: 16px;
+  }
+
+  .bal-card.compact {
+    padding: 16px;
+  }
+
+  .bal-top > .bal-info > div:first-child {
+    flex-direction: column;
+  }
+
+  .points-reward-popup {
+    width: min(260px, calc(100vw - 24px)) !important;
+    left: 12px !important;
+  }
+
+  .perf-mini-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dt-head,
+  .dt-row {
+    min-width: 500px;
+  }
+
+  .chart-container {
+    height: 46vh !important;
+    min-height: 280px;
+  }
+
+  .main-content.dashboard section {
+    padding: 16px !important;
+  }
+
+  .main-content.dashboard h3 {
+    font-size: 12px !important;
+    line-height: 1.35;
+  }
+}
+
+.route-loading {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--t1);
+}
+
+.route-loading-card {
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--t2);
+}
+
+.mobile-desktop-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 7, 12, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.mobile-desktop-notice-card {
+  width: min(100%, 380px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 24px;
+  background: linear-gradient(145deg, rgba(31, 37, 45, 0.98), rgba(13, 17, 23, 0.98));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+  color: #f7fafc;
+  text-align: left;
+}
+
+.mobile-desktop-notice-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  margin-bottom: 18px;
+  color: #7dd3fc;
+  background: rgba(125, 211, 252, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+}
+
+.mobile-desktop-notice h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: 0;
+  color: #ffffff;
+}
+
+.mobile-desktop-notice p {
+  margin: 0 0 20px;
+  color: rgba(247, 250, 252, 0.72);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.mobile-desktop-notice button {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #0b0e11;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .mobile-desktop-notice {
+    display: flex;
+  }
+
+  .shell {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .ai-page {
+    height: auto !important;
+    min-height: calc(100dvh - 72px) !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .ai-scroll {
+    padding: 22px 14px 178px !important;
+    overflow-y: visible !important;
+    min-height: calc(100dvh - 72px) !important;
+  }
+
+  .ai-inner {
+    max-width: none !important;
+    gap: 18px !important;
+  }
+
+  .ai-empty-state {
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    min-height: auto !important;
+  }
+
+  .ai-hero-copy {
+    text-align: left !important;
+    margin: 0 0 20px 0 !important;
+  }
+
+  .ai-hero-copy h1 {
+    font-size: clamp(30px, 9vw, 42px) !important;
+    line-height: 1.06 !important;
+    letter-spacing: 0 !important;
+    margin-bottom: 12px !important;
+  }
+
+  .ai-hero-copy p {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+
+  .ai-prompt-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    max-width: none !important;
+  }
+
+  .ai-prompt-card {
+    min-height: 0 !important;
+    padding: 18px !important;
+    border-radius: 18px !important;
+  }
+
+  .ai-prompt-card h4 {
+    font-size: 16px !important;
+    line-height: 1.25 !important;
+  }
+
+  .ai-prompt-card p {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+
+  .ai-composer-bar {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 72px !important;
+    padding: 10px 14px 12px !important;
+    z-index: 90 !important;
+  }
+
+  .ai-composer {
+    max-width: none !important;
+    border-radius: 20px !important;
+  }
+
+  .ai-composer input {
+    font-size: 16px !important;
+    min-width: 0;
+  }
+
+  .settings-page {
+    padding: 18px 14px 104px !important;
+    min-height: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .settings-page .dash-header {
+    margin-bottom: 20px !important;
+  }
+
+  .settings-page .dash-header h2 {
+    font-size: 34px !important;
+    line-height: 1 !important;
+  }
+
+  .settings-page .dash-header p {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  .settings-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .settings-column {
+    gap: 18px !important;
+    min-width: 0 !important;
+  }
+
+  .settings-card {
+    padding: 18px !important;
+    border-radius: 18px !important;
+    min-width: 0 !important;
+  }
+
+  .settings-card > div[style*="display: flex"][style*="align-items: center"] {
+    align-items: flex-start !important;
+    gap: 14px !important;
+  }
+
+  .settings-card h3 {
+    font-size: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .settings-card h4,
+  .settings-card h2 {
+    overflow-wrap: anywhere;
+    letter-spacing: 0 !important;
+  }
+
+  .settings-card h2 {
+    font-size: clamp(30px, 9vw, 40px) !important;
+    line-height: 1.05 !important;
+  }
+
+  .settings-card h4 {
+    font-size: clamp(19px, 6vw, 24px) !important;
+    line-height: 1.1 !important;
+  }
+
+  .settings-card input {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 16px !important;
+    letter-spacing: 0 !important;
+    text-overflow: ellipsis;
+  }
+
+  .settings-card label,
+  .settings-card p,
+  .settings-card span,
+  .settings-card li,
+  .settings-card div {
+    max-width: 100%;
+  }
+
+  .settings-card button {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .subscription-card > div {
+    min-width: 0 !important;
+  }
+
+  .subscription-card li {
+    gap: 10px !important;
+  }
+
+  .strategy-terminal {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100dvh - 72px) !important;
+    padding: 12px 12px 104px !important;
+    overflow: visible !important;
+  }
+
+  .strat-sidebar-wrap {
+    display: block !important;
+    width: 100% !important;
+    position: static !important;
+    flex-shrink: 1 !important;
+  }
+
+  .strat-sidebar-wrap > button {
+    display: none !important;
+  }
+
+  .strat-sidebar {
+    width: 100% !important;
+    max-height: 250px !important;
+    overflow: hidden !important;
+    flex-shrink: 1 !important;
+  }
+
+  .strat-list {
+    max-height: 178px !important;
+    overflow-y: auto !important;
+  }
+
+  .strat-main {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  .strat-content-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    gap: 14px !important;
+  }
+
+  .strat-chart-column {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 560px !important;
+    overflow: visible !important;
+  }
+
+  .strat-chart-column > div:first-child {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .strat-chart-column > div:last-child {
+    min-height: 360px !important;
+    height: 44vh !important;
+    overflow: hidden !important;
+  }
+
+  .strat-perf-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .strat-execution-panel {
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 18px !important;
+  }
+
+  .strat-execution-panel .exec-controls {
+    gap: 14px !important;
+  }
+
+  .strat-execution-panel .exec-field > div[style*="display: flex"][style*="gap: 12px"],
+  .strat-execution-panel div[style*="display: flex"][style*="gap: 12px"] {
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .settings-card {
+    padding: 16px !important;
+  }
+
+  .settings-card > div[style*="display: flex"][style*="align-items: center"] {
+    flex-direction: column !important;
+  }
+
+  .settings-card button {
+    min-width: 0 !important;
+  }
+
+  .ai-scroll {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .ai-composer-bar {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .strat-chart-column {
+    min-height: 500px !important;
+  }
+}

@@ -507,7 +507,7 @@ export default function StrategyTerminal() {
   return (
     <div className="strategy-terminal">
       {/* Strategy list sidebar with collapse */}
-      <div style={{ display: 'flex', flexDirection: 'row', flexShrink: 0, position: 'relative' }}>
+      <div className="strat-sidebar-wrap" style={{ display: 'flex', flexDirection: 'row', flexShrink: 0, position: 'relative' }}>
         <aside className="strat-sidebar" style={{
           width: isSidebarOpen ? 320 : 0,
           overflow: 'hidden',
@@ -609,10 +609,10 @@ export default function StrategyTerminal() {
         </div>
 
         {/* Main content: chart area (left) + execution panel (right), side by side */}
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', gap: 12, overflow: 'hidden' }}>
+        <div className="strat-content-grid" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', gap: 12, overflow: 'hidden' }}>
 
           {/* Chart column */}
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="strat-chart-column" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
               <h3 style={{ margin: 0, fontSize: 12, color: '#feca57', letterSpacing: 1.5, textShadow: '0 2px 10px rgba(254, 202, 87, 0.3)' }}>
                 HISTORICAL PERFORMANCE
