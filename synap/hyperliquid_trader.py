@@ -389,9 +389,9 @@ class HyperliquidTrader:
             logger.warning(f"Already have an open live position in {coin} — skipping")
             return False
 
-        # Check local state to categorize open positions
-        local_positions = self._load_local_state()
-        exchange_count = self._count_exchange_positions()
+        # Check and sync positions with exchange to purge closed ghost positions
+        local_positions = self.positions
+        exchange_count = len(local_positions)
 
         ai_count = 0
         strat_count = 0
