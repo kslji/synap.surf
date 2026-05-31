@@ -13,6 +13,7 @@ export default function AIPage() {
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [deleteConfirmSessionId, setDeleteConfirmSessionId] = useState(null);
 
   const fetchSessions = async () => {
     if (!wallet) return;
@@ -50,22 +51,9 @@ export default function AIPage() {
     }
   };
 
-  const deleteSession = async (sessionId, e) => {
+  const deleteSession = (sessionId, e) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this chat session?')) return;
-    try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        if (activeSessionId === sessionId) {
-          startNewChat();
-        }
-        fetchSessions();
-      }
-    } catch (err) {
-      console.error('Failed to delete session:', err);
-    }
+    setDeleteConfirmSessionId(sessionId);
   };
 
   const startNewChat = () => {
@@ -215,32 +203,30 @@ export default function AIPage() {
         flexShrink: 0
       }}>
         {/* Sidebar Header */}
-        <div style={{ padding: '24px 20px 16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '24px 20px 16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '11px', fontWeight: 900, color: 'var(--t1)', letterSpacing: '1px' }}>SYNAP CHATS</span>
           <button
             onClick={startNewChat}
             style={{
-              width: '100%',
-              background: 'var(--accent)',
-              color: '#fff',
-              borderRadius: '12px',
-              padding: '12px 16px',
-              fontWeight: 700,
-              fontSize: '14px',
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent)',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(79, 124, 138, 0.25)',
-              transition: 'all 0.2s ease-in-out'
+              transition: 'all 0.2s'
             }}
-            onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(79, 124, 138, 0.35)'; }}
-            onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(79, 124, 138, 0.25)'; }}
+            onMouseOver={e => { e.currentTarget.style.background = 'rgba(79, 124, 138, 0.1)'; }}
+            onMouseOut={e => { e.currentTarget.style.background = 'none'; }}
+            title="Start New Chat"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            New Chat
           </button>
         </div>
 
@@ -587,6 +573,113 @@ export default function AIPage() {
           </p>
         </div>
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmSessionId && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            border: '1px solid var(--border)',
+            borderRadius: '24px',
+            padding: '32px',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: 'var(--shadow)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '16px',
+              background: 'rgba(233, 69, 96, 0.1)',
+              color: 'var(--red)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              marginBottom: '20px'
+            }}>
+              🗑️
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--t1)', marginBottom: '8px' }}>
+              Delete Chat History?
+            </h3>
+            <p style={{ fontSize: '14px', color: 'var(--t3)', fontWeight: 500, lineHeight: 1.5, marginBottom: '24px' }}>
+              This action cannot be undone. All messages in this session will be permanently deleted from our servers.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+              <button
+                onClick={() => setDeleteConfirmSessionId(null)}
+                style={{
+                  flex: 1,
+                  background: 'var(--sub-bg)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--t2)',
+                  borderRadius: '12px',
+                  padding: '12px 0',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = 'var(--border)'}
+                onMouseOut={e => e.currentTarget.style.background = 'var(--sub-bg)'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const id = deleteConfirmSessionId;
+                  setDeleteConfirmSessionId(null);
+                  try {
+                    const res = await fetch(`/api/chat/sessions/${id}`, {
+                      method: 'DELETE'
+                    });
+                    if (res.ok) {
+                      if (activeSessionId === id) {
+                        startNewChat();
+                      }
+                      fetchSessions();
+                    }
+                  } catch (err) {
+                    console.error('Failed to delete session:', err);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  background: 'var(--red)',
+                  color: '#fff',
+                  borderRadius: '12px',
+                  padding: '12px 0',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(233, 69, 96, 0.2)'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = '#d83b54'}
+                onMouseOut={e => e.currentTarget.style.background = 'var(--red)'}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }

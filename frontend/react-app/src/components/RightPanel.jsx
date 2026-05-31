@@ -421,6 +421,18 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
       toast({ type: 'error', title: 'Wallet Not Connected', message: 'Please connect wallet first' });
       return;
     }
+
+    // Block execution if balance is under $10
+    const balance = walletBalance?.balance ?? 0;
+    if (!walletBalance?.configured || balance < 10) {
+      toast({ 
+        type: 'error', 
+        title: 'Insufficient Balance', 
+        message: 'cant take trade below 10$', 
+        duration: 7000 
+      });
+      return;
+    }
     
     const capital = botParams.MARGIN === 'AUTO' ? 0 : parseFloat(botParams.MARGIN) || 50;
     const lev = botParams.LEVERAGE === 'AUTO' ? 0 : parseInt(botParams.LEVERAGE) || 10;
