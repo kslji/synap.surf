@@ -857,6 +857,85 @@ async def get_market_intel():
     return intel
 
 
+# ── API: Real-time Live Price Fetching ────────────────────────────────────────
+@app.get("/api/market/price/{symbol}")
+async def get_realtime_price(symbol: str):
+    """
+    Fetch the latest mark price and 24h change for a coin.
+    Caches the result in MongoDB for exactly 5 seconds. If a request comes in within 5 seconds,
+    it returns the cached database document. Otherwise, it queries Hyperliquid live and updates the DB.
+    """
+    try:
+        from datetime import datetime, timezone, timedelta
+        coin = symbol.upper()
+        db = get_async_db()
+        now = datetime.now(timezone.utc)
+        
+        # Check cache in MongoDB
+        cache_key = f"live_price_{coin}"
+        cached_row = await db.market_data.find_one({"key": cache_key})
+        
+        if cached_row and "value_json" in cached_row:
+            cached_data = json.loads(cached_row["value_json"])
+            cached_time_str = cached_data.get("timestamp")
+            if cached_time_str:
+                cached_time = datetime.fromisoformat(cached_time_str)
+                # Check if cache is less than 5 seconds old
+                if (now - cached_time) < timedelta(seconds=5):
+                    # Return cached price from DB!
+                    return {
+                        "symbol": coin,
+                        "price": cached_data["price"],
+                        "change": cached_data["change"],
+                        "timestamp": cached_time_str,
+                        "source": "database_cache"
+                    }
+        
+        # Cache is stale or missing -> fetch live from Hyperliquid
+        payload = {"type": "metaAndAssetCtxs"}
+        data = make_hl_rest_call(payload)
+        if not data or len(data) < 2:
+            raise HTTPException(status_code=502, detail="Failed to fetch from Hyperliquid")
+            
+        universe = data[0].get("universe", [])
+        ctxs = data[1]
+        
+        match_idx = -1
+        for idx, asset in enumerate(universe):
+            if asset.get("name") == coin:
+                match_idx = idx
+                break
+                
+        if match_idx == -1 or match_idx >= len(ctxs):
+            raise HTTPException(status_code=404, detail=f"Asset {symbol} not found on Hyperliquid")
+            
+        ctx = ctxs[match_idx]
+        mark_px = float(ctx.get("markPx", 0))
+        prev_day_px = float(ctx.get("prevDayPx", 0))
+        change_pct = ((mark_px - prev_day_px) / prev_day_px) * 100 if prev_day_px > 0 else 0.0
+        
+        # Prepare document to save in DB
+        result = {
+            "symbol": coin,
+            "price": mark_px,
+            "change": change_pct,
+            "timestamp": now.isoformat(),
+            "source": "live_hyperliquid"
+        }
+        
+        # Save cache in MongoDB
+        await db.market_data.update_one(
+            {"key": cache_key},
+            {"$set": {"value_json": json.dumps(result)}},
+            upsert=True
+        )
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── API: Hyperliquid Proxy ──────────────────────────────────────────────────
 @app.get("/api/hl_top_perps")
 async def get_hl_top_perps():

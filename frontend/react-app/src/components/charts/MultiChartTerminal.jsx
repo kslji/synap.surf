@@ -310,25 +310,22 @@ function BubbleMap({ theme, onOpenInChart }) {
     if (!selectedAsset) return;
     if (showLoadingState) setPriceRefreshing(true);
     try {
-      const res = await fetch('/api/hl_top_perps');
+      const res = await fetch(`/api/market/price/${selectedAsset.name}?t=${Date.now()}`);
       if (!res.ok) throw new Error();
-      const json = await res.json();
-      const raw = json.ctxs || json.assets || [];
-      const match = raw.find(a => a.name === selectedAsset.name);
-      if (match) {
-        const mark = parseFloat(match.markPx || 0);
-        const prev = parseFloat(match.prevDayPx || 0);
-        const change = prev > 0 ? ((mark - prev) / prev) * 100 : 0;
-        setRealTimePrice(mark);
-        setRealTimeChange(change);
-        
-        // Update in assets array so bubble map also gets the latest updates
-        setAssets(prevAssets => prevAssets.map(a => 
-          a.name === selectedAsset.name 
-            ? { ...a, price: mark, change: change, volatility: Math.abs(change) }
-            : a
-        ));
-      }
+      const data = await res.json();
+      
+      const mark = parseFloat(data.price || 0);
+      const change = parseFloat(data.change || 0);
+      
+      setRealTimePrice(mark);
+      setRealTimeChange(change);
+      
+      // Update in assets array so bubble map also gets the latest updates
+      setAssets(prevAssets => prevAssets.map(a => 
+        a.name === selectedAsset.name 
+          ? { ...a, price: mark, change: change, volatility: Math.abs(change) }
+          : a
+      ));
     } catch (err) {
       console.error("Failed to refresh real-time price:", err);
     } finally {
