@@ -1904,7 +1904,12 @@ Focus entirely on institutional flows, whale activity, and news sentiment. Cover
         "risk_management": """You are in RISK MANAGEMENT MODE.
 This is user-account specific. Help with: optimal position sizing, stop-loss levels, risk-reward ratios, max drawdown limits, correlation risk, liquidation price awareness. Be protective but direct — talk like a risk desk manager who has seen accounts blow up. Use any trade/portfolio data provided in the context.""",
 
-        "general": """Answer the user's trading question directly and concisely. Use live market data from the context where relevant.""",
+        "general": """You are in GENERAL STRATEGY & DISCUSSION MODE.
+Answer the user's trading question directly, proactively, and actionably.
+If the user asks a broad, open-ended, or generic question (like "everything", "what to trade", or "market setup"), do NOT only analyze or criticize their past trades. Instead:
+1. Provide a clear, actionable analysis of the PRESENT market conditions using the live market intelligence and smart money netflows in the context.
+2. Propose active, high-probability trade setups or strategies suitable for the current volatility and trend structure (e.g. identifying momentum on trending coins).
+3. Reference their past trades only briefly for risk management corrections if it directly helps them trade the new setups you are proposing. Keep the focus forward-looking on new opportunities in the present tape.""",
     }
 
     mode_block = MODE_INSTRUCTIONS.get(req.context_type, MODE_INSTRUCTIONS["general"])
