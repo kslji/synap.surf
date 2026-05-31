@@ -302,6 +302,60 @@ function BubbleMap({ theme, onOpenInChart }) {
   const [intel, setIntel] = useState(null);
   const [intelLoading, setIntelLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [realTimePrice, setRealTimePrice] = useState(null);
+  const [realTimeChange, setRealTimeChange] = useState(null);
+  const [priceRefreshing, setPriceRefreshing] = useState(false);
+
+  const refreshPriceAndChange = async (showLoadingState = false) => {
+    if (!selectedAsset) return;
+    if (showLoadingState) setPriceRefreshing(true);
+    try {
+      const res = await fetch('/api/hl_top_perps');
+      if (!res.ok) throw new Error();
+      const json = await res.json();
+      const raw = json.ctxs || json.assets || [];
+      const match = raw.find(a => a.name === selectedAsset.name);
+      if (match) {
+        const mark = parseFloat(match.markPx || 0);
+        const prev = parseFloat(match.prevDayPx || 0);
+        const change = prev > 0 ? ((mark - prev) / prev) * 100 : 0;
+        setRealTimePrice(mark);
+        setRealTimeChange(change);
+        
+        // Update in assets array so bubble map also gets the latest updates
+        setAssets(prevAssets => prevAssets.map(a => 
+          a.name === selectedAsset.name 
+            ? { ...a, price: mark, change: change, volatility: Math.abs(change) }
+            : a
+        ));
+      }
+    } catch (err) {
+      console.error("Failed to refresh real-time price:", err);
+    } finally {
+      if (showLoadingState) setPriceRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedAsset) {
+      setRealTimePrice(selectedAsset.price);
+      setRealTimeChange(selectedAsset.change);
+    } else {
+      setRealTimePrice(null);
+      setRealTimeChange(null);
+    }
+  }, [selectedAsset]);
+
+  useEffect(() => {
+    if (!selectedAsset) return;
+    
+    refreshPriceAndChange();
+    const pollInterval = setInterval(() => {
+      refreshPriceAndChange(false);
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
+  }, [selectedAsset]);
 
   useEffect(() => {
     async function fetchAssets() {
@@ -699,17 +753,46 @@ function BubbleMap({ theme, onOpenInChart }) {
             ) : intel ? (
               <>
                 {/* Highlights */}
-                <div style={{ background: 'var(--sub-bg)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ position: 'relative', background: 'var(--sub-bg)', border: '1px solid var(--border)', borderRadius: '16px', padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  {/* Real-time Refresh Button */}
+                  <button 
+                    onClick={() => refreshPriceAndChange(true)}
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--t3)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--border)'; e.currentTarget.style.color = 'var(--t1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--t3)'; }}
+                    title="Refresh real-time price & change"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ animation: priceRefreshing ? 'spin 0.8s linear infinite' : 'none' }}>
+                      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                      <path d="M21 3v5h-5" />
+                    </svg>
+                  </button>
+
                   <div>
                     <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--t3)', textTransform: 'uppercase' }}>Mark Price</span>
                     <strong style={{ display: 'block', fontSize: '17px', fontWeight: '900', color: 'var(--t1)', marginTop: '4px' }}>
-                      ${selectedAsset.price.toFixed(selectedAsset.price < 1 ? 4 : 2)}
+                      ${realTimePrice !== null ? realTimePrice.toFixed(realTimePrice < 1 ? 4 : 2) : selectedAsset.price.toFixed(selectedAsset.price < 1 ? 4 : 2)}
                     </strong>
                   </div>
                   <div>
                     <span style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--t3)', textTransform: 'uppercase' }}>24h Change</span>
-                    <strong style={{ display: 'block', fontSize: '17px', fontWeight: '900', color: selectedAsset.change >= 0 ? 'var(--green)' : 'var(--red)', marginTop: '4px' }}>
-                      {selectedAsset.change >= 0 ? '+' : ''}{selectedAsset.change.toFixed(2)}%
+                    <strong style={{ display: 'block', fontSize: '17px', fontWeight: '900', color: (realTimeChange !== null ? realTimeChange : selectedAsset.change) >= 0 ? 'var(--green)' : 'var(--red)', marginTop: '4px' }}>
+                      {(realTimeChange !== null ? realTimeChange : selectedAsset.change) >= 0 ? '+' : ''}{(realTimeChange !== null ? realTimeChange : selectedAsset.change).toFixed(2)}%
                     </strong>
                   </div>
                 </div>
