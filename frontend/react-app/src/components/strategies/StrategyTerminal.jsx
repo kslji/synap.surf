@@ -20,7 +20,8 @@ function CustomDropdown({ options, value, onChange, label }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedOpt = options.find(o => o.value === value) || options[0];
+  const opts = options || [];
+  const selectedOpt = opts.find(o => o.value === value) || opts[0];
 
   return (
     <div className="custom-dropdown" ref={ref} style={{ position: 'relative', width: '100%' }}>
@@ -29,12 +30,12 @@ function CustomDropdown({ options, value, onChange, label }) {
         onClick={() => setIsOpen(!isOpen)}
         style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
       >
-        <span>{selectedOpt.label}</span>
+        <span>{selectedOpt ? selectedOpt.label : (value || 'Select...')}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
       </div>
-      {isOpen && (
+      {isOpen && opts.length > 0 && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0,
           background: 'var(--card)', backdropFilter: 'blur(12px)',
@@ -43,7 +44,7 @@ function CustomDropdown({ options, value, onChange, label }) {
           boxShadow: 'var(--shadow)',
           padding: '6px'
         }}>
-          {options.map(opt => (
+          {opts.map(opt => (
             <div
               key={opt.value}
               onClick={() => { onChange(opt.value); setIsOpen(false); }}

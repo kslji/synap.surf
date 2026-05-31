@@ -13,8 +13,13 @@ import traceback
 import json
 from datetime import datetime, timezone
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from backend.database import get_sync_db
-from synap.hyperliquid_trader import Info, constants
+from synap.market_data import RESTInfo
+from hyperliquid.utils import constants
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -29,7 +34,7 @@ def get_top_volatile_coins_metadata(limit=20):
     Returns a list of dicts: {"coin": "BTC", "change_pct": 0.05, "price": 60000.0}
     for the most volatile coins in the last 24h.
     """
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
+    info = RESTInfo(constants.MAINNET_API_URL, skip_ws=True)
     meta_and_ctxs = info.meta_and_asset_ctxs()
     
     if not meta_and_ctxs or len(meta_and_ctxs) < 2:
@@ -73,7 +78,7 @@ def get_specific_coins_metadata(coins_list):
     """
     Given a list of coin tickers, fetch their current price and % change.
     """
-    info = Info(constants.MAINNET_API_URL, skip_ws=True)
+    info = RESTInfo(constants.MAINNET_API_URL, skip_ws=True)
     meta_and_ctxs = info.meta_and_asset_ctxs()
     
     if not meta_and_ctxs or len(meta_and_ctxs) < 2:

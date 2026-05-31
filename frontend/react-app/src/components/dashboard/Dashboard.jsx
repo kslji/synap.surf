@@ -3,7 +3,7 @@ import MarketIntelCard from './MarketIntelCard.jsx';
 import TickerRow from './TickerRow.jsx';
 import TradeHistory from './TradeHistory.jsx';
 
-export default function Dashboard({ stats, trades, perps, intel, onShowCharts, onRefresh }) {
+export default function Dashboard({ stats, trades, perps, intel, onShowCharts, onRefresh, onGoToSettings }) {
   const safeStats = stats || {};
   const safeIntel = intel || {};
   const safeTrades = trades || [];
@@ -12,7 +12,7 @@ export default function Dashboard({ stats, trades, perps, intel, onShowCharts, o
   const now = new Date(), last = safeStats.last_updated ? new Date(safeStats.last_updated) : null;
   const isRunning = last && (now - last) / 60000 < 15;
   return (
-    <div className="main-area" id="dashboardContent">
+    <div className="main-area" id="dashboardContent" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div className="hero-row">
         <BalanceCard stats={safeStats} onShowCharts={onShowCharts} onRefresh={onRefresh} />
         <MarketIntelCard intel={safeIntel} />

@@ -17,6 +17,10 @@ fastapi>=0.100.0
 uvicorn>=0.23.0
 feedparser>=6.0.0
 
+# Jupiter Live Bot — DeepSeek-R1 via Groq
+groq>=0.9.0
+
+
 # AI Brain trading system (algo_brain/)
 requests>=2.31.0
 

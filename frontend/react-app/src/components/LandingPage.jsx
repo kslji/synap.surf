@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const features = [
   {
@@ -54,6 +54,7 @@ const nextUp = [
   'Multichain user portfolio',
   'More alert types',
   'Deeper portfolio reporting',
+  'Stock market integration',
 ];
 
 const developers = [
@@ -66,6 +67,88 @@ const developers = [
 
 export default function LandingPage({ onLaunch, theme = 'dark', toggleTheme }) {
   const [launching, setLaunching] = useState(false);
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [email, setEmail] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const isSubscribed = localStorage.getItem('synap_subscribed') === '1';
+    const isSeen = localStorage.getItem('seen_subscribe_popup') === '1';
+    
+    if (!isSubscribed && !isSeen) {
+      const timer = setTimeout(() => {
+        setShowSubModal(true);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    localStorage.setItem('seen_subscribe_popup', '1');
+    setShowSubModal(false);
+  };
+
+  const handleSubmitSubscription = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Please enter your email.');
+      return;
+    }
+    
+    const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Please enter a valid email address (e.g. name@domain.com).');
+      return;
+    }
+    
+    if (!occupation) {
+      setError('Please select your occupation.');
+      return;
+    }
+    
+    if (occupation === 'Employed' && !companyName.trim()) {
+      setError('Please enter your company name.');
+      return;
+    }
+    
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          occupation: occupation,
+          company_name: occupation === 'Employed' ? companyName.trim() : null,
+        }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Subscription failed. Please try again.');
+      }
+      
+      setSuccess(true);
+      localStorage.setItem('synap_subscribed', '1');
+      
+      setTimeout(() => {
+        setShowSubModal(false);
+      }, 2000);
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please check your connection.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleLaunch = () => {
     setLaunching(true);
@@ -807,6 +890,337 @@ export default function LandingPage({ onLaunch, theme = 'dark', toggleTheme }) {
             padding: 52px 0;
           }
         }
+
+        /* Subscription Modal Overlay */
+        .lp-modal-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          background: rgba(7, 11, 16, 0.65);
+          backdrop-filter: blur(12px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          animation: lp-fade-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes lp-fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        /* Subscription Modal Card */
+        .lp-modal-card {
+          width: 100%;
+          max-width: 480px;
+          background: var(--lp-card-bg);
+          border: 1px solid var(--lp-border);
+          border-radius: 16px;
+          box-shadow: 0 32px 64px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--lp-accent-border);
+          padding: 32px;
+          position: relative;
+          color: var(--lp-text);
+          animation: lp-slide-up 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        @keyframes lp-slide-up {
+          from { opacity: 0; transform: translateY(30px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .lp-modal-close {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background: transparent;
+          border: 0;
+          color: var(--lp-soft-text);
+          cursor: pointer;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .lp-modal-close:hover {
+          background: var(--lp-accent-soft);
+          color: var(--lp-accent);
+        }
+
+        .lp-modal-header {
+          text-align: center;
+          margin-bottom: 24px;
+        }
+
+        .lp-modal-bell-icon {
+          width: 52px;
+          height: 52px;
+          border-radius: 12px;
+          background: var(--lp-accent-soft);
+          border: 1px solid var(--lp-accent-border);
+          color: var(--lp-accent);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+          animation: lp-pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes lp-pulse {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 124, 138, 0.2); }
+          50% { transform: scale(1.05); box-shadow: 0 0 12px 4px rgba(79, 124, 138, 0.4); }
+        }
+
+        .lp-modal-header h3 {
+          font-size: 22px;
+          font-weight: 800;
+          color: var(--lp-title);
+          margin: 0 0 8px;
+          letter-spacing: -0.5px;
+        }
+
+        .lp-modal-header p {
+          font-size: 13.5px;
+          line-height: 1.55;
+          color: var(--lp-muted-text);
+          margin: 0;
+        }
+
+        .lp-modal-error {
+          background: rgba(201, 53, 79, 0.1);
+          border: 1px solid rgba(201, 53, 79, 0.25);
+          color: #e54b64;
+          padding: 12px;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 20px;
+          text-align: center;
+          animation: lp-shake 0.3s ease both;
+        }
+
+        @keyframes lp-shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+
+        .lp-modal-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .lp-modal-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          text-align: left;
+        }
+
+        .lp-modal-field label {
+          font-size: 12px;
+          font-weight: 800;
+          color: var(--lp-soft-text);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .lp-modal-input,
+        .lp-modal-select {
+          min-height: 46px;
+          background: var(--lp-card-soft);
+          border: 1px solid var(--lp-border);
+          border-radius: 8px;
+          padding: 0 14px;
+          font-size: 14px;
+          color: var(--lp-title);
+          outline: none;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .lp-modal-input:focus,
+        .lp-modal-select:focus {
+          border-color: var(--lp-accent);
+          box-shadow: 0 0 0 3px var(--lp-accent-soft);
+        }
+
+        .lp-modal-select {
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b9aac' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 14px center;
+          background-size: 16px;
+          cursor: pointer;
+        }
+
+        /* Animate company field expansion */
+        .lp-modal-field-expand {
+          animation: lp-expand 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes lp-expand {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .lp-modal-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .lp-modal-submit-btn {
+          min-height: 48px;
+          background: var(--lp-button-bg);
+          color: var(--lp-button-text);
+          border: 0;
+          border-radius: 8px;
+          font-weight: 850;
+          font-size: 14px;
+          cursor: pointer;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .lp-modal-submit-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .lp-modal-submit-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .lp-modal-cancel-btn {
+          min-height: 40px;
+          background: transparent;
+          color: var(--lp-soft-text);
+          border: 0;
+          border-radius: 8px;
+          font-weight: 750;
+          font-size: 13.5px;
+          cursor: pointer;
+          transition: color 0.2s ease, background 0.2s ease;
+        }
+
+        .lp-modal-cancel-btn:hover:not(:disabled) {
+          color: var(--lp-text);
+          background: var(--lp-border-soft);
+        }
+
+        /* Success State */
+        .lp-modal-success-state {
+          text-align: center;
+          padding: 16px 0;
+          animation: lp-fade-in 0.3s ease both;
+        }
+
+        .lp-modal-success-icon {
+          width: 68px;
+          height: 68px;
+          border-radius: 50%;
+          background: #e9f8f1;
+          color: #18b87a;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+          box-shadow: 0 0 0 8px rgba(24, 184, 122, 0.08);
+          animation: lp-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        @keyframes lp-scale-in {
+          from { transform: scale(0); }
+          to { transform: scale(1); }
+        }
+
+        .lp-modal-success-state h3 {
+          font-size: 22px;
+          font-weight: 800;
+          color: var(--lp-title);
+          margin: 0 0 8px;
+        }
+
+        .lp-modal-success-state p {
+          font-size: 14px;
+          color: var(--lp-muted-text);
+          line-height: 1.6;
+          margin: 0;
+        }
+
+        /* Hiring & Funding Callout */
+        .lp-modal-hiring-card {
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 1px dashed var(--lp-border);
+          text-align: center;
+        }
+
+        .lp-modal-hiring-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 900;
+          color: #12835a;
+          background: #e9f8f1;
+          border: 1px solid rgba(18, 131, 90, 0.16);
+          border-radius: 999px;
+          padding: 4px 10px;
+          margin-bottom: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        
+        .lp-modal-hiring-badge-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #18b87a;
+          box-shadow: 0 0 0 3px rgba(24, 184, 122, 0.18);
+        }
+
+        .lp-modal-hiring-text {
+          font-size: 12.5px;
+          line-height: 1.5;
+          color: var(--lp-muted-text);
+          margin: 0 0 12px 0;
+          font-weight: 600;
+        }
+
+        .lp-modal-linkedin-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 38px;
+          padding: 0 16px;
+          border-radius: 6px;
+          background: #0a66c2;
+          color: #ffffff;
+          font-size: 12.5px;
+          font-weight: 800;
+          text-decoration: none;
+          transition: transform 0.2s ease, background 0.2s ease;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        .lp-modal-linkedin-btn:hover {
+          background: #004b93;
+          transform: translateY(-1px);
+        }
       `}</style>
 
       <main className={`lp-root${launching ? ' launching' : ''}`} data-lp-theme={theme}>
@@ -971,6 +1385,53 @@ export default function LandingPage({ onLaunch, theme = 'dark', toggleTheme }) {
             </div>
           </section>
 
+          {/* Hyperliquid Guide Section */}
+          <section className="lp-section hyperliquid-guide-lp" style={{ animation: 'lp-fade-up 0.6s ease both' }}>
+            <div className="lp-list-box" style={{ padding: '36px', borderRadius: '12px', border: '1px solid var(--lp-border)', background: 'var(--lp-card-bg)', boxShadow: '0 24px 60px rgba(49, 67, 83, 0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #6c5ce7, #00d2d3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '900', fontSize: '22px' }}>H</div>
+                <div>
+                  <h2 style={{ fontSize: '22px', fontWeight: '900', margin: 0, color: 'var(--lp-title)', letterSpacing: '-0.5px' }}>HYPERLIQUID INTEGRATION GUIDE</h2>
+                  <p style={{ fontSize: '13.5px', color: 'var(--lp-muted-text)', margin: '4px 0 0 0', fontWeight: '600' }}>Understand how automated trading works and how to safely connect your wallet.</p>
+                </div>
+              </div>
+              
+              <div className="lp-split" style={{ gap: '36px', marginBottom: '32px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--lp-accent)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.8px' }}>What is Hyperliquid?</h3>
+                  <p style={{ fontSize: '14px', color: 'var(--lp-muted-text)', lineHeight: '1.7', margin: 0, fontWeight: '500' }}>
+                    Hyperliquid is a state-of-the-art decentralized perpetual exchange built on a custom L1 appchain. It supports sub-second order execution, zero gas fees for placing trades, deep liquidity, and highly secure L1 self-custody.
+                  </p>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ fontSize: '13.5px', fontWeight: '900', color: 'var(--lp-accent)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.8px' }}>How to get your API Wallet Key</h3>
+                  <ol style={{ fontSize: '14px', color: 'var(--lp-muted-text)', lineHeight: '1.7', margin: 0, paddingLeft: '20px', fontWeight: '500' }}>
+                    <li style={{ marginBottom: '8px' }}>Visit the <a href="https://app.hyperliquid.xyz/API" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--lp-accent)', fontWeight: '800', textDecoration: 'underline' }}>Hyperliquid API page</a> and connect your wallet.</li>
+                    <li style={{ marginBottom: '8px' }}>Ensure you have deposited USDC into your decentralized L1 trading account.</li>
+                    <li style={{ marginBottom: '8px' }}>Enter an API wallet name, click <strong>Generate</strong> to create a dedicated trading key, and click **Connect** to authorize it.</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--lp-card-soft)', border: '1px solid var(--lp-border-soft)', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <h4 style={{ fontSize: '12px', fontWeight: '900', color: 'var(--lp-soft-text)', textTransform: 'uppercase', margin: '0 0 6px 0', letterSpacing: '0.5px' }}>Ready to Trade?</h4>
+                  <p style={{ fontSize: '13.5px', color: 'var(--lp-muted-text)', margin: 0, lineHeight: '1.5', fontWeight: '500' }}>
+                    Save your generated API wallet private key securely in Settings to authorize the AI bot to execute trades.
+                  </p>
+                </div>
+                <button 
+                  onClick={handleLaunch} 
+                  className="lp-launch-btn"
+                  style={{ width: '100%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '48px', fontSize: '13.5px', fontWeight: '850', letterSpacing: '0.5px' }}
+                >
+                  {launching ? 'Opening dashboard...' : 'Launch Dashboard to Setup 🚀'}
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section className="lp-section">
             <div className="lp-split">
               <div className="lp-list-box">
@@ -1026,6 +1487,131 @@ export default function LandingPage({ onLaunch, theme = 'dark', toggleTheme }) {
             </div>
           </section>
         </div>
+
+        {/* Render Subscribe Modal Overlay */}
+        {showSubModal && (
+          <div className="lp-modal-overlay" onClick={handleCloseModal} role="dialog" aria-modal="true">
+            <div className="lp-modal-card" onClick={(e) => e.stopPropagation()}>
+              <button className="lp-modal-close" onClick={handleCloseModal} aria-label="Close subscription form">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+              
+              {success ? (
+                <div className="lp-modal-success-state">
+                  <div className="lp-modal-success-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <h3>Welcome to the Project!</h3>
+                  <p>You have successfully subscribed to future updates. We will stay in touch!</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitSubscription} className="lp-modal-form">
+                  <div className="lp-modal-header">
+                    <div className="lp-modal-bell-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                      </svg>
+                    </div>
+                    <h3>Join the project for future updates</h3>
+                    <p>Subscribe to our newsletter to receive the latest development insights, early access announcements, and feature updates.</p>
+                  </div>
+                  
+                  {error && <div className="lp-modal-error">{error}</div>}
+                  
+                  <div className="lp-modal-fields">
+                    <div className="lp-modal-field">
+                      <label htmlFor="lp-sub-email">Email Address</label>
+                      <input
+                        id="lp-sub-email"
+                        type="email"
+                        className="lp-modal-input"
+                        placeholder="e.g. trader@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={submitting}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="lp-modal-field">
+                      <label htmlFor="lp-sub-occupation">Occupation</label>
+                      <select
+                        id="lp-sub-occupation"
+                        className="lp-modal-select"
+                        value={occupation}
+                        onChange={(e) => {
+                          setOccupation(e.target.value);
+                          if (e.target.value !== 'Employed') {
+                            setCompanyName('');
+                          }
+                        }}
+                        disabled={submitting}
+                        required
+                      >
+                        <option value="">Select your occupation</option>
+                        <option value="Employed">Employed</option>
+                        <option value="Founder">Founder / Entrepreneur</option>
+                        <option value="Freelancer">Freelancer</option>
+                        <option value="Student">Student</option>
+                        <option value="Unemployed">Trader / Unemployed</option>
+                      </select>
+                    </div>
+                    
+                    {occupation === 'Employed' && (
+                      <div className="lp-modal-field lp-modal-field-expand">
+                        <label htmlFor="lp-sub-company">Company Name</label>
+                        <input
+                          id="lp-sub-company"
+                          type="text"
+                          className="lp-modal-input"
+                          placeholder="e.g. Acme Corp"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          disabled={submitting}
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="lp-modal-actions">
+                    <button type="submit" className="lp-modal-submit-btn" disabled={submitting}>
+                      {submitting ? 'Joining...' : 'Subscribe to Updates'}
+                    </button>
+                    <button type="button" className="lp-modal-cancel-btn" onClick={handleCloseModal} disabled={submitting}>
+                      Maybe Later
+                    </button>
+                  </div>
+                </form>
+              )}
+              {/* LinkedIn Hiring & Funding Callout Card */}
+              <div className="lp-modal-hiring-card">
+                <div className="lp-modal-hiring-badge">
+                  <span className="lp-modal-hiring-badge-dot"></span>
+                  Open To Work &amp; Funding 🚀
+                </div>
+                <p className="lp-modal-hiring-text">
+                  Are you a Recruiter, Founder, or VC? Let's connect for roles, advisory, or project funding!
+                </p>
+                <a
+                  href="https://www.linkedin.com/in/kabir-singh-lamba-datawizard/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="lp-modal-linkedin-btn"
+                >
+                  <span className="lp-dev-in" style={{ marginRight: '8px', padding: '1px 5px', fontSize: '10px' }}>in</span>
+                  Connect with Kabir on LinkedIn
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </>
   );

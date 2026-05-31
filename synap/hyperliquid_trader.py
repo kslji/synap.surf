@@ -19,8 +19,24 @@ from typing import Optional, Dict, Any, List
 
 from eth_account import Account
 from hyperliquid.exchange import Exchange
-from hyperliquid.info import Info
 from hyperliquid.utils import constants
+
+
+class RESTInfo:
+    def __init__(self, base_url=None, skip_ws=True):
+        self.base_url = base_url or "https://api.hyperliquid.xyz"
+
+    def meta(self):
+        import requests
+        resp = requests.post(f"{self.base_url}/info", json={"type": "meta"}, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
+    def user_state(self, address: str):
+        import requests
+        resp = requests.post(f"{self.base_url}/info", json={"type": "clearinghouseState", "user": address}, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
 
 from synap.config import (
     HL_TAKER_FEE,
@@ -62,7 +78,7 @@ class HyperliquidTrader:
             base_url=self.base_url,
             account_address=self.user_address,
         )
-        self.info = Info(base_url=self.base_url, skip_ws=True)
+        self.info = RESTInfo(base_url=self.base_url, skip_ws=True)
         # Cumulative stats (persisted locally)
         self.realized_pnl = 0.0
         self.total_trades = 0

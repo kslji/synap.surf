@@ -22,14 +22,31 @@ from typing import Optional
 
 import requests
 
-from hyperliquid.info import Info
-from hyperliquid.utils import constants
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from synap.config import TELEGRAM_BOT_TOKEN as CONFIG_TG_TOKEN
+from hyperliquid.utils import constants
+import requests
+
+class RESTInfo:
+    def __init__(self, base_url=None, skip_ws=True):
+        self.base_url = base_url or "https://api.hyperliquid.xyz"
+
+    def user_state(self, address: str):
+        import requests
+        resp = requests.post(f"{self.base_url}/info", json={"type": "clearinghouseState", "user": address}, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
+    def user_fills(self, address: str):
+        import requests
+        resp = requests.post(f"{self.base_url}/info", json={"type": "userFills", "user": address}, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
 HL_WALLET = None
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from backend.database import get_sync_db as get_db
 logger = logging.getLogger(__name__)
 
@@ -63,7 +80,7 @@ def get_live_hl_portfolio() -> Optional[dict]:
         return None
 
     try:
-        info = Info(constants.MAINNET_API_URL, skip_ws=True)
+        info = RESTInfo(constants.MAINNET_API_URL, skip_ws=True)
         state = info.user_state(HL_WALLET)
 
         # 1. Parse time

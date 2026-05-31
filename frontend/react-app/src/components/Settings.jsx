@@ -159,7 +159,7 @@ export default function Settings() {
               {/* ── Step 1: Private Key ── */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <label style={{ fontSize: 14, fontWeight: 800, color: 'var(--t1)' }}>Hyperliquid Private Key</label>
+                  <label style={{ fontSize: 14, fontWeight: 800, color: 'var(--t1)' }}>Hyperliquid API Wallet (Agent) Key</label>
                   {keyStatus === 'saved' && (
                     <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 800, background: 'rgba(24,184,122,0.15)', padding: '4px 10px', borderRadius: 8 }}>SAVED ✓</span>
                   )}
@@ -167,7 +167,7 @@ export default function Settings() {
                 <div style={{ position: 'relative' }}>
                   <input
                     type={showKey ? 'text' : 'password'}
-                    placeholder="Enter your L1 Private Key (0x...)"
+                    placeholder="Enter your API Wallet Private Key (0x...)"
                     value={hlKey}
                     onChange={(e) => setHlKey(e.target.value)}
                     style={{
@@ -186,7 +186,7 @@ export default function Settings() {
                   </button>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--t3)', marginTop: 10, lineHeight: 1.6, fontWeight: 500 }}>
-                  Used to sign trades. Never share this with anyone. Stored locally in your <code>.env</code>.
+                  This API/Agent key can only perform trading actions on your behalf and has **no withdrawal permissions**, keeping your funds 100% secure.
                 </p>
                 <button
                   onClick={handleSaveKey}

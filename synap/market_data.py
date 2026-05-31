@@ -10,9 +10,7 @@ import logging
 from typing import Optional
 
 import pandas as pd
-from hyperliquid.info import Info
-from hyperliquid.utils import constants
-
+import pandas as pd
 from synap.config import (
     CANDLE_INTERVAL,
     CANDLE_LOOKBACK,
@@ -21,14 +19,39 @@ from synap import strategies
 
 logger = logging.getLogger(__name__)
 
+
+class RESTInfo:
+    def __init__(self, base_url=None, skip_ws=True):
+        self.base_url = base_url or "https://api.hyperliquid.xyz"
+
+    def meta(self):
+        import requests
+        resp = requests.post(f"{self.base_url}/info", json={"type": "meta"}, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
+    def meta_and_asset_ctxs(self):
+        import requests
+        resp = requests.post(f"{self.base_url}/info", json={"type": "metaAndAssetCtxs"}, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
+    def candles_snapshot(self, coin: str, interval: str, start_ms: int, end_ms: int):
+        import requests
+        req = {"coin": coin, "interval": interval, "startTime": start_ms, "endTime": end_ms}
+        resp = requests.post(f"{self.base_url}/info", json={"type": "candleSnapshot", "req": req}, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
+
 # ─── Singleton Hyperliquid client ────────────────────────────────────────────
-_info: Optional[Info] = None
+_info: Optional[RESTInfo] = None
 
 
-def _get_info() -> Info:
+def _get_info() -> RESTInfo:
     global _info
     if _info is None:
-        _info = Info(constants.MAINNET_API_URL, skip_ws=True)
+        _info = RESTInfo()
     return _info
 
 

@@ -196,6 +196,7 @@ export default function App() {
             intel={safeIntel}
             onShowCharts={() => changeView('charts')}
             onRefresh={fetchAll}
+            onGoToSettings={() => changeView('settings')}
           />
         );
       case 'charts':

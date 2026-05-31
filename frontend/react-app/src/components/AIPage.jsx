@@ -70,7 +70,16 @@ export default function AIPage() {
         body: JSON.stringify({ prompt: userMsg, context_type: contextType, wallet: wallet })
       });
 
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      if (!res.ok) {
+        let errMsg = `Server error ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.detail) {
+            errMsg = errData.detail;
+          }
+        } catch (e) {}
+        throw new Error(errMsg);
+      }
 
       // Stop the timer as soon as we get the first byte (headers)
       clearInterval(interval);
@@ -130,7 +139,7 @@ export default function AIPage() {
                 <p style={{ fontSize: 18, color: 'var(--t3)', fontWeight: 500 }}>
                   Select a prompt below or type your own question.<br/>
                   <span style={{ fontSize: 14, color: 'var(--accent)', marginTop: 8, display: 'inline-block', fontWeight: 600 }}>
-                    (in free trial only 5 prompts are available)
+                    Beta Limit: 2 AI Prompts Per Day (Resets Every 24 Hours)
                   </span>
                 </p>
               </div>
