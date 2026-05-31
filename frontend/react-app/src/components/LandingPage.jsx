@@ -1597,7 +1597,7 @@ export default function LandingPage({ onLaunch, theme = 'dark', toggleTheme }) {
                   Open To Work &amp; Funding 🚀
                 </div>
                 <p className="lp-modal-hiring-text">
-                  Are Interested !? Let's connect !!
+                  Are You Interested !? Let's connect !!
                 </p>
                 <a
                   href="https://www.linkedin.com/in/kabir-singh-lamba-datawizard/"
