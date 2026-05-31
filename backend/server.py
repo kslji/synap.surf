@@ -519,6 +519,24 @@ async def subscribe_strategy(request: Request):
             "status": "OPEN",
             "strategy_id": strategy_id
         })
+        if open_pos:
+            # Self-healing verification against live Hyperliquid state
+            try:
+                state = make_hl_rest_call({"type": "clearinghouseState", "user": wallet_address})
+                live_coins = []
+                for entry in state.get("assetPositions", []):
+                    pos = entry.get("position", {})
+                    if pos and float(pos.get("szi", 0)) != 0:
+                        live_coins.append(pos["coin"].upper())
+                
+                if open_pos.get("coin", "").upper() not in live_coins:
+                    await db.trade_logs.update_one(
+                        {"_id": open_pos["_id"]},
+                        {"$set": {"status": "CLOSED"}}
+                    )
+                    open_pos = None
+            except Exception as e:
+                print(f"Error self-healing trade in subscribe: {e}")
         
         status = 'ACTIVE' if is_active else 'INACTIVE'
         alert_msg = None
@@ -588,6 +606,29 @@ async def get_strategy_status(wallet_address: str, strategy_id: str = "ALGO AI B
     })
     if open_pos:
         has_open_position = True
+        # Self-healing verification against live Hyperliquid state
+        try:
+            state = make_hl_rest_call({"type": "clearinghouseState", "user": wallet_address})
+            live_coins = []
+            for entry in state.get("assetPositions", []):
+                pos = entry.get("position", {})
+                if pos and float(pos.get("szi", 0)) != 0:
+                    live_coins.append(pos["coin"].upper())
+            
+            if open_pos.get("coin", "").upper() not in live_coins:
+                await db.trade_logs.update_one(
+                    {"_id": open_pos["_id"]},
+                    {"$set": {"status": "CLOSED"}}
+                )
+                has_open_position = False
+                
+                # Auto-correct synap_surf_ai subscription status if it was stuck in STOPPING
+                await db.synap_surf_ai.update_one(
+                    {"wallet_address": wallet_address, "strategy_id": strategy_id, "status": "STOPPING"},
+                    {"$set": {"status": "INACTIVE"}}
+                )
+        except Exception as e:
+            print(f"Error self-healing trade status: {e}")
 
     # Get the specific subscription for this user
     sub = await db.synap_surf_ai.find_one({"wallet_address": wallet_address, "strategy_id": strategy_id})
