@@ -1094,13 +1094,7 @@ export default function RightPanel({ view, stats, decisions, tradingMode, setTra
                 <span className="slider round" />
               </label>
             </div>
-            <div className="bc-field" style={{ marginTop: 16, marginBottom: 8 }}>
-              <label style={{ fontSize: 9 }}>AI ENGINE</label>
-              <div className="mini-toggle" style={{ background: 'var(--bg)', border: '1px solid var(--border)', width: 'fit-content' }}>
-                <span className={`m-tgl${aiEngine === 'claude' ? ' active' : ''}`} onClick={() => setAiEngine('claude')} style={{ fontSize: 8, padding: '4px 10px' }}>CLAUDE</span>
-                <span className="m-tgl grok-tooltip" data-tooltip="Right now Grok is unavailable" style={{ fontSize: 8, padding: '4px 10px', opacity: 0.5, cursor: 'not-allowed' }}>GROK</span>
-              </div>
-            </div>
+
             <div style={{ display: 'flex', gap: 8 }}>
               {botActive && (
                 <button 
